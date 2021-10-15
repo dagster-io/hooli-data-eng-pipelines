@@ -17,6 +17,7 @@ if __name__ == "__main__":
             "dagit",
             "dagster",
             "dagster_aws",
+            "dagster_cloud",
             "dagster_dbt",
             "dagster_pyspark",
             "dbt",
