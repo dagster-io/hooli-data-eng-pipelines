@@ -1,0 +1,14 @@
+dagit
+dagster
+dagster_aws
+dagster_dbt
+dagster_pyspark
+dbt
+fsspec
+pandas
+pyarrow
+pyspark
+requests
+s3fs
+snowflake-sqlalchemy
+sqlalchemy
