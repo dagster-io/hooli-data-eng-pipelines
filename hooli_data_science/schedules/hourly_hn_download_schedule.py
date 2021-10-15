@@ -32,7 +32,4 @@ def get_hourly_download_def_schedule_config(start_time: datetime):
     mode="prod",
 )
 def hourly_hn_download_schedule(date):
-    """
-    This schedule runs the download pipeline once every hour.
-    """
     return get_hourly_download_def_schedule_config(date)
