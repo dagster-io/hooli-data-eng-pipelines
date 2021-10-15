@@ -1,6 +1,7 @@
 dagit
 dagster
 dagster_aws
+dagster_cloud
 dagster_dbt
 dagster_pyspark
 dbt
