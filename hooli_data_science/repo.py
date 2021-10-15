@@ -11,7 +11,6 @@ def prod_repo():
     return [
         make_hn_tables_updated_sensor(dbt_prod_job),
         schedule_from_partitions(download_prod_job),
-        # hourly_hn_download_schedule,
     ]
 
 
