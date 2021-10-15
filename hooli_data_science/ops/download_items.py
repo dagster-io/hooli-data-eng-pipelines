@@ -22,7 +22,7 @@ HN_ACTION_SCHEMA = StructType(
         StructField("by", StringType()),
         StructField("text", StringType()),
         StructField("kids", ArrayType(LongType())),
-        # StructField("dead", BooleanType()),
+        StructField("dead", BooleanType()),
         StructField("score", DoubleType()),
         StructField("title", StringType()),
         StructField("descendants", DoubleType()),
