@@ -1,0 +1,31 @@
+[32m2021-10-15 17:06:47[0m - dagster - [34mDEBUG[0m - hacker_news_api_download - f3fc354b-5e13-47d0-8439-6dfcd0bcf595 - 20342 - build_stories - LOGS_CAPTURED - Started capturing logs for solid: build_stories.
+[32m2021-10-15 17:06:47[0m - dagster - [34mDEBUG[0m - hacker_news_api_download - f3fc354b-5e13-47d0-8439-6dfcd0bcf595 - 20342 - build_stories - STEP_START - Started execution of step "build_stories".
+[32m2021-10-15 17:06:58[0m - dagster - [34mDEBUG[0m - hacker_news_api_download - f3fc354b-5e13-47d0-8439-6dfcd0bcf595 - 20342 - build_stories - LOADED_INPUT - Loaded input "items" using input manager "parquet_io_manager", from output "items" of step "download_items"
+[32m2021-10-15 17:06:58[0m - dagster - [34mDEBUG[0m - hacker_news_api_download - f3fc354b-5e13-47d0-8439-6dfcd0bcf595 - 20342 - build_stories - STEP_INPUT - Got input "items" of type "DataFrame". (Type check passed).
+[32m2021-10-15 17:06:58[0m - dagster - [34mINFO[0m - hacker_news_api_download - f3fc354b-5e13-47d0-8439-6dfcd0bcf595 - build_stories - StructType(List(StructField(by,StringType,true),StructField(id,LongType,true),StructField(parent,DoubleType,true),StructField(text,StringType,true),StructField(time,LongType,true),StructField(type,StringType,true),StructField(kids,ArrayType(LongType,true),true),StructField(descendants,DoubleType,true),StructField(score,DoubleType,true),StructField(title,StringType,true),StructField(url,StringType,true),StructField(deleted,BooleanType,true)))
+[32m2021-10-15 17:06:59[0m - dagster - [34mERROR[0m - [31mhacker_news_api_download - f3fc354b-5e13-47d0-8439-6dfcd0bcf595 - 20342 - build_stories - STEP_FAILURE - Execution of step "build_stories" failed.
+
+dagster.core.errors.DagsterExecutionStepExecutionError: Error occurred while executing op "build_stories"::
+
+pyspark.sql.utils.AnalysisException: cannot resolve '`dead`' given input columns: [by, deleted, descendants, id, kids, parent, score, text, time, title, type, url];
+'Project [id#1L, parent#2, time#4L, type#5, by#0, text#3, kids#6, 'dead, score#8, title#9, descendants#7, url#10]
++- Filter (type#5 = story)
+   +- Relation[by#0,id#1L,parent#2,text#3,time#4L,type#5,kids#6,descendants#7,score#8,title#9,url#10,deleted#11] parquet
+
+
+Stack Trace:
+  File "/Users/max/dev/dagster/python_modules/dagster/dagster/core/execution/plan/utils.py", line 44, in solid_execution_error_boundary
+    yield
+  File "/Users/max/dev/dagster/python_modules/dagster/dagster/utils/__init__.py", line 383, in iterate_with_context
+    next_output = next(iterator)
+  File "/Users/max/dev/dagster/python_modules/dagster/dagster/core/execution/plan/compute_generator.py", line 65, in _coerce_solid_compute_fn_to_iterator
+    result = fn(context, **kwargs) if context_arg_provided else fn(**kwargs)
+  File "/Users/max/dev/hooli-data-science-pipelines/hooli_data_science/ops/download_items.py", line 91, in build_stories
+    return items.where(items["type"] == "story").select(ACTION_FIELD_NAMES)
+  File "/Users/max/dev/hooli-data-science-pipelines/.venv/lib/python3.8/site-packages/pyspark/sql/dataframe.py", line 1669, in select
+    jdf = self._jdf.select(self._jcols(*cols))
+  File "/Users/max/dev/hooli-data-science-pipelines/.venv/lib/python3.8/site-packages/py4j/java_gateway.py", line 1304, in __call__
+    return_value = get_return_value(
+  File "/Users/max/dev/hooli-data-science-pipelines/.venv/lib/python3.8/site-packages/pyspark/sql/utils.py", line 117, in deco
+    raise converted from None
+[0m
