@@ -56,9 +56,6 @@ DOWNLOAD_RESOURCES_STAGING = {
     ),
     "pyspark": configured_pyspark,
     "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
-    "base_url": ResourceDefinition.hardcoded_resource(
-        "http://demo.elementl.dev", "Dagit URL"
-    ),
 }
 
 DOWNLOAD_RESOURCES_PROD = {
