@@ -32,3 +32,6 @@ jobs:
           dagit-url: https://hooli.dagster.cloud/datascienceprod
           api-token: ${{ secrets.DAGSTER_AGENT_TOKEN }}
           experimental-git-data: true
+
+      - name: Prune unused layers
+        run: docker image prune --filter="label!=sha=${{ env.GIT_SHA }}"
