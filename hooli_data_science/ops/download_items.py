@@ -2,35 +2,22 @@ from typing import Tuple
 
 from dagster import Out, Output, op
 from pandas import DataFrame
-from pyspark.sql import DataFrame as SparkDF
-from pyspark.sql.types import (
-    ArrayType,
-    BooleanType,
-    DoubleType,
-    LongType,
-    StringType,
-    StructField,
-    StructType,
-)
 
-HN_ACTION_SCHEMA = StructType(
-    [
-        StructField("id", LongType()),
-        StructField("parent", DoubleType()),
-        StructField("time", LongType()),
-        StructField("type", StringType()),
-        StructField("by", StringType()),
-        StructField("text", StringType()),
-        StructField("kids", ArrayType(LongType())),
-        # StructField("dead", BooleanType()),
-        StructField("score", DoubleType()),
-        StructField("title", StringType()),
-        StructField("descendants", DoubleType()),
-        StructField("url", StringType()),
-    ]
-)
 
-ACTION_FIELD_NAMES = [field.name for field in HN_ACTION_SCHEMA.fields]
+ACTION_FIELD_NAMES = [
+    "id",
+    "parent",
+    "time",
+    "type",
+    "by",
+    "text",
+    "kids",
+    "dead",
+    "score",
+    "title",
+    "descendants",
+    "url",
+]
 
 
 @op(
@@ -51,7 +38,7 @@ def download_items(context, id_range: Tuple[int, int]) -> Output:
 
     rows = []
     for item_id in range(start_id, end_id):
-        rows.append(context.resources.hn_client.fetch_item_by_id(item_id))
+        rows.append(context.resources.hn_client.fetch_item_by_id(context, item_id))
         if len(rows) % 100 == 0:
             context.log.info(f"Downloaded {len(rows)} items!")
 
@@ -74,9 +61,8 @@ def download_items(context, id_range: Tuple[int, int]) -> Output:
     ),
     description="Creates a dataset of all items that are comments",
 )
-def build_comments(context, items: SparkDF) -> SparkDF:
-    context.log.info(str(items.schema))
-    return items.where(items["type"] == "comment").select(ACTION_FIELD_NAMES)
+def build_comments(context, items: DataFrame) -> DataFrame:
+    return items.where(items["type"] == "comment")[ACTION_FIELD_NAMES]
 
 
 @op(
@@ -86,6 +72,5 @@ def build_comments(context, items: SparkDF) -> SparkDF:
     ),
     description="Creates a dataset of all items that are stories",
 )
-def build_stories(context, items: SparkDF) -> SparkDF:
-    context.log.info(str(items.schema))
-    return items.where(items["type"] == "story").select(ACTION_FIELD_NAMES)
+def build_stories(context, items: DataFrame) -> DataFrame:
+    return items.where(items["type"] == "story")[ACTION_FIELD_NAMES]

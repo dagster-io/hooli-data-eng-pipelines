@@ -1,7 +1,16 @@
 from datetime import datetime, timezone
 from typing import Tuple
 
-from dagster import DynamicOut, DynamicOutput, EventMetadataEntry, Field, Out, Output, check, op
+from dagster import (
+    DynamicOut,
+    DynamicOutput,
+    EventMetadataEntry,
+    Field,
+    Out,
+    Output,
+    check,
+    op,
+)
 
 
 def binary_search_nearest_left(get_value, start, end, min_target):
@@ -50,7 +59,7 @@ def binary_search_nearest_right(get_value, start, end, max_target):
     return end
 
 
-def _id_range_for_time(start, end, hn_client):
+def _id_range_for_time(context, start, end, hn_client):
     check.invariant(end >= start, "End time comes before start time")
 
     start = datetime.timestamp(
@@ -61,7 +70,7 @@ def _id_range_for_time(start, end, hn_client):
     )
 
     def _get_item_timestamp(item_id):
-        item = hn_client.fetch_item_by_id(item_id)
+        item = hn_client.fetch_item_by_id(context, item_id)
         return item["time"]
 
     max_item_id = hn_client.fetch_max_item_id()
@@ -69,11 +78,19 @@ def _id_range_for_time(start, end, hn_client):
     # declared by resource to allow testability against snapshot
     min_item_id = hn_client.min_item_id()
 
-    start_id = binary_search_nearest_left(_get_item_timestamp, min_item_id, max_item_id, start)
-    end_id = binary_search_nearest_right(_get_item_timestamp, min_item_id, max_item_id, end)
+    start_id = binary_search_nearest_left(
+        _get_item_timestamp, min_item_id, max_item_id, start
+    )
+    end_id = binary_search_nearest_right(
+        _get_item_timestamp, min_item_id, max_item_id, end
+    )
 
-    start_timestamp = str(datetime.fromtimestamp(_get_item_timestamp(start_id), tz=timezone.utc))
-    end_timestamp = str(datetime.fromtimestamp(_get_item_timestamp(end_id), tz=timezone.utc))
+    start_timestamp = str(
+        datetime.fromtimestamp(_get_item_timestamp(start_id), tz=timezone.utc)
+    )
+    end_timestamp = str(
+        datetime.fromtimestamp(_get_item_timestamp(end_id), tz=timezone.utc)
+    )
 
     metadata_entries = [
         EventMetadataEntry.int(value=max_item_id, label="max_item_id"),
@@ -100,6 +117,7 @@ def id_range_for_time(context):
     For the configured time partition, searches for the range of ids that were created in that time.
     """
     id_range, metadata_entries = _id_range_for_time(
+        context,
         context.resources.partition_start,
         context.resources.partition_end,
         context.resources.hn_client,

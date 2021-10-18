@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import requests
-from dagster import resource
+from dagster import Field, SolidExecutionContext, resource
 from dagster.utils import file_relative_path
 
 HNItemRecord = Dict[str, Any]
@@ -14,7 +14,9 @@ HN_BASE_URL = "https://hacker-news.firebaseio.com/v0"
 
 class HNClient(ABC):
     @abstractmethod
-    def fetch_item_by_id(self, item_id: int) -> Optional[HNItemRecord]:
+    def fetch_item_by_id(
+        self, context: SolidExecutionContext, item_id: int
+    ) -> Optional[HNItemRecord]:
         pass
 
     @abstractmethod
@@ -27,7 +29,9 @@ class HNClient(ABC):
 
 
 class HNAPIClient(HNClient):
-    def fetch_item_by_id(self, item_id: int) -> Optional[HNItemRecord]:
+    def fetch_item_by_id(
+        self, context: SolidExecutionContext, item_id: int
+    ) -> Optional[HNItemRecord]:
 
         item_url = f"{HN_BASE_URL}/item/{item_id}.json"
         item = requests.get(item_url, timeout=5).json()
@@ -46,7 +50,9 @@ class HNSnapshotClient(HNClient):
         with gzip.open(file_path, "r") as f:
             self._items: Dict[str, HNItemRecord] = json.loads(f.read().decode())
 
-    def fetch_item_by_id(self, item_id: int) -> Optional[HNItemRecord]:
+    def fetch_item_by_id(
+        self, context: SolidExecutionContext, item_id: int
+    ) -> Optional[HNItemRecord]:
         return self._items.get(str(item_id))
 
     def fetch_max_item_id(self) -> int:
@@ -62,16 +68,31 @@ class HNAPISubsampleClient(HNClient):
     which is useful for testing / demoing purposes.
     """
 
-    def __init__(self, subsample_rate):
+    def __init__(self, subsample_rate, retries=1):
         self._items = {}
         self.subsample_rate = subsample_rate
+        self.retries = retries
 
-    def fetch_item_by_id(self, item_id: int) -> Optional[HNItemRecord]:
+    def fetch_item_by_id(
+        self, context: SolidExecutionContext, item_id: int
+    ) -> Optional[HNItemRecord]:
         # map self.subsample_rate items to the same item_id, caching it for faster performance
         subsample_id = item_id - item_id % self.subsample_rate
         if subsample_id not in self._items:
             item_url = f"{HN_BASE_URL}/item/{subsample_id}.json"
-            item = requests.get(item_url, timeout=5).json()
+            item = None
+            retried = 0
+            while item is None and retried < self.retries:
+                try:
+                    item = requests.get(item_url, timeout=5).json()
+                except requests.exceptions.ReadTimeout:
+                    retried += 1
+                    if retried == self.retries:
+                        raise
+                    context.log.info(
+                        f"Firebase timed out, retrying ({retried}/{self.retries})"
+                    )
+                    continue
             self._items[subsample_id] = item
         return self._items[subsample_id]
 
@@ -83,10 +104,11 @@ class HNAPISubsampleClient(HNClient):
 
 
 @resource(
-    description="A hackernews client that fetches results from the firebaseio web api."
+    description="A hackernews client that fetches results from the firebaseio web api.",
+    config_schema={"retries": Field(int, default_value=1, is_required=False)},
 )
-def hn_api_client(_):
-    return HNAPIClient()
+def hn_api_client(context):
+    return HNAPIClient(retries=context.resource_config["retries"])
 
 
 @resource(

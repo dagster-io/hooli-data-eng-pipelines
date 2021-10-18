@@ -8,25 +8,24 @@ from dagster import (
     InputContext,
     OutputContext,
     StringSource,
+    check,
     io_manager,
 )
 from dagster.core.storage.io_manager import IOManager
 from pandas import DataFrame as PandasDataFrame
 from pandas import read_sql
-from pyspark.sql import DataFrame as SparkDataFrame
-from pyspark.sql.types import StructField, StructType
 from snowflake.connector.pandas_tools import pd_writer
 from snowflake.sqlalchemy import URL  # pylint: disable=no-name-in-module,import-error
 from sqlalchemy import create_engine
 
 
-def spark_field_to_snowflake_type(spark_field: StructField):
-    # Snowflake does not have a long type (all integer types have the same precision)
-    spark_type = spark_field.dataType.typeName()
-    if spark_type == "long":
-        return "integer"
-    else:
-        return spark_type
+# def spark_field_to_snowflake_type(spark_field: StructField):
+#     # Snowflake does not have a long type (all integer types have the same precision)
+#     spark_type = spark_field.dataType.typeName()
+#     if spark_type == "long":
+#         return "integer"
+#     else:
+#         return spark_type
 
 
 SNOWFLAKE_CONFIG_SCHEMA = {
@@ -87,26 +86,17 @@ class SnowflakeIOManager(IOManager):
     def get_output_asset_key(self, context: OutputContext):
         return AssetKey(["snowflake", *context.metadata["table"].split(".")])
 
-    def handle_output(
-        self, context: OutputContext, obj: Union[PandasDataFrame, SparkDataFrame]
-    ):
+    def handle_output(self, context: OutputContext, obj: PandasDataFrame):
+        check.inst_param(obj, "obj", PandasDataFrame)
+
         schema, table = context.metadata["table"].split(".")
 
         with connect_snowflake(config=context.resource_config, schema=schema) as con:
             con.execute(self._get_cleanup_statement(table, context.resources))
 
-        if isinstance(obj, SparkDataFrame):
-            yield from self._handle_spark_output(
-                context.resource_config, obj, schema, table
-            )
-        elif isinstance(obj, PandasDataFrame):
-            yield from self._handle_pandas_output(
-                context.resource_config, obj, schema, table
-            )
-        else:
-            raise Exception(
-                "SnowflakeIOManager only supports pandas DataFrames and spark DataFrames"
-            )
+        yield from self._handle_pandas_output(
+            context.resource_config, obj, schema, table
+        )
 
     def _handle_pandas_output(
         self, config: Dict, obj: PandasDataFrame, schema: str, table: str
@@ -128,26 +118,6 @@ class SnowflakeIOManager(IOManager):
                 index=False,
                 method=pd_writer,
             )
-
-    def _handle_spark_output(
-        self, config: Dict, df: SparkDataFrame, schema: str, table: str
-    ):
-        options = {
-            "sfURL": f"{config['account']}.snowflakecomputing.com",
-            "sfUser": config["user"],
-            "sfPassword": config["password"],
-            "sfDatabase": config["database"],
-            "sfSchema": schema,
-            "sfWarehouse": config["warehouse"],
-            "dbtable": table,
-        }
-        yield EventMetadataEntry.md(
-            spark_columns_to_markdown(df.schema), "DataFrame columns"
-        )
-
-        df.write.format("net.snowflake.spark.snowflake").options(**options).mode(
-            "append"
-        ).save()
 
     def _get_cleanup_statement(self, table: str, _resources):
         return f"""
@@ -219,22 +189,5 @@ def pandas_columns_to_markdown(dataframe: PandasDataFrame) -> str:
         )
         + "\n".join(
             [f"| {name} | {dtype} |" for name, dtype in dataframe.dtypes.iteritems()]
-        )
-    )
-
-
-def spark_columns_to_markdown(schema: StructType) -> str:
-    return (
-        textwrap.dedent(
-            """
-        | Name | Type |
-        | ---- | ---- |
-    """
-        )
-        + "\n".join(
-            [
-                f"| {field.name} | {field.dataType.typeName()} |"
-                for field in schema.fields
-            ]
         )
     )

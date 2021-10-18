@@ -8,7 +8,6 @@ dbt
 fsspec
 pandas
 pyarrow
-pyspark
 requests
 s3fs
 snowflake-sqlalchemy
