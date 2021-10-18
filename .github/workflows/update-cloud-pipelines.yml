@@ -34,4 +34,4 @@ jobs:
           experimental-git-data: true
 
       - name: Prune unused layers
-        run: docker image prune --filter="label!=sha=${{ env.GIT_SHA }}"
+        run: docker image prune -f --filter="label!=sha=${{ env.GITHUB_SHA }}"
