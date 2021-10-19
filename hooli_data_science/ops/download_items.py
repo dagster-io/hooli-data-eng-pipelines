@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from dagster import Out, Output, op
+from dagster import AssetMaterialization, List, Nothing, Out, Output, op
 from pandas import DataFrame
 
 
@@ -55,22 +55,34 @@ def download_items(context, id_range: Tuple[int, int]) -> Output:
 
 
 @op(
-    out=Out(
-        io_manager_key="warehouse_io_manager",
-        metadata={"table": "hackernews.comments"},
-    ),
+    out={
+        "items": Out(
+            io_manager_key="warehouse_io_manager",
+            metadata={"table": "hackernews.comments"},
+        ),
+        "done": Out(),
+    },
     description="Creates a dataset of all items that are comments",
 )
-def build_comments(context, items: DataFrame) -> DataFrame:
-    return items.where(items["type"] == "comment")[ACTION_FIELD_NAMES]
+def build_comments(_context, items: DataFrame) -> DataFrame:
+    yield Output(items.where(items["type"] == "comment")[ACTION_FIELD_NAMES], "items")
+    yield Output(True, "done")
 
 
 @op(
-    out=Out(
-        io_manager_key="warehouse_io_manager",
-        metadata={"table": "hackernews.stories"},
-    ),
+    out={
+        "items": Out(
+            io_manager_key="warehouse_io_manager",
+            metadata={"table": "hackernews.stories"},
+        )
+    },
     description="Creates a dataset of all items that are stories",
 )
-def build_stories(context, items: DataFrame) -> DataFrame:
-    return items.where(items["type"] == "story")[ACTION_FIELD_NAMES]
+def build_stories(_context, items: DataFrame) -> DataFrame:
+    yield Output(items.where(items["type"] == "story")[ACTION_FIELD_NAMES], "items")
+    yield Output(True, "done")
+
+
+@op
+def update_tables(_context, _ready: List[Nothing]):
+    yield AssetMaterialization("hn_tables_updated")

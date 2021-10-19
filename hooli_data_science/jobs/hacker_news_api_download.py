@@ -3,7 +3,12 @@ import os
 from dagster import ResourceDefinition, graph
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 
-from ..ops.download_items import build_comments, build_stories, download_items
+from ..ops.download_items import (
+    build_comments,
+    build_stories,
+    download_items,
+    update_tables,
+)
 from ..ops.id_range_for_time import id_range_for_time
 from ..resources.hn_resource import hn_api_subsample_client
 from ..resources.parquet_io_manager import partitioned_parquet_io_manager
@@ -81,8 +86,9 @@ DOWNLOAD_TAGS = {
 )
 def hacker_news_api_download():
     items = download_items(id_range_for_time())
-    build_comments(items)
-    build_stories(items)
+    _, comments_built = build_comments(items)
+    _, stories_built = build_stories(items)
+    update_tables([comments_built, stories_built])
 
 
 download_prod_job = hacker_news_api_download.to_job(

@@ -73,6 +73,10 @@ def time_partitioned_snowflake_io_manager(_):
     return TimePartitionedSnowflakeIOManager()
 
 
+def generate_asset_key_for_snowflake_table(table_name):
+    return AssetKey(["snowflake", *(table_name.split("."))])
+
+
 class SnowflakeIOManager(IOManager):
     """
     This IOManager can handle Outputs that are either pandas DataFrames or ParquetPointers (which
@@ -84,7 +88,7 @@ class SnowflakeIOManager(IOManager):
     """
 
     def get_output_asset_key(self, context: OutputContext):
-        return AssetKey(["snowflake", *context.metadata["table"].split(".")])
+        return generate_asset_key_for_snowflake_table(context.metadata["table"])
 
     def handle_output(self, context: OutputContext, obj: PandasDataFrame):
         check.inst_param(obj, "obj", PandasDataFrame)
