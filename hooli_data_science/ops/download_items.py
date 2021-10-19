@@ -74,7 +74,8 @@ def build_comments(_context, items: DataFrame) -> DataFrame:
         "items": Out(
             io_manager_key="warehouse_io_manager",
             metadata={"table": "hackernews.stories"},
-        )
+        ),
+        "done": Out(),
     },
     description="Creates a dataset of all items that are stories",
 )

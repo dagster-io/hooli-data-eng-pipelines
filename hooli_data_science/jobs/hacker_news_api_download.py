@@ -75,15 +75,8 @@ DOWNLOAD_TAGS = {
     }
 }
 
-# FIXME: Need to change the owners
-@graph(
-    description="#### Owners:\n"
-    "schrockn@elementl.com, cat@elementl.com\n "
-    "#### About\n"
-    "This pipeline downloads all items from the HN API for a given day, "
-    "splits the items into stories and comment types using Spark, and uploads filtered items to "
-    "the corresponding stories or comments Snowflake table",
-)
+
+@graph
 def hacker_news_api_download():
     items = download_items(id_range_for_time())
     _, comments_built = build_comments(items)
