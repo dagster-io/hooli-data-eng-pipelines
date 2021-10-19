@@ -1,7 +1,7 @@
 git+https://github.com/dagster-io/dagster.git@8ca8a5abe1c327eab2069e157dade55adaf09e65#subdirectory=python_modules/dagster
 git+https://github.com/dagster-io/dagster.git@8ca8a5abe1c327eab2069e157dade55adaf09e65#subdirectory=python_modules/dagit
 git+https://github.com/dagster-io/dagster.git@8ca8a5abe1c327eab2069e157dade55adaf09e65#subdirectory=python_modules/libraries/dagster-aws/
-dagster-cloud
+dagster-cloud==0.12.14
 git+https://github.com/dagster-io/dagster.git@8ca8a5abe1c327eab2069e157dade55adaf09e65#subdirectory=python_modules/libraries/dagster-dbt/
 dbt
 fsspec
