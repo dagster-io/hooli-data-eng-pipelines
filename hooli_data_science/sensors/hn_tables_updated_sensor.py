@@ -28,7 +28,7 @@ def make_hn_tables_updated_sensor(
     job_or_pipeline_name = cast(str, job.name if job else pipeline_name)
 
     @asset_sensor(
-        asset_key="hn_tables_updated",
+        asset_key=AssetKey("hn_tables_updated"),
         pipeline_name=pipeline_name,
         name=f"{job_or_pipeline_name}_on_hn_tables_updated",
         mode=mode,
