@@ -92,7 +92,6 @@ def build_stories(_context, items: DataFrame) -> DataFrame:
     yield Output(True, "done")
 
 
-@op(ins={"_ready": In(Nothing)})
+@op(ins={"_ready": In(Nothing)}, out=Out(bool, asset_key="hn_tables_updated"))
 def update_tables(_context):
-    yield AssetMaterialization("hn_tables_updated")
     yield Output(True)
