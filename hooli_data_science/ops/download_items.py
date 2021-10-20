@@ -12,7 +12,7 @@ ACTION_FIELD_NAMES = [
     "by",
     "text",
     "kids",
-    "dead",
+    # "dead",
     "score",
     "title",
     "descendants",
