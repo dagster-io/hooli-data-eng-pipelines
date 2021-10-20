@@ -3,7 +3,7 @@ from datetime import datetime
 from dagster import hourly_partitioned_config, hourly_schedule
 
 
-@hourly_partitioned_config(start_date=datetime(2021, 1, 1))
+@hourly_partitioned_config(start_date=datetime(2021, 10, 1))
 def hourly_download_schedule_config(start: datetime, end: datetime):
     return {
         "resources": {
@@ -27,7 +27,7 @@ def get_hourly_download_def_schedule_config(start_time: datetime):
 
 @hourly_schedule(
     pipeline_name="download_pipeline",
-    start_date=datetime(2021, 1, 1),
+    start_date=datetime(2021, 10, 1),
     execution_timezone="UTC",
     mode="prod",
 )
