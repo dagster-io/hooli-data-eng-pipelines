@@ -87,3 +87,4 @@ def build_stories(_context, items: DataFrame) -> DataFrame:
 @op(ins={"_ready": In(Nothing)})
 def update_tables(_context):
     yield AssetMaterialization("hn_tables_updated")
+    yield Output(True)
