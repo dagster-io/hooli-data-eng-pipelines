@@ -34,7 +34,7 @@ def make_hn_tables_updated_sensor(
         mode=mode,
         job=job,
     )
-    def hn_tables_updated_sensor(context):
+    def hn_tables_updated_sensor(_context, _event):
         yield RunRequest(run_key=None)
 
     return hn_tables_updated_sensor
