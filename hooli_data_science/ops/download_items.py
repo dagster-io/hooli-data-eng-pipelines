@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from dagster import AssetMaterialization, In, Nothing, Out, Output, op
+from dagster import AssetKey, In, Nothing, Out, Output, op
 from pandas import DataFrame
 
 
@@ -92,6 +92,6 @@ def build_stories(_context, items: DataFrame) -> DataFrame:
     yield Output(True, "done")
 
 
-@op(ins={"_ready": In(Nothing)}, out=Out(bool, asset_key="hn_tables_updated"))
+@op(ins={"_ready": In(Nothing)}, out=Out(bool, asset_key=AssetKey("hn_tables_updated")))
 def update_tables(_context):
     yield Output(True)
