@@ -65,7 +65,11 @@ def download_items(context, id_range: Tuple[int, int]) -> Output:
     description="Creates a dataset of all items that are comments",
 )
 def build_comments(_context, items: DataFrame) -> DataFrame:
-    yield Output(items.where(items["type"] == "comment")[ACTION_FIELD_NAMES], "items")
+    items = items.where(items["type"] == "comment")[ACTION_FIELD_NAMES]
+    items["user_id"] = items["by"]
+    del items["by"]
+
+    yield Output(items, "items")
     yield Output(True, "done")
 
 
@@ -80,7 +84,11 @@ def build_comments(_context, items: DataFrame) -> DataFrame:
     description="Creates a dataset of all items that are stories",
 )
 def build_stories(_context, items: DataFrame) -> DataFrame:
-    yield Output(items.where(items["type"] == "story")[ACTION_FIELD_NAMES], "items")
+    items = items.where(items["type"] == "story")[ACTION_FIELD_NAMES]
+    items["user_id"] = items["by"]
+    del items["by"]
+
+    yield Output(items, "items")
     yield Output(True, "done")
 
 

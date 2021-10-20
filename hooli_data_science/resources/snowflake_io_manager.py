@@ -118,7 +118,7 @@ class SnowflakeIOManager(IOManager):
             with_uppercase_cols.to_sql(
                 table,
                 con=con,
-                if_exists="replace",
+                if_exists="append",
                 index=False,
                 method=pd_writer,
             )
