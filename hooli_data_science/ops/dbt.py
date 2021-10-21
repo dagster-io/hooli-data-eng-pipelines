@@ -1,13 +1,33 @@
-from dagster import Out, Output, op
+from dagster import AssetKey, In, Nothing, Out, Output, op
 from dagster_dbt import DbtCliOutput
+
+
+@op
+def preflight_comments_table(_context):
+    return True
+
+
+@op
+def preflight_stories_table(_context):
+    return True
 
 
 @op(
     required_resource_keys={"dbt", "dbt_assets"},
+    ins={
+        "comments_table_ready": In(
+            dagster_type=bool,
+            asset_key=AssetKey(["snowflake", "hackernews", "comments"]),
+        ),
+        "stories_table_ready": In(
+            dagster_type=bool,
+            asset_key=AssetKey(["snowflake", "hackernews", "stories"]),
+        ),
+    },
     out=Out(dagster_type=DbtCliOutput),
     tags={"kind": "dbt"},
 )
-def hn_dbt_run(context):
+def hn_dbt_run(context, comments_table_ready, stories_table_ready):
     dbt_cli_output = context.resources.dbt.run()
     # here, we use a resource to determine which AssetMaterialization events to yield for
     # a given DbtCliOutput. This is done so we can swap out this implementation between modes,

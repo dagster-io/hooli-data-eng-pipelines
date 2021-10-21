@@ -5,7 +5,12 @@ from dagster.utils import file_relative_path
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 from dagster_dbt import dbt_cli_resource
 
-from ..ops.dbt import hn_dbt_run, hn_dbt_test
+from ..ops.dbt import (
+    hn_dbt_run,
+    hn_dbt_test,
+    preflight_comments_table,
+    preflight_stories_table,
+)
 from ..resources.dbt_asset_resource import SnowflakeQueryDbtAssetResource
 
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../hacker_news_dbt")
@@ -61,7 +66,9 @@ DBT_RESOURCES_STAGING = {
 
 @graph
 def dbt_metrics():
-    hn_dbt_test(hn_dbt_run())
+    comments_table_ready = preflight_comments_table()
+    stories_table_ready = preflight_stories_table()
+    hn_dbt_test(hn_dbt_run(comments_table_ready, stories_table_ready))
 
 
 dbt_prod_job = dbt_metrics.to_job(resource_defs=DBT_RESOURCES_PROD)
