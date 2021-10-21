@@ -1,18 +1,13 @@
-import json
 from typing import Optional, cast
 
 from dagster import (
     AssetKey,
-    DagsterEventType,
-    EventRecordsFilter,
     JobDefinition,
     RunRequest,
     SensorDefinition,
     asset_sensor,
     check,
 )
-
-from ..resources.snowflake_io_manager import generate_asset_key_for_snowflake_table
 
 
 def make_hn_tables_updated_sensor(
