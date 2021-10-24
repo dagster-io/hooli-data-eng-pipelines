@@ -57,16 +57,26 @@ DOWNLOAD_TAGS = {
 }
 
 
-@graph
-def hacker_news_api_download():
+@graph(
+    description=(
+        "Ingests items from the Hacker News API, builds comments and stories dataframes, and "
+        "updates the date-partitioned Snowflake tables."
+    )
+)
+def ingest_hacker_news():
     items = download_items(id_range_for_time())
     _, comments_built = build_comments(items)
     _, stories_built = build_stories(items)
     update_tables([comments_built, stories_built])
 
 
-download_prod_job = hacker_news_api_download.to_job(
+ingest_hacker_news_job = ingest_hacker_news.to_job(
     resource_defs=DOWNLOAD_RESOURCES_PROD,
     tags=DOWNLOAD_TAGS,
     config=hourly_download_schedule_config,
+    description=(
+        "Date-partitioned job that ingests items from the Hacker News API, builds comments and "
+        "stories dataframes, and updates the appropriate date partitions of the comments and "
+        "stories tables in Snowflake."
+    ),
 )

@@ -2,16 +2,16 @@ from setuptools import find_packages, setup
 
 if __name__ == "__main__":
     setup(
-        name="hooli_data_science",
+        name="hooli_data_eng",
         version="1.3.5",
         author="Hooli",
         author_email="hello@hooli.com",
         description="Hooli Data Science team Dagster pipelines.",
-        url="https://github.com/dagster-io/hooli-data-science-pipelines",
+        url="https://github.com/dagster-io/hooli-data-eng-pipelines",
         classifiers=[
             "Programming Language :: Python :: 3.10",
         ],
-        packages=find_packages(exclude=["hooli_data_science_pipelines_tests"]),
+        packages=find_packages(exclude=["hooli_data_eng_pipelines_tests"]),
         include_package_data=True,
         install_requires=[
             "dagit",
@@ -31,5 +31,5 @@ if __name__ == "__main__":
         extras_require={
             "test": ["black", "mypy", "pylint", "pytest"],
         },
-        package_data={"hooli_data_science": ["hooli_data_science_dbt/*"]},
+        package_data={"hooli_data_eng": ["hooli_data_eng_dbt/*"]},
     )

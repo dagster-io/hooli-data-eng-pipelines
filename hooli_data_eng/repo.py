@@ -1,6 +1,6 @@
 from dagster import repository, schedule_from_partitions
 
-from .jobs import dbt_prod_job, download_prod_job
+from .jobs import dbt_prod_job, ingest_hacker_news_job
 
 # from .schedules import hourly_hn_download_schedule
 from .sensors import make_hn_tables_updated_sensor
@@ -10,6 +10,6 @@ from .sensors import make_hn_tables_updated_sensor
 def prod_repo():
     return [
         make_hn_tables_updated_sensor(dbt_prod_job),
-        schedule_from_partitions(download_prod_job),
+        schedule_from_partitions(ingest_hacker_news_job),
         # hourly_hn_download_schedule,
     ]
