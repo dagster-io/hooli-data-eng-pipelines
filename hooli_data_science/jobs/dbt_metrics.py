@@ -46,23 +46,6 @@ DBT_RESOURCES_PROD = {
     ),
 }
 
-DBT_RESOURCES_STAGING = {
-    "io_manager": s3_pickle_io_manager.configured(
-        {"s3_bucket": "hackernews-elementl-dev"}
-    ),
-    "s3": s3_resource,
-    "dbt": dbt_cli_resource.configured(
-        {
-            "profiles-dir": DBT_PROFILES_DIR,
-            "project-dir": DBT_PROJECT_DIR,
-            "target": "dev",
-        }
-    ),
-    "dbt_assets": ResourceDefinition.hardcoded_resource(
-        SnowflakeQueryDbtAssetResource(SNOWFLAKE_CONF, "hacker_news_dbt_dev")
-    ),
-}
-
 
 @graph
 def dbt_metrics():
@@ -72,4 +55,3 @@ def dbt_metrics():
 
 
 dbt_prod_job = dbt_metrics.to_job(resource_defs=DBT_RESOURCES_PROD)
-dbt_staging_job = dbt_metrics.to_job(resource_defs=DBT_RESOURCES_STAGING)

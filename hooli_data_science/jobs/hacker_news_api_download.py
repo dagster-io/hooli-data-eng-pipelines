@@ -24,25 +24,6 @@ SNOWFLAKE_CONF = {
     "warehouse": "TINY_WAREHOUSE",
 }
 
-DOWNLOAD_RESOURCES_STAGING = {
-    "io_manager": s3_pickle_io_manager.configured(
-        {"s3_bucket": "hackernews-elementl-dev"}
-    ),
-    "s3": s3_resource,
-    "partition_start": ResourceDefinition.string_resource(),
-    "partition_end": ResourceDefinition.string_resource(),
-    "parquet_io_manager": partitioned_parquet_io_manager.configured(
-        {"base_path": "s3://hackernews-elementl-dev"}
-    ),
-    "warehouse_io_manager": time_partitioned_snowflake_io_manager.configured(
-        SNOWFLAKE_CONF
-    ),
-    "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
-    "base_url": ResourceDefinition.hardcoded_resource(
-        "http://demo.elementl.dev", "Dagit URL"
-    ),
-}
-
 DOWNLOAD_RESOURCES_PROD = {
     "io_manager": s3_pickle_io_manager.configured(
         {"s3_bucket": "hackernews-elementl-prod"}
@@ -86,13 +67,6 @@ def hacker_news_api_download():
 
 download_prod_job = hacker_news_api_download.to_job(
     resource_defs=DOWNLOAD_RESOURCES_PROD,
-    tags=DOWNLOAD_TAGS,
-    config=hourly_download_schedule_config,
-)
-
-
-download_staging_job = hacker_news_api_download.to_job(
-    resource_defs=DOWNLOAD_RESOURCES_STAGING,
     tags=DOWNLOAD_TAGS,
     config=hourly_download_schedule_config,
 )
