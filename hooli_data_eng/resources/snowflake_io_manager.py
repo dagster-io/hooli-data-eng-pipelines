@@ -166,7 +166,7 @@ class TimePartitionedSnowflakeIOManager(SnowflakeIOManager):
     """
 
     def get_output_asset_partitions(self, context: OutputContext):
-        return [context.resources.partition_start]
+        return set([context.resources.partition_start])
 
     def _get_cleanup_statement(self, table: str, resources):
         return f"""
