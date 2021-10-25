@@ -1,5 +1,5 @@
 locations:
-  data-science-pipeline:
+  data-eng-pipeline:
     build: .
     registry: 764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
     package_name: hooli_data_eng
