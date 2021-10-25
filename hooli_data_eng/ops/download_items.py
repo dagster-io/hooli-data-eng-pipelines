@@ -101,4 +101,10 @@ def build_stories(_context, items: DataFrame) -> DataFrame:
     description="Updates tables in Snowflake",
 )
 def update_tables(tables: List[DataFrame]) -> List[DataFrame]:
-    yield Output(tables, metadata={"n_tables_updated": len(tables)})
+    yield Output(
+        tables,
+        metadata={
+            "n_tables_updated": len(tables),
+            "n_rows_updated": sum([table.shape[0] for table in tables]),
+        },
+    )
