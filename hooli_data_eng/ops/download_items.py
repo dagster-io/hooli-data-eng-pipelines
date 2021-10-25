@@ -1,8 +1,10 @@
 from typing import Tuple
 
-from dagster import AssetKey, In, Nothing, Out, Output, op
+from dagster import AssetKey, In, List, Out, Output, op, usable_as_dagster_type
+from dagster.core.types.decorator import usable_as_dagster_type
 from pandas import DataFrame
 
+from .id_range_for_time import HackerNewsApiIdRange
 
 ACTION_FIELD_NAMES = [
     "id",
@@ -20,12 +22,29 @@ ACTION_FIELD_NAMES = [
 ]
 
 
+@usable_as_dagster_type
+class HNItemsDataFrame(DataFrame):
+    pass
+
+
+@usable_as_dagster_type
+class HNCommentsDataFrame(DataFrame):
+    pass
+
+
+@usable_as_dagster_type
+class HNStoriesDataFrame(DataFrame):
+    pass
+
+
 @op(
-    out={"items": Out(io_manager_key="parquet_io_manager", dagster_type=DataFrame)},
+    out={
+        "items": Out(io_manager_key="parquet_io_manager", dagster_type=HNItemsDataFrame)
+    },
     required_resource_keys={"hn_client"},
     description="Downloads all of the items for the id range passed in as input and creates a DataFrame with all the entries.",
 )
-def download_items(context, id_range: Tuple[int, int]) -> Output:
+def download_items(context, id_range: HackerNewsApiIdRange) -> Output:
     """
     Downloads all of the items for the id range passed in as input and creates a DataFrame with
     all the entries.
@@ -45,7 +64,7 @@ def download_items(context, id_range: Tuple[int, int]) -> Output:
     non_none_rows = [row for row in rows if row is not None]
 
     return Output(
-        DataFrame(non_none_rows).drop_duplicates(subset=["id"]),
+        HNItemsDataFrame(DataFrame(non_none_rows).drop_duplicates(subset=["id"])),
         "items",
         metadata={
             "Non-empty items": len(non_none_rows),
@@ -56,42 +75,50 @@ def download_items(context, id_range: Tuple[int, int]) -> Output:
 
 @op(
     out={
-        "items": Out(
+        "comments_df": Out(
+            dagster_type=HNCommentsDataFrame,
             io_manager_key="warehouse_io_manager",
             metadata={"table": "hackernews.comments"},
         ),
-        "done": Out(),
     },
     description="Creates a dataset of all items that are comments",
 )
-def build_comments(_context, items: DataFrame) -> DataFrame:
+def build_comments(_context, items: HNItemsDataFrame) -> HNCommentsDataFrame:
     items = items.where(items["type"] == "comment")[ACTION_FIELD_NAMES]
     items["user_id"] = items["by"]
     del items["by"]
 
-    yield Output(items, "items")
-    yield Output(True, "done")
+    yield Output(HNCommentsDataFrame(items), "comments_df")
 
 
 @op(
     out={
-        "items": Out(
+        "stories_df": Out(
+            dagster_type=HNStoriesDataFrame,
             io_manager_key="warehouse_io_manager",
             metadata={"table": "hackernews.stories"},
         ),
-        "done": Out(),
     },
     description="Creates a dataset of all items that are stories",
 )
-def build_stories(_context, items: DataFrame) -> DataFrame:
+def build_stories(_context, items: HNItemsDataFrame) -> HNStoriesDataFrame:
     items = items.where(items["type"] == "story")[ACTION_FIELD_NAMES]
     items["user_id"] = items["by"]
     del items["by"]
 
-    yield Output(items, "items")
-    yield Output(True, "done")
+    yield Output(HNStoriesDataFrame(items), "stories")
 
 
-@op(ins={"_ready": In(Nothing)}, out=Out(bool, asset_key=AssetKey("hn_tables_updated")))
-def update_tables(_context):
-    yield Output(True)
+@op(
+    ins={"tables": In(List[DataFrame], description="Tables to update in Snowflake")},
+    out={
+        "updated_tables": Out(
+            List[DataFrame],
+            description="Updated Snowflake tables",
+            asset_key=AssetKey("hacker_news_tables"),
+        )
+    },
+    description="Updates tables in Snowflake",
+)
+def update_tables(tables: List[DataFrame]) -> List[DataFrame]:
+    yield Output(tables, metadata={"n_tables_updated": len(tables)})

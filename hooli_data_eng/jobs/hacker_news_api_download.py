@@ -26,16 +26,37 @@ SNOWFLAKE_CONF = {
 
 DOWNLOAD_RESOURCES_PROD = {
     "io_manager": s3_pickle_io_manager.configured(
-        {"s3_bucket": "hackernews-elementl-prod"}
+        {"s3_bucket": "hackernews-elementl-prod"},
+        description=(
+            "Default S3 pickle IOManager that stores output values in the configured S3 bucket "
+            "(`s3://hackernews-elementl-prod`)."
+        ),
     ),
-    "s3": s3_resource,
-    "partition_start": ResourceDefinition.string_resource(),
-    "partition_end": ResourceDefinition.string_resource(),
+    "s3": s3_resource.configured({}, description="Provides access to AWS S3."),
+    "partition_start": ResourceDefinition.string_resource(
+        description="Specifies the start of the partition."
+    ),
+    "partition_end": ResourceDefinition.string_resource(
+        description="Specifies the end of the partition."
+    ),
     "parquet_io_manager": partitioned_parquet_io_manager.configured(
-        {"base_path": "s3://hackernews-elementl-prod"}
+        {"base_path": "s3://hackernews-elementl-prod"},
+        description=(
+            "IOManager that stores partitioned DataFrames using parquet at the configured path "
+            "(`s3://hackernews-elementl-prod`). Requires `partition_start` and `partition_end` "
+            "resources to specify the appropriate partition."
+        ),
     ),
     "warehouse_io_manager": time_partitioned_snowflake_io_manager.configured(
-        SNOWFLAKE_CONF
+        SNOWFLAKE_CONF,
+        description=(
+            "This version of the SnowflakeIOManager divides its data into seperate time "
+            "partitions. Requires partition_start and partition_end resources.\n\n"
+            "Deletes the data in the Snowflake table present within those bounds, then loads "
+            "output data into the table.\n\n"
+            "This is useful for pipelines that run on a schedule, updating each hour (or day, "
+            "etc.) with new data."
+        ),
     ),
     "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
 }
@@ -65,8 +86,8 @@ DOWNLOAD_TAGS = {
 )
 def ingest_hacker_news():
     items = download_items(id_range_for_time())
-    _, comments_built = build_comments(items)
-    _, stories_built = build_stories(items)
+    comments_built = build_comments(items)
+    stories_built = build_stories(items)
     update_tables([comments_built, stories_built])
 
 

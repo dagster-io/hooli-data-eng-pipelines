@@ -79,6 +79,7 @@ class PartitionedParquetIOManager(ParquetIOManager):
 
 
 @io_manager(
+    description="IOManager that stores DataFrames using parquet at the configured path.",
     config_schema={"base_path": str},
 )
 def parquet_io_manager(_):
@@ -87,6 +88,10 @@ def parquet_io_manager(_):
 
 @io_manager(
     config_schema={"base_path": str},
+    description=(
+        "IOManager that stores partitioned DataFrames using parquet at the configured path. "
+        "Requires partition_start and partition_end resources to specify the appropriate partition."
+    ),
     required_resource_keys={"partition_start", "partition_end"},
 )
 def partitioned_parquet_io_manager(_):

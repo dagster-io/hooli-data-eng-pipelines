@@ -19,6 +19,7 @@ if __name__ == "__main__":
             "dagster_aws",
             "dagster_cloud",
             "dagster_dbt",
+            "dagster_pandas",
             "dbt",
             "fsspec",
             "pandas",

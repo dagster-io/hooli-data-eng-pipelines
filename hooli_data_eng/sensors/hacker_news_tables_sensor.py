@@ -10,7 +10,7 @@ from dagster import (
 )
 
 
-def make_hn_tables_updated_sensor(
+def make_hacker_news_tables_sensor(
     job: Optional[JobDefinition] = None,
     pipeline_name: Optional[str] = None,  # legacy arg
     mode: Optional[str] = None,  # legacy arg
@@ -23,13 +23,13 @@ def make_hn_tables_updated_sensor(
     job_or_pipeline_name = cast(str, job.name if job else pipeline_name)
 
     @asset_sensor(
-        asset_key=AssetKey("hn_tables_updated"),
+        asset_key=AssetKey("hacker_news_tables"),
         pipeline_name=pipeline_name,
-        name=f"{job_or_pipeline_name}_on_hn_tables_updated",
+        name=f"{job_or_pipeline_name}_on_hacker_news_tables",
         mode=mode,
         job=job,
     )
-    def hn_tables_updated_sensor(_context, _event):
+    def hacker_news_tables_sensor(_context, _event):
         yield RunRequest(run_key=None)
 
-    return hn_tables_updated_sensor
+    return hacker_news_tables_sensor
