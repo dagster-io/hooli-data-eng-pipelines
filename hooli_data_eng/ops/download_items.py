@@ -86,7 +86,7 @@ def build_stories(_context, items: DataFrame) -> DataFrame:
     items["user_id"] = items["by"]
     del items["by"]
 
-    yield Output(items, "stories")
+    yield Output(items, "stories_df")
 
 
 @op(
