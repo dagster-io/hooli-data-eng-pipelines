@@ -30,7 +30,7 @@ jobs:
       - name: Run Dagster Cloud CI action
         uses: dagster-io/dagster-cloud-cicd-action@main
         with:
-          dagit-url: https://hooli.dagster.cloud/datascienceprod
+          dagit-url: https://hooli.dagster.cloud/dataengprod
           api-token: ${{ secrets.DAGSTER_AGENT_TOKEN }}
           experimental-git-data: true
 
