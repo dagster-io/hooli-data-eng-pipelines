@@ -1,7 +1,4 @@
-from typing import Tuple
-
-from dagster import AssetKey, In, List, Out, Output, op, usable_as_dagster_type
-from dagster.core.types.decorator import usable_as_dagster_type
+from dagster import AssetKey, In, List, Out, Output, op
 from pandas import DataFrame
 
 from .id_range_for_time import HackerNewsApiIdRange
@@ -22,25 +19,8 @@ ACTION_FIELD_NAMES = [
 ]
 
 
-@usable_as_dagster_type
-class HNItemsDataFrame(DataFrame):
-    pass
-
-
-@usable_as_dagster_type
-class HNCommentsDataFrame(DataFrame):
-    pass
-
-
-@usable_as_dagster_type
-class HNStoriesDataFrame(DataFrame):
-    pass
-
-
 @op(
-    out={
-        "items": Out(io_manager_key="parquet_io_manager", dagster_type=HNItemsDataFrame)
-    },
+    out={"items": Out(io_manager_key="parquet_io_manager", dagster_type=DataFrame)},
     required_resource_keys={"hn_client"},
     description="Downloads all of the items for the id range passed in as input and creates a DataFrame with all the entries.",
 )
@@ -64,7 +44,7 @@ def download_items(context, id_range: HackerNewsApiIdRange) -> Output:
     non_none_rows = [row for row in rows if row is not None]
 
     return Output(
-        HNItemsDataFrame(DataFrame(non_none_rows).drop_duplicates(subset=["id"])),
+        DataFrame(non_none_rows).drop_duplicates(subset=["id"]),
         "items",
         metadata={
             "Non-empty items": len(non_none_rows),
@@ -76,37 +56,37 @@ def download_items(context, id_range: HackerNewsApiIdRange) -> Output:
 @op(
     out={
         "comments_df": Out(
-            dagster_type=HNCommentsDataFrame,
+            dagster_type=DataFrame,
             io_manager_key="warehouse_io_manager",
             metadata={"table": "hackernews.comments"},
         ),
     },
     description="Creates a dataset of all items that are comments",
 )
-def build_comments(_context, items: HNItemsDataFrame) -> HNCommentsDataFrame:
+def build_comments(_context, items: DataFrame) -> DataFrame:
     items = items.where(items["type"] == "comment")[ACTION_FIELD_NAMES]
     items["user_id"] = items["by"]
     del items["by"]
 
-    yield Output(HNCommentsDataFrame(items), "comments_df")
+    yield Output(items, "comments_df")
 
 
 @op(
     out={
         "stories_df": Out(
-            dagster_type=HNStoriesDataFrame,
+            dagster_type=DataFrame,
             io_manager_key="warehouse_io_manager",
             metadata={"table": "hackernews.stories"},
         ),
     },
     description="Creates a dataset of all items that are stories",
 )
-def build_stories(_context, items: HNItemsDataFrame) -> HNStoriesDataFrame:
+def build_stories(_context, items: DataFrame) -> DataFrame:
     items = items.where(items["type"] == "story")[ACTION_FIELD_NAMES]
     items["user_id"] = items["by"]
     del items["by"]
 
-    yield Output(HNStoriesDataFrame(items), "stories")
+    yield Output(items, "stories")
 
 
 @op(
