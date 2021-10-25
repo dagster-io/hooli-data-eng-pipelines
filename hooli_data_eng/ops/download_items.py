@@ -103,8 +103,9 @@ def build_stories(_context, items: DataFrame) -> DataFrame:
 def update_tables(tables: List[DataFrame]) -> List[DataFrame]:
     yield Output(
         tables,
+        "updated_tables",
         metadata={
-            "n_tables_updated": len(tables),
-            "n_rows_updated": sum([table.shape[0] for table in tables]),
+            "total_n_tables_updated": len(tables),
+            "total_n_rows_updated": sum([table.shape[0] for table in tables]),
         },
     )
