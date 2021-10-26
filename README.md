@@ -1,3 +1,3 @@
 # Hooli, Inc. Data Science Team
 
-Dagster application code developed by the data science team at Hooli.
+Dagster application code developed by the data science team at Hooli. Very valuable and exciting.
