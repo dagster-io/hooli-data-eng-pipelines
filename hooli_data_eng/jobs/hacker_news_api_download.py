@@ -1,6 +1,7 @@
 import os
+from datetime import datetime
 
-from dagster import ResourceDefinition, graph
+from dagster import ResourceDefinition, graph, hourly_partitioned_config
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 
 from ..ops.download_items import (
@@ -13,7 +14,17 @@ from ..ops.id_range_for_time import id_range_for_time
 from ..resources.hn_resource import hn_api_subsample_client
 from ..resources.parquet_io_manager import partitioned_parquet_io_manager
 from ..resources.snowflake_io_manager import time_partitioned_snowflake_io_manager
-from ..schedules.hourly_hn_download_schedule import hourly_download_schedule_config
+
+
+@hourly_partitioned_config(start_date=datetime(2021, 10, 14))
+def hourly_download_schedule_config(start: datetime, end: datetime):
+    return {
+        "resources": {
+            "partition_start": {"config": start.strftime("%Y-%m-%d %H:%M:%S")},
+            "partition_end": {"config": end.strftime("%Y-%m-%d %H:%M:%S")},
+        }
+    }
+
 
 # the configuration we'll need to make our Snowflake-based IOManager work
 SNOWFLAKE_CONF = {

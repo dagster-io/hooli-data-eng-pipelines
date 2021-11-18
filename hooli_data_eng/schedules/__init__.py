@@ -1,1 +1,10 @@
-from .hourly_hn_download_schedule import hourly_hn_download_schedule
+from dagster import ScheduleDefinition
+
+from ..jobs import salesforce_ingest
+
+daily_salesforce_ingest = ScheduleDefinition(
+    name="daily_salesforce_ingest",
+    cron_schedule="0 6 * * *",
+    job=salesforce_ingest,
+    description="Daily Fivetran ingest from Salesforce",
+)
