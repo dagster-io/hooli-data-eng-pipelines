@@ -1,10 +1,10 @@
-git+https://github.com/dagster-io/dagster.git@d0b95fd1b6ef74d8d3ba6631af1518cda0c5f528#subdirectory=python_modules/dagster
-git+https://github.com/dagster-io/dagster.git@d0b95fd1b6ef74d8d3ba6631af1518cda0c5f528#subdirectory=python_modules/dagit
-git+https://github.com/dagster-io/dagster.git@d0b95fd1b6ef74d8d3ba6631af1518cda0c5f528#subdirectory=python_modules/libraries/dagster-aws/
-git+https://github.com/dagster-io/dagster-cloud
-git+https://github.com/dagster-io/dagster.git@d0b95fd1b6ef74d8d3ba6631af1518cda0c5f528#subdirectory=python_modules/libraries/dagster-dbt/
-git+https://github.com/dagster-io/dagster.git@d0b95fd1b6ef74d8d3ba6631af1518cda0c5f528#subdirectory=python_modules/libraries/dagster-fivetran/
-git+https://github.com/dagster-io/dagster.git@d0b95fd1b6ef74d8d3ba6631af1518cda0c5f528#subdirectory=python_modules/libraries/dagster-pandas/
+dagster
+dagit
+dagster-aws
+dagster-cloud
+dagster-dbt
+dagster-fivetran
+dagster-pandas
 dbt
 fsspec
 pandas
