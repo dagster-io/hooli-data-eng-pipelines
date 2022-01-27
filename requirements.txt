@@ -5,7 +5,7 @@ dagster-cloud
 dagster-dbt
 dagster-fivetran
 dagster-pandas
-dbt
+dbt==0.21.0
 fsspec
 pandas
 pyarrow
