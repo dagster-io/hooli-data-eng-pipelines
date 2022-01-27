@@ -19,7 +19,7 @@ DBT_PROFILES_DIR = file_relative_path(__file__, "../../hacker_news_dbt/config")
 SNOWFLAKE_CONF = {
     "account": os.getenv("SNOWFLAKE_ACCOUNT", ""),
     "user": os.getenv("SNOWFLAKE_USER", ""),
-    "password": os.getenv("SNOWFLAKE_PASSWORD", ""),
+    "password": os.getenv("SNOWFLAKE_PASSWORD", "").strip("'"),
     "database": "DEMO_DB",
     "warehouse": "TINY_WAREHOUSE",
 }
