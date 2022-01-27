@@ -30,7 +30,7 @@ def hourly_download_schedule_config(start: datetime, end: datetime):
 SNOWFLAKE_CONF = {
     "account": os.getenv("SNOWFLAKE_ACCOUNT", ""),
     "user": os.getenv("SNOWFLAKE_USER", ""),
-    "password": os.getenv("SNOWFLAKE_PASSWORD", ""),
+    "password": os.getenv("SNOWFLAKE_PASSWORD", "").strip("'"),
     "database": "DEMO_DB",
     "warehouse": "TINY_WAREHOUSE",
 }
