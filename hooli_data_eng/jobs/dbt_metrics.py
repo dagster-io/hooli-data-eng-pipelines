@@ -13,6 +13,7 @@ from ..ops.dbt import (
 )
 from ..resources.dbt_asset_resource import SnowflakeQueryDbtAssetResource
 
+# Hack since the snowflake password env var is being wrapped in single quotes
 os.environ["SNOWFLAKE_PASSWORD"] = os.getenv("SNOWFLAKE_PASSWORD", "").strip("'")
 
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../hacker_news_dbt")
