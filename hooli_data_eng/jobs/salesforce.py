@@ -25,7 +25,7 @@ aggregate_salesforce = dbt_cloud_run_op.configured(
             "dbt_cloud": {
                 "config": {
                     "auth_token": {"env": "DBT_CLOUD_AUTH_TOKEN"},
-                    "account_id": os.getenv("DBT_CLOUD_ACCOUNT_ID"),
+                    "account_id": int(os.getenv("DBT_CLOUD_ACCOUNT_ID")),
                 }
             },
             "fivetran": {
