@@ -13,6 +13,8 @@ from ..ops.dbt import (
 )
 from ..resources.dbt_asset_resource import SnowflakeQueryDbtAssetResource
 
+os.environ["SNOWFLAKE_PASSWORD"] = os.getenv("SNOWFLAKE_PASSWORD", "").strip("'")
+
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../hacker_news_dbt")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../../hacker_news_dbt/config")
 
