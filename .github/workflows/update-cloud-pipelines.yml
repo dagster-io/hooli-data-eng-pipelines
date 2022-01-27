@@ -28,11 +28,10 @@ jobs:
         continue-on-error: true
 
       - name: Run Dagster Cloud CI action
-        uses: dagster-io/dagster-cloud-cicd-action/deploy@benpankow/new-git-metadata
+        uses: dagster-io/dagster-cloud-cicd-action/deploy@v0.2.0
         with:
           dagit-url: https://hooli.dagster.cloud/data-eng-prod
           api-token: ${{ secrets.DAGSTER_AGENT_TOKEN }}
-          experimental-git-data: true
 
       - name: Prune unused layers
         run: docker image prune -a -f --filter="label!=sha=${{ github.sha }}"
