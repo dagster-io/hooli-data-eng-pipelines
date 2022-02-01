@@ -1,7 +1,8 @@
-from dagster_fivetran import fivetran_resource, fivetran_sync_op
-from dagster_dbt import dbt_cloud_resource, dbt_cloud_run_op
-from dagster import job
 import os
+
+from dagster import job
+from dagster_dbt import dbt_cloud_resource, dbt_cloud_run_op
+from dagster_fivetran import fivetran_resource, fivetran_sync_op
 
 FIVETRAN_SALESFORCE_SYNC_ID = "conjure_constitutional"
 DBT_CLOUD_SALESFORCE_JOB_ID = 42476
@@ -25,7 +26,7 @@ aggregate_salesforce = dbt_cloud_run_op.configured(
             "dbt_cloud": {
                 "config": {
                     "auth_token": {"env": "DBT_CLOUD_AUTH_TOKEN"},
-                    "account_id": int(os.getenv("DBT_CLOUD_ACCOUNT_ID")),
+                    "account_id": int(os.getenv("DBT_CLOUD_ACCOUNT_ID", 0)),
                 }
             },
             "fivetran": {
