@@ -4,7 +4,7 @@ from dagster import ResourceDefinition, graph
 from dagster.utils import file_relative_path
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 from dagster_dbt import dbt_cli_resource
-
+from dagster_cloud import ALERT_EMAILS_TAG
 from ..ops.dbt import (
     hn_dbt_run,
     hn_dbt_test,
@@ -30,9 +30,7 @@ SNOWFLAKE_CONF = {
 # We define two sets of resources, one for the prod job, which writes to production schemas and
 # s3 buckets, and one for dev job, which writes to alternate schemas and s3 buckets.
 DBT_RESOURCES_PROD = {
-    "io_manager": s3_pickle_io_manager.configured(
-        {"s3_bucket": "hackernews-elementl-prod"}
-    ),
+    "io_manager": s3_pickle_io_manager.configured({"s3_bucket": "hackernews-elementl-prod"}),
     "s3": s3_resource,
     "dbt": dbt_cli_resource.configured(
         {
@@ -57,4 +55,12 @@ def dbt_metrics():
     hn_dbt_test(hn_dbt_run(comments_table_ready, stories_table_ready))
 
 
-dbt_prod_job = dbt_metrics.to_job(resource_defs=DBT_RESOURCES_PROD)
+ALERT_TAGS = {
+    ALERT_EMAILS_TAG: [
+        "richard.hendricks@hooli.com",
+        "nelson.bighetti@hooli.com",
+    ]
+}
+
+
+dbt_prod_job = dbt_metrics.to_job(resource_defs=DBT_RESOURCES_PROD, tags=ALERT_TAGS)

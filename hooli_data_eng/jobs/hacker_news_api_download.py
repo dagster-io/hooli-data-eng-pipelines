@@ -14,6 +14,7 @@ from ..ops.id_range_for_time import id_range_for_time
 from ..resources.hn_resource import hn_api_subsample_client
 from ..resources.parquet_io_manager import partitioned_parquet_io_manager
 from ..resources.snowflake_io_manager import time_partitioned_snowflake_io_manager
+from dagster_cloud import ALERT_EMAILS_TAG
 
 
 @hourly_partitioned_config(start_date=datetime(2021, 10, 14))
@@ -31,7 +32,7 @@ SNOWFLAKE_CONF = {
     "account": os.getenv("SNOWFLAKE_ACCOUNT", ""),
     "user": os.getenv("SNOWFLAKE_USER", ""),
     # Hack since the snowflake password env var is being wrapped in single quotes
-    "password": os.getenv("SNOWFLAKE_PASSWORD", "").strip("'"), 
+    "password": os.getenv("SNOWFLAKE_PASSWORD", "").strip("'"),
     "database": "DEMO_DB",
     "warehouse": "TINY_WAREHOUSE",
 }
@@ -89,6 +90,13 @@ DOWNLOAD_TAGS = {
     }
 }
 
+ALERT_TAGS = {
+    ALERT_EMAILS_TAG: [
+        "richard.hendricks@hooli.com",
+        "nelson.bighetti@hooli.com",
+    ]
+}
+
 
 @graph(
     description=(
@@ -105,7 +113,7 @@ def ingest_hacker_news():
 
 ingest_hacker_news_job = ingest_hacker_news.to_job(
     resource_defs=DOWNLOAD_RESOURCES_PROD,
-    tags=DOWNLOAD_TAGS,
+    tags={**DOWNLOAD_TAGS, **ALERT_TAGS},
     config=hourly_download_schedule_config,
     description=(
         "Date-partitioned job that ingests items from the Hacker News API, builds comments and "
