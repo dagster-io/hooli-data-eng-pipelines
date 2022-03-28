@@ -94,7 +94,8 @@ ALERT_TAGS = {
     ALERT_EMAILS_TAG: [
         "richard.hendricks@hooli.com",
         "nelson.bighetti@hooli.com",
-    ]
+    ],
+    "notify": "slack",
 }
 
 
