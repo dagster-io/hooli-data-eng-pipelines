@@ -2,11 +2,45 @@ version: 2
 
 models:
   - name: stories_agg
-    description: "HackerNews stories"
-    columns: []
+    description: "HackerNews stories, aggregated over different time windows"
+    columns:
+      - name: user_id
+        data_type: str
+      - name: day
+        data_type: timestamp
+      - name: n_stories_7d
+        data_type: int
+      - name: n_stories_30d
+        data_type: int
+      - name: n_stories_90d
+        data_type: int
   - name: comments_agg
-    description: "HackerNews comments"
-    columns: []
+    description: "HackerNews comments, aggregated over different time windows"
+    columns:
+      - name: user_id
+        data_type: str
+      - name: n_comments_7d
+        data_type: int
+      - name: n_comments_30d
+        data_type: int
+      - name: n_comments_90d
+        data_type: int
   - name: user_actions_aggregated
     description: "HackerNews users with enriched data about activity"
-    columns: []
+    columns:
+      - name: user_id
+        data_type: str
+      - name: day
+        data_type: timestamp
+      - name: n_stories_7d
+        data_type: int
+      - name: n_stories_30d
+        data_type: int
+      - name: n_stories_90d
+        data_type: int
+      - name: n_comments_7d
+        data_type: int
+      - name: n_comments_30d
+        data_type: int
+      - name: n_comments_90d
+        data_type: int

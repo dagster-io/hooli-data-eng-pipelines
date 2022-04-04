@@ -1,1 +1,1 @@
-{{ aggregate_actions('hackernews.stories', 'stories') }}
+{{ aggregate_actions(source('hackernews', 'stories'), 'stories') }}
