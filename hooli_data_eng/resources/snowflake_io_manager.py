@@ -4,14 +4,20 @@ from contextlib import contextmanager
 from typing import Any, Dict, Union
 
 import pyspark
-from dagster import (AssetKey, EventMetadataEntry, InputContext, OutputContext,
-                     StringSource, check, io_manager)
+from dagster import (
+    AssetKey,
+    EventMetadataEntry,
+    InputContext,
+    OutputContext,
+    StringSource,
+    check,
+    io_manager,
+)
 from dagster.core.storage.io_manager import IOManager
 from pandas import DataFrame as PandasDataFrame
 from pandas import read_sql
 from snowflake.connector.pandas_tools import pd_writer
-from snowflake.sqlalchemy import \
-    URL  # pylint: disable=no-name-in-module,import-error
+from snowflake.sqlalchemy import URL  # pylint: disable=no-name-in-module,import-error
 from sqlalchemy import create_engine
 
 # def spark_field_to_snowflake_type(spark_field: StructField):
@@ -98,8 +104,7 @@ class SnowflakeIOManager(IOManager):
         schema, table = context.metadata["table"].split(".")
 
         with connect_snowflake(config=context.resource_config, schema=schema) as con:
-            # con.execute(self._get_cleanup_statement(table, context.resources))
-            pass
+            con.execute(self._get_cleanup_statement(table, context.resources))
 
         yield from self._handle_pandas_output(context.resource_config, obj, schema, table)
 
