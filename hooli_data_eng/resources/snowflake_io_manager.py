@@ -1,25 +1,18 @@
-import textwrap
-import pyspark
 import functools
+import textwrap
 from contextlib import contextmanager
 from typing import Any, Dict, Union
 
-from dagster import (
-    AssetKey,
-    EventMetadataEntry,
-    InputContext,
-    OutputContext,
-    StringSource,
-    check,
-    io_manager,
-)
+import pyspark
+from dagster import (AssetKey, EventMetadataEntry, InputContext, OutputContext,
+                     StringSource, check, io_manager)
 from dagster.core.storage.io_manager import IOManager
 from pandas import DataFrame as PandasDataFrame
 from pandas import read_sql
 from snowflake.connector.pandas_tools import pd_writer
-from snowflake.sqlalchemy import URL  # pylint: disable=no-name-in-module,import-error
+from snowflake.sqlalchemy import \
+    URL  # pylint: disable=no-name-in-module,import-error
 from sqlalchemy import create_engine
-
 
 # def spark_field_to_snowflake_type(spark_field: StructField):
 #     # Snowflake does not have a long type (all integer types have the same precision)

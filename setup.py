@@ -25,6 +25,7 @@ if __name__ == "__main__":
             "fsspec",
             "pandas",
             "pyarrow",
+            "pyspark",
             "requests",
             "s3fs",
             "snowflake-sqlalchemy",

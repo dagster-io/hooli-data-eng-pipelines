@@ -2,14 +2,8 @@ import os
 from typing import Union
 
 import pandas
-from dagster import (
-    AssetKey,
-    EventMetadataEntry,
-    IOManager,
-    OutputContext,
-    check,
-    io_manager,
-)
+from dagster import (AssetKey, EventMetadataEntry, IOManager, OutputContext,
+                     check, io_manager)
 
 
 class ParquetIOManager(IOManager):

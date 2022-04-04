@@ -3,18 +3,15 @@ from datetime import datetime
 
 from dagster import ResourceDefinition, graph, hourly_partitioned_config
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
+from dagster_cloud import ALERT_EMAILS_TAG
 
-from ..ops.download_items import (
-    build_comments,
-    build_stories,
-    download_items,
-    update_tables,
-)
+from ..ops.download_items import (build_comments, build_stories,
+                                  download_items, update_tables)
 from ..ops.id_range_for_time import id_range_for_time
 from ..resources.hn_resource import hn_api_subsample_client
 from ..resources.parquet_io_manager import partitioned_parquet_io_manager
-from ..resources.snowflake_io_manager import time_partitioned_snowflake_io_manager
-from dagster_cloud import ALERT_EMAILS_TAG
+from ..resources.snowflake_io_manager import \
+    time_partitioned_snowflake_io_manager
 
 
 @hourly_partitioned_config(start_date=datetime(2021, 10, 14))

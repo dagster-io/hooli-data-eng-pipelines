@@ -3,14 +3,11 @@ import os
 from dagster import ResourceDefinition, graph
 from dagster.utils import file_relative_path
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
-from dagster_dbt import dbt_cli_resource
 from dagster_cloud import ALERT_EMAILS_TAG
-from ..ops.dbt import (
-    hn_dbt_run,
-    hn_dbt_test,
-    preflight_comments_table,
-    preflight_stories_table,
-)
+from dagster_dbt import dbt_cli_resource
+
+from ..ops.dbt import (hn_dbt_run, hn_dbt_test, preflight_comments_table,
+                       preflight_stories_table)
 from ..resources.dbt_asset_resource import SnowflakeQueryDbtAssetResource
 
 # Hack since the snowflake password env var is being wrapped in single quotes

@@ -1,13 +1,7 @@
 from typing import Optional, cast
 
-from dagster import (
-    AssetKey,
-    JobDefinition,
-    RunRequest,
-    SensorDefinition,
-    asset_sensor,
-    check,
-)
+from dagster import (AssetKey, JobDefinition, RunRequest, SensorDefinition,
+                     asset_sensor, check)
 
 
 def make_hacker_news_tables_sensor(
