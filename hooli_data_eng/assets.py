@@ -40,8 +40,8 @@ db_step_launcher = databricks_pyspark_step_launcher.configured(
                 {"pypi": {"package": "requests"}},
             ],
         },
-        "databricks_host": {"env": "DATABRICKS_HOST"},
-        "databricks_token": {"env": "DATABRICKS_TOKEN"},
+        "databricks_host": os.getenv("DATABRICKS_HOST", ""),
+        "databricks_token": os.getenv("DATABRICKS_TOKEN", ""),
         "local_pipeline_package_path": str(Path(__file__).parent.parent),
         "secrets_to_env_variables": [
             {"name": "ADLS2_KEY", "key": "adls2_key", "scope": "dagster-test"},
