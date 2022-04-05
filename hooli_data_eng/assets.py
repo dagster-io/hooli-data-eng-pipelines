@@ -117,7 +117,7 @@ hacker_news_assets = AssetGroup(
             {"adls2_file_system": "demofs"}
         ),
         "adls2": adls2_resource.configured(
-            {"credential": {"key": {"env": "ADLS2_KEY"}}, "storage_account": "dagsterdemo"}
+            {"credential": {"key": os.getenv("ADLS2_KEY", "")}, "storage_account": "dagsterdemo"}
         ),
         "warehouse_io_manager": snowflake_io_manager.configured(
             {
