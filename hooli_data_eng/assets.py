@@ -107,7 +107,7 @@ with open(DBT_MANIFEST_PATH, "r") as f:
     dbt_assets = load_assets_from_dbt_manifest(json.load(f))
 
 
-ag = AssetGroup(
+hacker_news_assets = AssetGroup(
     [hacker_news_actions, comments, stories] + dbt_assets,
     resource_defs={
         "parquet_io_manager": pyspark_parquet_asset_io_manager.configured(

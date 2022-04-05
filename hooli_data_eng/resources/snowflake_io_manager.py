@@ -89,6 +89,7 @@ class SnowflakeIOManager(IOManager):
     """
 
     def get_output_asset_key(self, context: OutputContext):
+        # hack so that the hacker_news_assets job doesn't double-specify assets
         if "assets" not in context.pipeline_name:
             return generate_asset_key_for_snowflake_table(context.metadata["table"])
 
