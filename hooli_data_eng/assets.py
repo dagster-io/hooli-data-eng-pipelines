@@ -106,6 +106,8 @@ def stories(context, hacker_news_actions: pd.DataFrame):
 with open(DBT_MANIFEST_PATH, "r") as f:
     dbt_assets = load_assets_from_dbt_manifest(json.load(f))
 
+# hack
+is_remote = os.getenv("ADLS2_KEY", 1) == os.getenv("DATABRICKS_HOST", 2)
 
 hacker_news_assets = AssetGroup(
     [hacker_news_actions, comments, stories] + dbt_assets,
@@ -129,7 +131,7 @@ hacker_news_assets = AssetGroup(
                 "warehouse": "TINY_WAREHOUSE",
             }
         ),
-        "pyspark": pyspark_resource,
+        "pyspark": pyspark_resource if is_remote else ResourceDefinition.mock_resource(),
         "step_launcher": db_step_launcher,
         "dbt": dbt_cli_resource.configured(
             {

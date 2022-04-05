@@ -35,7 +35,7 @@ hacker_news_dbt:
       user: "{{ env_var('SNOWFLAKE_USER', '') }}"
       password: "{{ env_var('SNOWFLAKE_PASSWORD', '') }}"
 
-      database: TESTDB
+      database: DEMO_DB
       warehouse: TINY_WAREHOUSE
       schema: hacker_news_assets
       client_session_keep_alive: False
