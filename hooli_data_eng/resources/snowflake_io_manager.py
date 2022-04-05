@@ -1,7 +1,9 @@
+import functools
 import textwrap
 from contextlib import contextmanager
 from typing import Any, Dict, Union
 
+import pyspark
 from dagster import (
     AssetKey,
     EventMetadataEntry,
@@ -17,7 +19,6 @@ from pandas import read_sql
 from snowflake.connector.pandas_tools import pd_writer
 from snowflake.sqlalchemy import URL  # pylint: disable=no-name-in-module,import-error
 from sqlalchemy import create_engine
-
 
 # def spark_field_to_snowflake_type(spark_field: StructField):
 #     # Snowflake does not have a long type (all integer types have the same precision)
@@ -88,29 +89,31 @@ class SnowflakeIOManager(IOManager):
     """
 
     def get_output_asset_key(self, context: OutputContext):
-        return generate_asset_key_for_snowflake_table(context.metadata["table"])
+        # hack so that the hacker_news_assets job doesn't double-specify assets
+        if "assets" not in context.pipeline_name:
+            return generate_asset_key_for_snowflake_table(context.metadata["table"])
 
-    def handle_output(self, context: OutputContext, obj: PandasDataFrame):
-        check.inst_param(obj, "obj", PandasDataFrame)
+    def handle_output(
+        self, context: OutputContext, obj: Union[PandasDataFrame, pyspark.sql.DataFrame]
+    ):
+        check.inst_param(obj, "obj", (PandasDataFrame, pyspark.sql.DataFrame))
+
+        # handle pyspark DataFrames by converting them to pandas ;)
+        if isinstance(obj, pyspark.sql.DataFrame):
+            obj = obj.toPandas()
 
         schema, table = context.metadata["table"].split(".")
 
         with connect_snowflake(config=context.resource_config, schema=schema) as con:
             con.execute(self._get_cleanup_statement(table, context.resources))
 
-        yield from self._handle_pandas_output(
-            context.resource_config, obj, schema, table
-        )
+        yield from self._handle_pandas_output(context.resource_config, obj, schema, table)
 
-    def _handle_pandas_output(
-        self, config: Dict, obj: PandasDataFrame, schema: str, table: str
-    ):
+    def _handle_pandas_output(self, config: Dict, obj: PandasDataFrame, schema: str, table: str):
         from snowflake import connector  # pylint: disable=no-name-in-module
 
         yield EventMetadataEntry.int(obj.shape[0], "Rows")
-        yield EventMetadataEntry.md(
-            pandas_columns_to_markdown(obj), "DataFrame columns"
-        )
+        yield EventMetadataEntry.md(pandas_columns_to_markdown(obj), "DataFrame columns")
 
         connector.paramstyle = "pyformat"
         with connect_snowflake(config=config, schema=schema) as con:
@@ -120,7 +123,7 @@ class SnowflakeIOManager(IOManager):
                 con=con,
                 if_exists="append",
                 index=False,
-                method=pd_writer,
+                method=functools.partial(pd_writer, quote_identifiers=False),
             )
 
     def _get_cleanup_statement(self, table: str, _resources):
@@ -129,11 +132,7 @@ class SnowflakeIOManager(IOManager):
         """
 
     def _get_select_statement(self, _resources, metadata: Dict[str, Any]):
-        col_str = (
-            ", ".join(f'"{c}"' for c in metadata["columns"])
-            if "columns" in metadata
-            else "*"
-        )
+        col_str = ", ".join(f'"{c}"' for c in metadata["columns"]) if "columns" in metadata else "*"
         return f"""
         SELECT {col_str} FROM {metadata["table"]};
         """
@@ -191,7 +190,5 @@ def pandas_columns_to_markdown(dataframe: PandasDataFrame) -> str:
         | ---- | ---- |
     """
         )
-        + "\n".join(
-            [f"| {name} | {dtype} |" for name, dtype in dataframe.dtypes.iteritems()]
-        )
+        + "\n".join([f"| {name} | {dtype} |" for name, dtype in dataframe.dtypes.iteritems()])
     )

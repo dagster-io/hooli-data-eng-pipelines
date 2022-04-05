@@ -2,14 +2,8 @@ from collections import namedtuple
 from datetime import datetime, timezone
 from typing import NewType, Tuple
 
-from dagster import (
-    EventMetadataEntry,
-    Out,
-    Output,
-    check,
-    op,
-    usable_as_dagster_type,
-)
+from dagster import (EventMetadataEntry, Out, Output, check, op,
+                     usable_as_dagster_type)
 from dagster.core.types.decorator import usable_as_dagster_type
 
 
