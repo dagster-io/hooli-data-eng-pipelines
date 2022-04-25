@@ -132,7 +132,7 @@ hacker_news_assets = AssetGroup(
             }
         ),
         "pyspark": pyspark_resource if is_remote else ResourceDefinition.mock_resource(),
-        "step_launcher": db_step_launcher,
+        "step_launcher": ResourceDefinition.none_resource(),
         "dbt": dbt_cli_resource.configured(
             {
                 "profiles_dir": DBT_PROFILES_DIR,
