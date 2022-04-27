@@ -6,13 +6,10 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-import pyspark
 from dagster import AssetGroup, ResourceDefinition, asset
 from dagster.utils import file_relative_path
 from dagster_azure.adls2 import adls2_pickle_asset_io_manager, adls2_resource
-from dagster_databricks import databricks_pyspark_step_launcher
 from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_manifest
-from dagster_pyspark import pyspark_resource
 
 from .resources.pyspark_io_manager import pyspark_parquet_asset_io_manager
 from .resources.snowflake_io_manager import snowflake_io_manager
@@ -41,25 +38,21 @@ def hacker_news_actions(context) -> pd.DataFrame:
 
 @asset(
     io_manager_key="warehouse_io_manager",
-    required_resource_keys={"pyspark"},
-    compute_kind="pyspark",
     metadata={"table": "hackernews.comments"},
 )
 def comments(context, hacker_news_actions: pd.DataFrame):
     """Snowflake table containing HackerNews comments actions"""
-    df = context.resources.pyspark.spark_session.createDataFrame(hacker_news_actions)
+    df = hacker_news_actions
     return df.where(df.action_type == "comment")
 
 
 @asset(
     io_manager_key="warehouse_io_manager",
-    required_resource_keys={"pyspark"},
-    compute_kind="pyspark",
     metadata={"table": "hackernews.stories"},
 )
 def stories(context, hacker_news_actions: pd.DataFrame):
     """Snowflake table containing HackerNews stories actions"""
-    df = context.resources.pyspark.spark_session.createDataFrame(hacker_news_actions)
+    df = hacker_news_actions
     return df.where(df.action_type == "story")
 
 
@@ -72,9 +65,9 @@ is_remote = os.getenv("ADLS2_KEY", 1) == os.getenv("DATABRICKS_HOST", 2)
 hacker_news_assets = AssetGroup(
     [hacker_news_actions, comments, stories] + dbt_assets,
     resource_defs={
-        "parquet_io_manager": pyspark_parquet_asset_io_manager.configured(
-            {"prefix": "dbfs:/dagster"}
-        ),
+        # "parquet_io_manager": pyspark_parquet_asset_io_manager.configured(
+        #     {"prefix": "dbfs:/dagster"}
+        # ),
         "adls2_io_manager": adls2_pickle_asset_io_manager.configured(
             {"adls2_file_system": "demofs"}
         ),
@@ -91,7 +84,7 @@ hacker_news_assets = AssetGroup(
                 "warehouse": "TINY_WAREHOUSE",
             }
         ),
-        "pyspark": pyspark_resource if is_remote else ResourceDefinition.mock_resource(),
+        # "pyspark": pyspark_resource if is_remote else ResourceDefinition.mock_resource(),
         "dbt": dbt_cli_resource.configured(
             {
                 "profiles_dir": DBT_PROFILES_DIR,
