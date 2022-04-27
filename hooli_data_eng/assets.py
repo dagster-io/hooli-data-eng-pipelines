@@ -12,6 +12,7 @@ from dagster_pyspark import pyspark_resource
 
 from .resources.pyspark_io_manager import pyspark_parquet_asset_io_manager
 from .resources.snowflake_io_manager import snowflake_io_manager
+import time
 
 DBT_PROJECT_DIR = file_relative_path(__file__, "../hacker_news_dbt")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../hacker_news_dbt/config")
@@ -36,24 +37,26 @@ def hacker_news_actions(context) -> pd.DataFrame:
 
 
 @asset(
-    io_manager_key="warehouse_io_manager",
+    io_manager_key="adls2_io_manager",
     # required_resource_keys={"pyspark"},
     compute_kind="pandas",
     metadata={"table": "hackernews.comments"},
 )
 def comments(context, hacker_news_actions: pd.DataFrame):
     """Snowflake table containing HackerNews comments actions"""
+    time.sleep(0.5)
     return hacker_news_actions
 
 
 @asset(
-    io_manager_key="warehouse_io_manager",
+    io_manager_key="adls2_io_manager",
     # required_resource_keys={"pyspark"},
     compute_kind="pandas",
     metadata={"table": "hackernews.stories"},
 )
 def stories(context, hacker_news_actions: pd.DataFrame):
     """Snowflake table containing HackerNews stories actions"""
+    time.sleep(0.5)
     return hacker_news_actions
 
 
