@@ -1,3 +1,4 @@
+from typing import Any
 from dagster import AssetKey, In, List, Out, Output, op
 from pandas import DataFrame
 
@@ -24,16 +25,14 @@ ACTION_FIELD_NAMES = [
     required_resource_keys={"hn_client"},
     description="Downloads all of the items for the id range passed in as input and creates a DataFrame with all the entries.",
 )
-def download_items(context, id_range: HackerNewsApiIdRange) -> Output:
+def download_items(context, id_range: Any) -> Output:
     """
     Downloads all of the items for the id range passed in as input and creates a DataFrame with
     all the entries.
     """
     start_id, end_id = id_range
 
-    context.log.info(
-        f"Downloading range {start_id} up to {end_id}: {end_id - start_id} items."
-    )
+    context.log.info(f"Downloading range {start_id} up to {end_id}: {end_id - start_id} items.")
 
     rows = []
     for item_id in range(start_id, end_id):
