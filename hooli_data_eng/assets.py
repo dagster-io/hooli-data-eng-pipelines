@@ -2,15 +2,11 @@ import datetime
 import json
 import os
 import random
-from pathlib import Path
-from typing import Optional
 
 import pandas as pd
-import pyspark
-from dagster import AssetGroup, ResourceDefinition, asset
+from dagster import AssetGroup, asset
 from dagster.utils import file_relative_path
 from dagster_azure.adls2 import adls2_pickle_asset_io_manager, adls2_resource
-from dagster_databricks import databricks_pyspark_step_launcher
 from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_manifest
 from dagster_pyspark import pyspark_resource
 
@@ -20,46 +16,6 @@ from .resources.snowflake_io_manager import snowflake_io_manager
 DBT_PROJECT_DIR = file_relative_path(__file__, "../hacker_news_dbt")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../hacker_news_dbt/config")
 DBT_MANIFEST_PATH = file_relative_path(__file__, "../hacker_news_dbt/target/manifest.json")
-
-db_step_launcher = databricks_pyspark_step_launcher.configured(
-    {
-        "run_config": {
-            "run_name": "launch_step",
-            "cluster": {"existing": "0330-205159-1zaw1cv6"},
-            "libraries": [
-                {"pypi": {"package": "dagster-azure"}},
-                {"pypi": {"package": "dagster-aws"}},
-                {"pypi": {"package": "dagster-pandas"}},
-                {"pypi": {"package": "dagster-dbt"}},
-                {"pypi": {"package": "dbt-core"}},
-                {"pypi": {"package": "dbt-snowflake"}},
-                {"pypi": {"package": "dagster-fivetran"}},
-                {"pypi": {"package": "dagster-cloud"}},
-                {"pypi": {"package": "pandas>=1.4.0"}},
-                {"pypi": {"package": "snowflake-sqlalchemy"}},
-                {"pypi": {"package": "requests"}},
-            ],
-        },
-        "databricks_host": os.getenv("DATABRICKS_HOST", ""),
-        "databricks_token": os.getenv("DATABRICKS_TOKEN", ""),
-        "local_pipeline_package_path": str(Path(__file__).parent.parent),
-        "secrets_to_env_variables": [
-            {"name": "ADLS2_KEY", "key": "adls2_key", "scope": "dagster-test"},
-            {"name": "DATABRICKS_HOST", "key": "adls2_key", "scope": "dagster-test"},
-            {"name": "DATABRICKS_TOKEN", "key": "adls2_key", "scope": "dagster-test"},
-            {"name": "SNOWFLAKE_USER", "key": "snowflake_user", "scope": "dagster-test"},
-            {"name": "SNOWFLAKE_PASSWORD", "key": "snowflake_password", "scope": "dagster-test"},
-            {"name": "SNOWFLAKE_ACCOUNT", "key": "snowflake_account", "scope": "dagster-test"},
-        ],
-        "storage": {
-            "s3": {
-                "access_key_key": "access_key_key",
-                "secret_key_key": "secret_key_key",
-                "secret_scope": "dagster-test",
-            }
-        },
-    }
-)
 
 
 @asset(
@@ -81,7 +37,7 @@ def hacker_news_actions(context) -> pd.DataFrame:
 
 @asset(
     io_manager_key="warehouse_io_manager",
-    required_resource_keys={"step_launcher", "pyspark"},
+    required_resource_keys={"pyspark"},
     compute_kind="pyspark",
     metadata={"table": "hackernews.comments"},
 )
@@ -93,7 +49,7 @@ def comments(context, hacker_news_actions: pd.DataFrame):
 
 @asset(
     io_manager_key="warehouse_io_manager",
-    required_resource_keys={"step_launcher", "pyspark"},
+    required_resource_keys={"pyspark"},
     compute_kind="pyspark",
     metadata={"table": "hackernews.stories"},
 )
@@ -131,8 +87,7 @@ hacker_news_assets = AssetGroup(
                 "warehouse": "TINY_WAREHOUSE",
             }
         ),
-        "pyspark": pyspark_resource if is_remote else ResourceDefinition.mock_resource(),
-        "step_launcher": db_step_launcher,
+        "pyspark": pyspark_resource,
         "dbt": dbt_cli_resource.configured(
             {
                 "profiles_dir": DBT_PROFILES_DIR,
