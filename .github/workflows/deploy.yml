@@ -8,8 +8,8 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 env:
-  DAGSTER_CLOUD_URL: https://hooli.dagster.cloud/data-eng-prod
-  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_AGENT_TOKEN }}
+  DAGSTER_CLOUD_URL: "https://hooli.dagster.cloud/data-eng-prod"
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
 
 jobs:
   parse_workspace:
@@ -51,7 +51,7 @@ jobs:
       - name: Build and deploy to Dagster Cloud hybrid
         uses: dagster-io/dagster-cloud-action/actions/hybrid_prod_deploy@v0.1
         with:
-          dagster_cloud_api_token: ${{ secrets.DAGSTER_AGENT_TOKEN }}
+          dagster_cloud_api_token: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
           location: ${{ toJson(matrix.location) }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
