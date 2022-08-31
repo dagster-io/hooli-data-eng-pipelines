@@ -2,6 +2,8 @@ dagster==0.14.7
 dagit==0.14.7
 dagster-aws==0.14.7
 dagster-cloud==0.14.7
+dagster-azure==0.14.7
+dagster-databricks==0.14.7
 dagster-dbt==0.14.7
 dagster-fivetran==0.14.7
 dagster-pandas==0.14.7
@@ -9,6 +11,7 @@ dbt==0.21.0
 fsspec
 pandas
 pyarrow
+pyspark
 requests
 s3fs
 snowflake-sqlalchemy
