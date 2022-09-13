@@ -25,6 +25,17 @@ models:
         data_type: int
       - name: n_comments_90d
         data_type: int
+  - name: jobs_agg
+    description: "HackerNews job postings, aggregated over different time windows"
+    columns:
+      - name: user_id
+        data_type: str
+      - name: n_jobs_7d
+        data_type: int
+      - name: n_jobs_30d
+        data_type: int
+      - name: n_jobs_90d
+        data_type: int
   - name: user_actions_aggregated
     description: "HackerNews users with enriched data about activity"
     columns:
@@ -43,4 +54,10 @@ models:
       - name: n_comments_30d
         data_type: int
       - name: n_comments_90d
+        data_type: int
+      - name: n_jobs_7d
+        data_type: int
+      - name: n_jobs_30d
+        data_type: int
+      - name: n_jobs_90d
         data_type: int

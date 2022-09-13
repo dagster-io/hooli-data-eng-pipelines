@@ -1,0 +1,1 @@
+{{ aggregate_actions(source('hackernews', 'jobs'), 'jobs') }}

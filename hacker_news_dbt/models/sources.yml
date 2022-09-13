@@ -5,3 +5,4 @@ sources:
     tables:
       - name: comments
       - name: stories
+      - name: jobs

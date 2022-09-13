@@ -7,7 +7,11 @@ import pandas as pd
 from dagster import AssetGroup, asset
 from dagster.utils import file_relative_path
 from dagster_azure.adls2 import adls2_pickle_asset_io_manager, adls2_resource
-from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_manifest
+from dagster_dbt import (
+    dbt_cli_resource,
+    load_assets_from_dbt_manifest,
+    load_assets_from_dbt_project,
+)
 from dagster_pyspark import pyspark_resource
 
 from .resources.pyspark_io_manager import pyspark_parquet_asset_io_manager
@@ -29,7 +33,9 @@ def hacker_news_actions(context) -> pd.DataFrame:
     n_values = int(duration.total_seconds() / 360)
     columns = ["action_type", "user_id", "time"]
     data = {
-        "action_type": random.choices(["comment", "story"], weights=[0.8, 0.2], k=n_values),
+        "action_type": random.choices(
+            ["comment", "story", "job"], weights=[0.7, 0.2, 0.1], k=n_values
+        ),
         "user_id": (random.randint(1000, 9999) for _ in range(n_values)),
         "time": (datetime.datetime.now().timestamp() for _ in range(n_values)),
     }
@@ -60,14 +66,26 @@ def stories(context, hacker_news_actions: pd.DataFrame):
     return hacker_news_actions
 
 
+@asset(
+    io_manager_key="adls2_io_manager",
+    # required_resource_keys={"pyspark"},
+    compute_kind="pandas",
+    metadata={"table": "hackernews.jobs"},
+)
+def jobs(context, hacker_news_actions: pd.DataFrame):
+    """Snowflake table containing HackerNews jobs postings"""
+    time.sleep(0.5)
+    return hacker_news_actions
+
+
 with open(DBT_MANIFEST_PATH, "r") as f:
-    dbt_assets = load_assets_from_dbt_manifest(json.load(f))
+    dbt_assets = load_assets_from_dbt_project(DBT_PROJECT_DIR, DBT_PROFILES_DIR)
 
 # hack
 is_remote = os.getenv("ADLS2_KEY", 1) == os.getenv("DATABRICKS_HOST", 2)
 
 hacker_news_assets = AssetGroup(
-    [hacker_news_actions, comments, stories] + dbt_assets,
+    [hacker_news_actions, comments, stories, jobs] + dbt_assets,
     resource_defs={
         # "parquet_io_manager": pyspark_parquet_asset_io_manager.configured(
         #     {"prefix": "dbfs:/dagster"}
