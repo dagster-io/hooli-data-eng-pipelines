@@ -10,6 +10,6 @@ def prod_repo():
     return [
         make_hacker_news_tables_sensor(dbt_prod_job),
         schedule_from_partitions(ingest_hacker_news_job),
-        daily_salesforce_ingest,
+        # daily_salesforce_ingest,
         hourly_hn_assets,
     ]
