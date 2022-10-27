@@ -1,1 +1,0 @@
-{{ aggregate_actions(source('hackernews', 'comments'), 'comments') }}

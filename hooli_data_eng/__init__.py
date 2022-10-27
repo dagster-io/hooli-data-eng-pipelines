@@ -1,1 +1,1 @@
-from .repo import prod_repo
+from .repository import hooli_data_eng

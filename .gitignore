@@ -5,3 +5,4 @@ __pycache__
 pyvenv.cfg
 *.egg-info
 .ipynb_checkpoints/
+.bashrc
