@@ -58,7 +58,7 @@ forecasting_assets = load_assets_from_package_module(
 def get_env():
     if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
         return "BRANCH"
-    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-pipeline":
+    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
         return "PROD"
     return "LOCAL"
 
