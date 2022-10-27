@@ -126,21 +126,26 @@ resource_def = {
     }
 }
 
+assets_with_resources = with_resources(
+        dbt_assets + raw_data_assets + forecasting_assets,
+        resource_def[get_env()]
+) 
+
 # ---------------------------------------------------
 # Jobs and Sensors
 
 analytics_job = define_asset_job("refresh_analytics_model_job",
      selection=AssetSelection.keys(["analytics", "daily_order_summary"]).upstream(), 
-     config = {
-        "resources": resource_def[get_env()]
-     }
+    #  config = {
+    #     "resources": resource_def[get_env()]
+    #  }
 )
 
 predict_job = define_asset_job("predict_job", 
     selection=AssetSelection.keys(["forecasting","predicted_orders"]),
-    config = {
-        "resources": resource_def[get_env()]
-     }
+    # config = {
+    #     "resources": resource_def[get_env()]
+    #  }
 )
 
 @asset_sensor(asset_key=AssetKey(["analytics", "orders_augmented"]), job = predict_job)
@@ -155,11 +160,10 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 
 @repository
 def hooli_data_eng():
-    return with_resources(
-        dbt_assets + raw_data_assets + forecasting_assets,
-        resource_def[get_env()]
-    ) + [
+    return assets_with_resources + [
         ScheduleDefinition(job=analytics_job, cron_schedule="0 * * * *")
     ] + [ 
     orders_sensor 
+    ] + [
+        analytics_job, predict_job
     ]
