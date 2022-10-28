@@ -6,6 +6,8 @@ from scipy import optimize
 
 from dagster import AssetIn, asset,  MonthlyPartitionsDefinition
 
+from prophet import Prophet
+
 
 def model_func(x, a, b):
     return a * np.exp(b * (x / 10**18 - 1.6095))
@@ -30,6 +32,23 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
     context.log.info("Starting with: " + str(p0[0]) + " and " + str(p0[1]))
     context.log.info("Ended with: " + str(coeffs[0]) + " and " + str(coeffs[1]))
     return coeffs
+
+@asset(
+    ins={"daily_order_summary": AssetIn(key_prefix=["analytics"])},
+    compute_kind="ml_tool",
+    key_prefix=["forecasting"]
+)
+def order_prophet_model(context, daily_order_summary: pd.DataFrame) -> pd.DataFrame:
+    """Model parameters that best fit the observed data"""
+    df = pd.DataFrame({
+      'ds': daily_order_summary['order_date'],
+      'y': daily_order_summary['num_orders']
+    })
+    m = Prophet()
+    m.fit(df)
+    future = m.make_future_dataframe(periods=30)
+    forecast = m.predict(future)
+    return forecast
 
 @asset(
   ins={
