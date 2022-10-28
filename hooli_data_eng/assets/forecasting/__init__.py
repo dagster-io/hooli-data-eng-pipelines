@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy import optimize
 
-from dagster import AssetIn, asset,  MonthlyPartitionsDefinition
+from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output
 
 
 def model_func(x, a, b):
@@ -41,7 +41,7 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01")
 )
-def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> pd.DataFrame:
+def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> Output[pd.DataFrame]:
     """Model errors by month"""
     a, b = order_forecast_model
     target_date = pd.to_datetime(context.asset_partition_key_for_output())
@@ -55,8 +55,8 @@ def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forec
     predicted_orders = model_func(x = date_range.astype(np.int64), a=a, b=b)
     error = sum(target_orders['num_orders']) - sum(predicted_orders)
     context.log.info("Error for " + str(target_date) + ": " + str(error))
-
-    return pd.DataFrame({"error": [error]})
+    
+    return Output(pd.DataFrame({"error": [error]}), metadata={"error_obs_prds": error})
 
 
 @asset(
