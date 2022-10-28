@@ -41,8 +41,8 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01")
 )
-def model_stats_by_day(context, daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> pd.DataFrame:
-    """Model errors by day"""
+def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> pd.DataFrame:
+    """Model errors by month"""
     a, b = order_forecast_model
     target_date = pd.to_datetime(context.asset_partition_key_for_output())
     target_month = target_date.month
