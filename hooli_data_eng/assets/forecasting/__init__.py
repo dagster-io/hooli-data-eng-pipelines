@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy import optimize
 
-from dagster import AssetIn, asset
+from dagster import AssetIn, asset,  MonthlyPartitionsDefinition
 
 
 def model_func(x, a, b):
@@ -30,6 +30,34 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
     context.log.info("Starting with: " + str(p0[0]) + " and " + str(p0[1]))
     context.log.info("Ended with: " + str(coeffs[0]) + " and " + str(coeffs[1]))
     return coeffs
+
+@asset(
+  ins={
+        "daily_order_summary": AssetIn(key_prefix=["analytics"]),
+        "order_forecast_model": AssetIn(),
+    },
+    compute_kind="ml_tool",
+    key_prefix=["forecasting"],
+    io_manager_key="model_io_manager",
+    partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01")
+)
+def model_stats_by_day(context, daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> pd.DataFrame:
+    """Model errors by day"""
+    a, b = order_forecast_model
+    target_date = pd.to_datetime(context.asset_partition_key_for_output())
+    target_month = target_date.month
+    daily_order_summary['order_date'] = pd.to_datetime(daily_order_summary['order_date'])
+    daily_order_summary['order_month'] = pd.DatetimeIndex(daily_order_summary['order_date']).month
+    target_orders = daily_order_summary[(daily_order_summary['order_month'] == target_month)]
+    date_range  = pd.date_range(
+        start=target_date, end=target_date + pd.DateOffset(days=30)
+    )
+    predicted_orders = model_func(x = date_range.astype(np.int64), a=a, b=b)
+    error = sum(target_orders['num_orders']) - sum(predicted_orders)
+    context.log.info("Error for " + str(target_date) + ": " + str(error))
+
+    return pd.DataFrame({"error": [error]})
+
 
 @asset(
     ins={
