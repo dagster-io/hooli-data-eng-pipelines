@@ -113,8 +113,8 @@ resource_def = {
             "password": {"env": "SNOWFLAKE_PASSWORD"},
             "warehouse": "TINY_WAREHOUSE"
         }),
-        "ml_err_io_manager": ml_err_s3_pickle_io_manager.configured({
-            "s3_bucket": "hooli-demo"
+        "model_io_manager": s3_pickle_io_manager.configured({
+            "s3_bucket": "hooli-demo-branch"
         }),
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
