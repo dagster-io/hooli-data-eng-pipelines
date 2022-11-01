@@ -1,13 +1,16 @@
 import os
 
+from dagster_pyspark import pyspark_resource
+
 from hooli_data_eng.assets import forecasting, raw_data
+from hooli_data_eng.resources.databricks import db_step_launcher
 from dagster_duckdb import build_duckdb_io_manager
 from dagster_duckdb_pandas import DuckDBPandasTypeHandler
 from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
 from dagster_snowflake import build_snowflake_io_manager
 from dagster_snowflake_pandas import SnowflakePandasTypeHandler
 from dagster_aws.s3 import s3_resource, s3_pickle_io_manager
-
+from dagster_databricks import databricks_pyspark_step_launcher
 
 
 from dagster import (
@@ -115,7 +118,9 @@ resource_def = {
             "project_dir": DBT_PROJECT_DIR,
             "profiles_dir": DBT_PROFILES_DIR,
             "target": "LOCAL"
-        })
+        }),
+        "pyspark": pyspark_resource,
+        "step_launcher": ResourceDefinition.none_resource()
     },
 
     "BRANCH": {
@@ -134,7 +139,9 @@ resource_def = {
             "project_dir": DBT_PROJECT_DIR,
             "profiles_dir": DBT_PROFILES_DIR,
             "target": "BRANCH"
-        })
+        }),
+        "pyspark": pyspark_resource,
+        "step_launcher": ResourceDefinition.none_resource()
 
     },
 
@@ -154,7 +161,9 @@ resource_def = {
             "project_dir": DBT_PROJECT_DIR,
             "profiles_dir": DBT_PROFILES_DIR,
             "target": "PROD"
-        })
+        }),
+        "pyspark": pyspark_resource,
+        "step_launcher": ResourceDefinition.none_resource()
 
     }
 }
@@ -191,6 +200,15 @@ predict_job = define_asset_job("predict_job",
     selection=AssetSelection.keys(["forecasting","predicted_orders"]),
 )
 
+databricks_job = define_asset_job("databricks_job", 
+    selection=AssetSelection.keys(["forecasting","big_orders"]),
+    config = {
+        "resources": {
+            "step_launcher": db_step_launcher
+        }
+    }
+)
+
 # This sensor listens for changes to the orders_augmented asset which 
 # represents a dbt model. When the table managed by dbt is updated, 
 # this sensor will trigger the predict_job above, ensuring that anytime 
@@ -210,4 +228,4 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 
 @repository
 def hooli_data_eng():
-    return assets_with_resources + [analytics_schedule] + [orders_sensor] + [analytics_job, predict_job]
+    return assets_with_resources + [analytics_schedule] + [orders_sensor] + [analytics_job, predict_job, databricks_job]

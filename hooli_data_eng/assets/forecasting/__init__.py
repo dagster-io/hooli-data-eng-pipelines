@@ -78,3 +78,15 @@ def predicted_orders(
     )
     predicted_data = model_func(x=future_dates.astype(np.int64), a=a, b=b)
     return pd.DataFrame({"order_date": future_dates, "num_orders": predicted_data})
+
+@asset(
+    ins={"predicted_orders": AssetIn(key_prefix=["forecasting"])},
+    compute_kind="pyspark",
+    key_prefix=["forecasting"],
+    required_resource_keys={"step_launcher", "pyspark"}, 
+    metadata = {"resource_constrained_at": 50}
+)
+def big_orders(context,predicted_orders: pd.DataFrame):
+    """Days where predicted orders surpass our current carrying capacity"""
+    df = context.resources.pyspark.spark_session.createDataFrame(predicted_orders)
+    return df.where(df.num_orders >= 50).toPandas()

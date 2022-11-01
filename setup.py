@@ -19,7 +19,9 @@ if __name__ == "__main__":
             "dagster-duckdb-pandas",
             "dagster-snowflake",
             "dagster-snowflake-pandas",
-            "dagster-cloud"
+            "dagster-cloud",
+            "dagster-pyspark",
+            "dagster-databricks"
         ],
         extras_require={"dev": ["dagit", "pytest"]},
     )
