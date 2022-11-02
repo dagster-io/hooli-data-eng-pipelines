@@ -1,5 +1,6 @@
 from dagster_databricks import databricks_pyspark_step_launcher
 from pathlib import Path
+import os
 
 cluster_config = {
     "size": {
@@ -40,6 +41,10 @@ db_step_launcher = databricks_pyspark_step_launcher.configured({
         "databricks_host": {"env": "DATABRICKS_HOST"},
         "databricks_token": {"env": "DATABRICKS_TOKEN"},
         "local_pipeline_package_path": str(Path(__file__).parent.parent.parent),
+        "env_variables": {
+            "DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT": os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", ""),
+            "DAGSTER_CLOUD_DEPLOYMENT_NAME": os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "")
+        },
         "secrets_to_env_variables": [
             {"name": "DATABRICKS_TOKEN", "key": "adls2_key", "scope": "dagster-test"},
             {"name": "SNOWFLAKE_USER", "key": "snowflake_user", "scope": "dagster-test"},
