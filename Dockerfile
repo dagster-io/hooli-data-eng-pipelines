@@ -4,7 +4,7 @@ WORKDIR /opt/dagster/app
 
 RUN apt-get update && apt-get install -y git 
 
-RUN apt install default-jre
+RUN apt install -y default-jre
 
 ADD . .
 
