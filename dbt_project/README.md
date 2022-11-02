@@ -1,15 +1,7 @@
-Welcome to your new dbt project!
+This dbt project integrates with Dagster in a few ways:
 
-### Using the starter project
+1. The dbt profiles match to the dagster resource paradigm, allowing for local testing against DuckDB, staging against a Snowflake staging DB, and production against a Snowflake prod DB.
 
-Try running the following commands:
-- dbt run
-- dbt test
+2. The dbt models refer to sources. These sources represent tables created by dagster. The use of sources allows Dagster to correctly infer and display the upstream asset dependencies of the dbt models. 
 
-
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+3. In dagster, the asset key prefix is used to represent the schema.
