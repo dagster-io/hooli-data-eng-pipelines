@@ -46,6 +46,7 @@ db_step_launcher = databricks_pyspark_step_launcher.configured({
             "DAGSTER_CLOUD_DEPLOYMENT_NAME": os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "")
         },
         "secrets_to_env_variables": [
+            {"name": "DATABRICKS_HOST", "key": "adls2_key", "scope": "dagster-test"},
             {"name": "DATABRICKS_TOKEN", "key": "adls2_key", "scope": "dagster-test"},
             {"name": "SNOWFLAKE_USER", "key": "snowflake_user", "scope": "dagster-test"},
             {"name": "SNOWFLAKE_PASSWORD", "key": "snowflake_password", "scope": "dagster-test"},
