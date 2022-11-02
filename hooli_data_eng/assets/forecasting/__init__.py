@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy import optimize
 
-from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output
+from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output, Field, Int
 
 
 def model_func(x, a, b):
@@ -15,7 +15,7 @@ def model_func(x, a, b):
     ins={"daily_order_summary": AssetIn(key_prefix=["analytics"])},
     compute_kind="ml_tool",
     io_manager_key="model_io_manager",
-    config_schema={"a_init": int, "b_init": int}
+    config_schema={"a_init": Field(Int, default_value=5), "b_init": Field(Int, default_value=5)}
     
 )
 def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:

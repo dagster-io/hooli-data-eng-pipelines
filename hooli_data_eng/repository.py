@@ -141,7 +141,7 @@ resource_def = {
             "target": "BRANCH"
         }),
         "pyspark": pyspark_resource,
-        "step_launcher": ResourceDefinition.none_resource()
+        "step_launcher": db_step_launcher
 
     },
 
@@ -163,7 +163,7 @@ resource_def = {
             "target": "PROD"
         }),
         "pyspark": pyspark_resource,
-        "step_launcher": ResourceDefinition.none_resource()
+        "step_launcher": db_step_launcher
 
     }
 }
@@ -200,14 +200,6 @@ predict_job = define_asset_job("predict_job",
     selection=AssetSelection.keys(["forecasting","predicted_orders"]),
 )
 
-databricks_job = define_asset_job("databricks_job", 
-    selection=AssetSelection.keys(["forecasting","big_orders"]),
-    config = {
-        "resources": {
-            "step_launcher": db_step_launcher
-        }
-    }
-)
 
 # This sensor listens for changes to the orders_augmented asset which 
 # represents a dbt model. When the table managed by dbt is updated, 
@@ -228,4 +220,4 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 
 @repository
 def hooli_data_eng():
-    return assets_with_resources + [analytics_schedule] + [orders_sensor] + [analytics_job, predict_job, databricks_job]
+    return assets_with_resources + [analytics_schedule] + [orders_sensor] + [analytics_job, predict_job]
