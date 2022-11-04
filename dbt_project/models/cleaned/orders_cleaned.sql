@@ -4,6 +4,6 @@ select
         purchase_price,
         sku,
         dt,
-        dt as date,
+        cast(dt as datetime) as order_date,
         quantity * purchase_price as order_total
-from {{ source('raw_data', 'orders') }}
+from {{ source("RAW_DATA", "orders") }}

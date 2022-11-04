@@ -1,10 +1,10 @@
 version: 2
 
 sources:
-  - name: raw_data
+  - name: "RAW_DATA"
     tables:
-      - name: orders
-      - name: users
-  - name: forecasting
+      - name: "orders"
+      - name: "users"
+  - name: "FORECASTING"
     tables:
-      - name: predicted_orders
+      - name: "predicted_orders"
