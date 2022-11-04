@@ -11,7 +11,7 @@ from dagster_snowflake import build_snowflake_io_manager
 from dagster_snowflake_pandas import SnowflakePandasTypeHandler
 from dagster_aws.s3 import s3_resource, s3_pickle_io_manager
 from dagster_databricks import databricks_pyspark_step_launcher
-
+from dagstermill import local_output_notebook_io_manager
 
 from dagster import (
     AssetSelection,
@@ -113,6 +113,7 @@ resource_def = {
     "LOCAL": {
         "io_manager": duckdb_io_manager,
         "model_io_manager": fs_io_manager,
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": ResourceDefinition.none_resource(),
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -134,6 +135,7 @@ resource_def = {
         "model_io_manager": s3_pickle_io_manager.configured({
             "s3_bucket": "hooli-demo-branch"
         }),
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -156,6 +158,7 @@ resource_def = {
         "model_io_manager": s3_pickle_io_manager.configured({
             "s3_bucket": "hooli-demo"
         }),
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
