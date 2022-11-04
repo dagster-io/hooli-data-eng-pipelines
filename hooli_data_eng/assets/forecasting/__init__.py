@@ -26,7 +26,7 @@ def model_func(x, a, b):
 # The final model coefficients are logged to Dagster 
 # using context.log.info
 @asset(
-    ins={"daily_order_summary": AssetIn(key_prefix=["analytics"])},
+    ins={"daily_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     compute_kind="ml_tool",
     io_manager_key="model_io_manager",
     config_schema={"a_init": Field(Int, default_value=5), "b_init": Field(Int, default_value=5)}
@@ -52,7 +52,7 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
 # Helpful information is surfaced in dagster using the Output(... metadata)
 @asset(
   ins={
-        "daily_order_summary": AssetIn(key_prefix=["analytics"]),
+        "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
     compute_kind="ml_tool",
@@ -82,11 +82,11 @@ def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forec
 # and stores the result in the warehouse
 @asset(
     ins={
-        "daily_order_summary": AssetIn(key_prefix=["analytics"]),
+        "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
     compute_kind="ml_tool",
-    key_prefix=["forecasting"],
+    key_prefix=["FORECASTING"],
 )
 def predicted_orders(
     daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
@@ -108,9 +108,9 @@ def predicted_orders(
 # In branch and production, the step launcher is responsible
 # for building a databricks cluster 
 @asset(
-    ins={"predicted_orders": AssetIn(key_prefix=["forecasting"])},
+    ins={"predicted_orders": AssetIn(key_prefix=["FORECASTING"])},
     compute_kind="pyspark",
-    key_prefix=["forecasting"],
+    key_prefix=["FORECASTING"],
     required_resource_keys={"step_launcher", "pyspark"}, 
     metadata = {"resource_constrained_at": 50}
 )
@@ -125,7 +125,7 @@ model_nb = define_dagstermill_asset(
     name = "model_nb",
     notebook_path = file_relative_path(__file__, "model.ipynb"),
     ins = {
-          "daily_order_summary": AssetIn(key_prefix=["analytics"], dagster_type = pd.DataFrame),
+          "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"], dagster_type = pd.DataFrame),
           "order_forecast_model": AssetIn(),
     },
     required_resource_keys = {"io_manager"}
