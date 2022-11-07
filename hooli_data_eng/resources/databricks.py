@@ -38,6 +38,8 @@ db_step_launcher = databricks_pyspark_step_launcher.configured({
                 {"pypi": {"package": "scipy"}},
                 {"pypi": {"package": "plotnine"}},
                 {"pypi": {"package": "dagstermill"}},
+                {"pypi": {"package": "responses"}},
+                {"pypi": {"package": "requests"}},
             ],
         },
         "databricks_host": {"env": "DATABRICKS_HOST"},

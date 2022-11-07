@@ -4,6 +4,7 @@ from dagster_pyspark import pyspark_resource
 
 from hooli_data_eng.assets import forecasting, raw_data
 from hooli_data_eng.resources.databricks import db_step_launcher
+from hooli_data_eng.resources.api import data_api
 from dagster_duckdb import build_duckdb_io_manager
 from dagster_duckdb_pandas import DuckDBPandasTypeHandler
 from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
@@ -114,6 +115,7 @@ resource_def = {
         "io_manager": duckdb_io_manager,
         "model_io_manager": fs_io_manager,
         "output_notebook_io_manager": local_output_notebook_io_manager,
+        "data_api": data_api,
         "s3": ResourceDefinition.none_resource(),
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -136,6 +138,7 @@ resource_def = {
             "s3_bucket": "hooli-demo-branch"
         }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
+        "data_api": data_api,
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -160,6 +163,7 @@ resource_def = {
         }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
+        "data_api": data_api,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
             "profiles_dir": DBT_PROFILES_DIR,

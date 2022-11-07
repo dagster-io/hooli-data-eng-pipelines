@@ -23,7 +23,9 @@ if __name__ == "__main__":
             "dagster-pyspark",
             "dagster-databricks",
             "dagstermill",
-            "plotnine"
+            "plotnine",
+            "responses", 
+            "requests"
         ],
         extras_require={"dev": ["dagit", "pytest"]},
     )
