@@ -5,6 +5,7 @@ from dagster_pyspark import pyspark_resource
 from hooli_data_eng.assets import forecasting, raw_data
 from hooli_data_eng.resources.databricks import db_step_launcher
 from hooli_data_eng.resources.api import data_api
+from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
 from dagster_duckdb import build_duckdb_io_manager
 from dagster_duckdb_pandas import DuckDBPandasTypeHandler
 from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
@@ -227,4 +228,4 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 
 @repository
 def hooli_data_eng():
-    return assets_with_resources + [analytics_schedule] + [orders_sensor] + [analytics_job, predict_job]
+    return assets_with_resources + [analytics_schedule] + [orders_sensor, watch_s3_sensor] + [analytics_job, predict_job]
