@@ -21,7 +21,9 @@ if __name__ == "__main__":
             "dagster-snowflake-pandas",
             "dagster-cloud",
             "dagster-pyspark",
-            "dagster-databricks"
+            "dagster-databricks",
+            "dagstermill",
+            "plotnine"
         ],
         extras_require={"dev": ["dagit", "pytest"]},
     )

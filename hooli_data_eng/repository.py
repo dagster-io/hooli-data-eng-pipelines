@@ -11,7 +11,7 @@ from dagster_snowflake import build_snowflake_io_manager
 from dagster_snowflake_pandas import SnowflakePandasTypeHandler
 from dagster_aws.s3 import s3_resource, s3_pickle_io_manager
 from dagster_databricks import databricks_pyspark_step_launcher
-
+from dagstermill import local_output_notebook_io_manager
 
 from dagster import (
     AssetSelection,
@@ -43,8 +43,8 @@ from dagster._utils import file_relative_path
 # which can be found in dbt_project/models/sources.yml
 raw_data_assets = load_assets_from_package_module(
     raw_data,
-    group_name="raw_data",
-    key_prefix=["raw_data"]
+    group_name="RAW_DATA",
+    key_prefix=['RAW_DATA']
 )
 
 # Our second set of assets represent dbt models
@@ -60,7 +60,7 @@ DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_project/config")
 dbt_assets = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
-    key_prefix=["analytics"]
+    key_prefix=["ANALYTICS"]
 )
 
 
@@ -69,7 +69,7 @@ dbt_assets = load_assets_from_dbt_project(
 # assets/forecasting/__init__.py
 forecasting_assets = load_assets_from_package_module(
     forecasting,
-    group_name="forecasting"
+    group_name="FORECASTING"
 )
 
 
@@ -113,6 +113,7 @@ resource_def = {
     "LOCAL": {
         "io_manager": duckdb_io_manager,
         "model_io_manager": fs_io_manager,
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": ResourceDefinition.none_resource(),
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -134,6 +135,7 @@ resource_def = {
         "model_io_manager": s3_pickle_io_manager.configured({
             "s3_bucket": "hooli-demo-branch"
         }),
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -156,6 +158,7 @@ resource_def = {
         "model_io_manager": s3_pickle_io_manager.configured({
             "s3_bucket": "hooli-demo"
         }),
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -188,7 +191,7 @@ assets_with_resources = with_resources(
 # this job will update the raw data assets and then the dbt models
 # upstream of daily_order_summary.
 analytics_job = define_asset_job("refresh_analytics_model_job",
-     selection=AssetSelection.keys(["analytics", "daily_order_summary"]).upstream(), 
+     selection=AssetSelection.keys(["ANALYTICS", "daily_order_summary"]).upstream(), 
 )
 
 # This schedule tells dagster to run the analytics_job daily
@@ -197,7 +200,7 @@ analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 * * 
 # This job selects the predicted_orders asset defined in 
 # assets/forecasting/__init__.py
 predict_job = define_asset_job("predict_job", 
-    selection=AssetSelection.keys(["forecasting","predicted_orders"]),
+    selection=AssetSelection.keys(["FORECASTING","predicted_orders"]),
 )
 
 
@@ -205,7 +208,7 @@ predict_job = define_asset_job("predict_job",
 # represents a dbt model. When the table managed by dbt is updated, 
 # this sensor will trigger the predict_job above, ensuring that anytime 
 # new order data is produced the forecast is updated
-@asset_sensor(asset_key=AssetKey(["analytics", "orders_augmented"]), job = predict_job)
+@asset_sensor(asset_key=AssetKey(["ANALYTICS", "orders_augmented"]), job = predict_job)
 def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
     yield RunRequest(
         run_key = context.cursor

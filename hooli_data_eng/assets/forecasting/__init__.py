@@ -5,14 +5,28 @@ import pandas as pd
 from scipy import optimize
 
 from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output, Field, Int
-
+from dagstermill import define_dagstermill_asset
+from dagster._utils import file_relative_path
 
 def model_func(x, a, b):
     return a * np.exp(b * (x / 10**18 - 1.6095))
 
+# ----- Forecasting Assets ----- 
+# These assets live downstream of tables created by dbt
+# which are referenced by the key_prefix 'analytics', 
+# but otherwise can be referenced as data frames --  
+# the IO from the warehouse to these pandas assets are handled 
+# by the IO Managers
 
+# This asset trains a model and stores the model coefficients as 
+# a tuple 
+# The hyper-parameters for the model (a_init and b_init) are 
+# available as parameters that can be changed in Dagster's 
+# Launchpad (see config_schema)
+# The final model coefficients are logged to Dagster 
+# using context.log.info
 @asset(
-    ins={"daily_order_summary": AssetIn(key_prefix=["analytics"])},
+    ins={"daily_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     compute_kind="ml_tool",
     io_manager_key="model_io_manager",
     config_schema={"a_init": Field(Int, default_value=5), "b_init": Field(Int, default_value=5)}
@@ -31,9 +45,14 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
     context.log.info("Ended with: " + str(coeffs[0]) + " and " + str(coeffs[1]))
     return coeffs
 
+# This asset uses the data from the warehouse and the trained model 
+# coefficients to track model error by month
+# The monthly error is modelled as a partioned asset to enable
+# easy backfills if the error statistic or upstream model change
+# Helpful information is surfaced in dagster using the Output(... metadata)
 @asset(
   ins={
-        "daily_order_summary": AssetIn(key_prefix=["analytics"]),
+        "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
     compute_kind="ml_tool",
@@ -59,13 +78,15 @@ def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forec
     return Output(pd.DataFrame({"error": [error]}), metadata={"error_obs_prds": error})
 
 
+# This asset uses the trained model to forecast 30 day forward orders
+# and stores the result in the warehouse
 @asset(
     ins={
-        "daily_order_summary": AssetIn(key_prefix=["analytics"]),
+        "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
     compute_kind="ml_tool",
-    key_prefix=["forecasting"],
+    key_prefix=["FORECASTING"],
 )
 def predicted_orders(
     daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
@@ -79,10 +100,17 @@ def predicted_orders(
     predicted_data = model_func(x=future_dates.astype(np.int64), a=a, b=b)
     return pd.DataFrame({"order_date": future_dates, "num_orders": predicted_data})
 
+# This asset uses the forecasted orders to flag any days that 
+# surpass available capacity 
+# The asset uses spark which requires a pyspark resource 
+# and a step launcher
+# Locally the pyspark session runs in a local spark context
+# In branch and production, the step launcher is responsible
+# for building a databricks cluster 
 @asset(
-    ins={"predicted_orders": AssetIn(key_prefix=["forecasting"])},
+    ins={"predicted_orders": AssetIn(key_prefix=["FORECASTING"])},
     compute_kind="pyspark",
-    key_prefix=["forecasting"],
+    key_prefix=["FORECASTING"],
     required_resource_keys={"step_launcher", "pyspark"}, 
     metadata = {"resource_constrained_at": 50}
 )
@@ -90,3 +118,15 @@ def big_orders(context,predicted_orders: pd.DataFrame):
     """Days where predicted orders surpass our current carrying capacity"""
     df = context.resources.pyspark.spark_session.createDataFrame(predicted_orders)
     return df.where(df.num_orders >= 50).toPandas()
+
+# This asset uses a Jupyter Notebook which takes inputs from the warehouse
+# and the trained model coefficients
+model_nb = define_dagstermill_asset(
+    name = "model_nb",
+    notebook_path = file_relative_path(__file__, "model.ipynb"),
+    ins = {
+          "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"], dagster_type = pd.DataFrame),
+          "order_forecast_model": AssetIn(),
+    },
+    required_resource_keys = {"io_manager"}
+) 
