@@ -1,3 +1,15 @@
+# ---------------------------------------------------
+# This resource allows the big_orders asset to 
+# run on a databricks cluster in branch or prod 
+# (Locally the asset uses a local pyspark session)
+
+# During asset evaluation, a new cluster is created 
+# and the project code is sent to the cluster using a 
+# *step launcher*
+# Existing clusters can be used instead of creating a
+# job-specific cluster by changing the cluster key to 
+# "cluster": {"existing": "cluster-id"}
+
 from dagster_databricks import databricks_pyspark_step_launcher
 from pathlib import Path
 import os

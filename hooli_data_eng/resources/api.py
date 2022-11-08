@@ -1,3 +1,12 @@
+# ---------------------------------------------------
+# This file mimics how you might represent an external
+# API in Dagster
+# The API is a resource that is configured and used
+# by the raw_data/__init__.py orders and users assets
+
+# This demo uses the responses package to mock an API
+# instead of relying on a real API
+
 from dagster import resource
 import responses 
 import requests
@@ -12,7 +21,10 @@ class RawDataAPI():
     @responses.activate
     def get_orders(_):
         responses.get(
+            # fake endpoint
             "http://api.jaffleshop.co/v1/orders",
+
+            # random order data returned, see utils.py
             json = random_data(
                extra_columns={"order_id": str, "quantity": int, "purchase_price": float, "sku": str},
                n = 1000
@@ -24,7 +36,10 @@ class RawDataAPI():
     @responses.activate
     def get_users(_):
         responses.get(
+            # fake endpoint
             "http://api.jaffleshop.co/v1/users",
+
+            # random user data returned
             json = pd.DataFrame(
                 {
                     "user_id": range(1000),

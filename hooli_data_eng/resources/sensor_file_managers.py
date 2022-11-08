@@ -1,9 +1,19 @@
+# ---------------------------------------------------
+# This file contains a set of resources used 
+# by the jobs/watch_s3.py sensor
+# Creating a new resource is as easy 
+# as implementing a class and then a function
+# that invokes the class 
+# These resources accept configuration, passed 
+# in the sensor definition 
 
-from dagster import build_resources, resource
+
+from dagster import resource
 import boto3
-from dagster._utils import file_relative_path
 import os
-import boto3
+
+# The LocalFileSystem class allows for local 
+# testing with the same sensor code 
 
 class LocalFileSystem():
     def __init__(self, base_dir):
@@ -18,6 +28,11 @@ class LocalFileSystem():
 def local_fs(context):
     base_dir = context.resource_config["base_dir"]
     return LocalFileSystem(base_dir)
+
+# The s3FileSystem class is used on branch and 
+# production deployments 
+# TODO: Implement AWS profiles as config
+
 
 class s3FileSystem():
     def __init__(self, region_name, s3_bucket):
@@ -34,8 +49,6 @@ class s3FileSystem():
                 return mtime
                 
         
-        
-
 @resource(config_schema = {"region_name": str, "s3_bucket": str})
 def s3_fs(context):
     region_name = context.resource_config["region_name"]
