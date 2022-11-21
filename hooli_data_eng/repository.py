@@ -102,7 +102,7 @@ def get_env():
 # Locally, have dagster use DuckDB as the database
 # See dbt_project/config/profiles.yml to see the matching dbt config
 duckdb_io_manager = build_duckdb_io_manager([DuckDBPandasTypeHandler()]).configured(
-    {"duckdb_path": os.path.join(DBT_PROJECT_DIR, "example.duckdb")}
+    {"database": os.path.join(DBT_PROJECT_DIR, "example.duckdb")}
 )
 
 # For production we'll use snowflake and s3
