@@ -19,5 +19,5 @@ def avg_order(company_perf: pd.DataFrame) -> pd.DataFrame:
 )
 def max_order(company_perf: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({
-        "max_order": max(company_perf['n_orders'])
+        "max_order": [max(company_perf['n_orders'])]
     })
