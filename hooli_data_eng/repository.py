@@ -2,7 +2,7 @@ import os
 
 from dagster_pyspark import pyspark_resource
 
-from hooli_data_eng.assets import forecasting, raw_data
+from hooli_data_eng.assets import forecasting, raw_data, marketing
 from hooli_data_eng.resources.databricks import db_step_launcher
 from hooli_data_eng.resources.api import data_api
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
@@ -28,7 +28,8 @@ from dagster import (
     load_assets_from_package_module,
     repository,
     with_resources,
-    AssetKey
+    AssetKey,
+    build_asset_reconciliation_sensor
 )
 from dagster._utils import file_relative_path
 
@@ -74,6 +75,10 @@ forecasting_assets = load_assets_from_package_module(
     group_name="FORECASTING"
 )
 
+marketing_assets = load_assets_from_package_module(
+    marketing,
+    group_name="MARKETING"
+)
 
 # ---------------------------------------------------
 # Resources
@@ -177,7 +182,7 @@ resource_def = {
 }
 
 assets_with_resources = with_resources(
-        dbt_assets + raw_data_assets + forecasting_assets,
+        dbt_assets + raw_data_assets + forecasting_assets + marketing_assets,
         resource_def[get_env()]
 ) 
 
@@ -219,6 +224,10 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
         run_key = context.cursor
     )
 
+freshness_sla_sensor = build_asset_reconciliation_sensor(
+    name = "freshness_sla_sensor",
+    asset_selection = AssetSelection.keys(AssetKey(["MARKETING", "avg_order"]))
+)
 
 # ---------------------------------------------------
 # Repository
@@ -228,4 +237,4 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 
 @repository
 def hooli_data_eng():
-    return assets_with_resources + [analytics_schedule] + [orders_sensor, watch_s3_sensor] + [analytics_job, predict_job]
+    return assets_with_resources + [analytics_schedule] + [orders_sensor, watch_s3_sensor, freshness_sla_sensor] + [analytics_job, predict_job]
