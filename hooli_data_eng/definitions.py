@@ -221,6 +221,7 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 # freshness policies
 freshness_sla_sensor = build_asset_reconciliation_sensor(
     name = "freshness_sla_sensor",
+    minimum_interval_seconds = 9,
     asset_selection = 
         AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])).upstream() | 
         AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"])).upstream() 
