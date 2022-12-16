@@ -21,8 +21,10 @@ To understand the structure, start with the file `hooli_data_eng/repository.py`.
 - *Jobs*: allow us to automate when our assets are updated. This example includes jobs that run on a *Schedule* and *Sensors* that trigger jobs to run when upstream data is ready. Jobs can target assets, see `repository.py` or they can define imperative operations, see `jobs/watch_s3.py`.
 - *Job Configuration* allows Dagster to parameterize tasks, this example includes a forecasting model with hyper parameters passed as job config.
 - *Partitions and Backfills* allow Dagster to represent partitioned data with no additional code. This example includes a partitioned model stats asset (`hooli_data_eng/assets/forecasting/__init__.py`). Using partitions allows the Hooli data team to track model performance overtime, account for model drift, and run back tests for new models.
-- The asset `big_orders` in `hopoli_data_eng/assets/forecasting/__init__.py` uses Spark. Locally, Spark is run through a local PySpark process. In production, a `resources/databricks.py` Databricks *Step Launcher* is used to dynamically create a Spark cluster for processing.
+- The asset `big_orders` in `hooli_data_eng/assets/forecasting/__init__.py` uses Spark. Locally, Spark is run through a local PySpark process. In production, a `resources/databricks.py` Databricks *Step Launcher* is used to dynamically create a Spark cluster for processing.
 - The asset `model_nb` is an example of *Dagstermill* which lets you run Jupyter Notebooks as assets, including notebooks that should take upstream assets as inputs.
+- *Sensors* are used to run jobs based on external events. See for example `hooli_data_eng/jobs/watch_s3.py`. 
+- *Declarative Scheduling* is used to keep certain marketing and analytics assets up to date based on a stakeholder SLA using freshness policies and an asset reconciliation sensor. Examples include `hooli_data_eng/assets/marketing/__init__.py` and `dbt_project/models/ANALYTICS/daily_order_summary.sql`. 
 
 ## Deployment Architecture 
 

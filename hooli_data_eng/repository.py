@@ -224,9 +224,13 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
         run_key = context.cursor
     )
 
+# This sensor kicks off runs when assets are stale and violoating their
+# freshness policies
 freshness_sla_sensor = build_asset_reconciliation_sensor(
     name = "freshness_sla_sensor",
-    asset_selection = AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])).upstream()
+    asset_selection = 
+        AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])).upstream() | 
+        AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"])).upstream() 
 )
 
 # ---------------------------------------------------
