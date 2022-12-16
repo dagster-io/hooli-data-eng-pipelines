@@ -12,11 +12,11 @@ from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
 from dagster_snowflake import build_snowflake_io_manager
 from dagster_snowflake_pandas import SnowflakePandasTypeHandler
 from dagster_aws.s3 import s3_resource, s3_pickle_io_manager
-from dagster_databricks import databricks_pyspark_step_launcher
 from dagstermill import local_output_notebook_io_manager
 
 from dagster import (
     AssetSelection,
+    Definitions,
     EventLogEntry,
     RunRequest,
     ScheduleDefinition,
@@ -26,8 +26,6 @@ from dagster import (
     define_asset_job,
     fs_io_manager,
     load_assets_from_package_module,
-    repository,
-    with_resources,
     AssetKey,
     build_asset_reconciliation_sensor
 )
@@ -181,11 +179,6 @@ resource_def = {
     }
 }
 
-assets_with_resources = with_resources(
-        dbt_assets + raw_data_assets + forecasting_assets + marketing_assets,
-        resource_def[get_env()]
-) 
-
 # ---------------------------------------------------
 # Jobs and Sensors
 
@@ -234,11 +227,15 @@ freshness_sla_sensor = build_asset_reconciliation_sensor(
 )
 
 # ---------------------------------------------------
-# Repository
+# Definitions
 
-# A repository is the collection of assets, jobs, schedules, and sensors.
-# Dagster Cloud deployments can contain mulitple repositories.
+# Definitions are the collection of assets, jobs, schedules, resources, and sensors
+# used with a project. Dagster Cloud deployments can contain mulitple projects.
 
-@repository
-def hooli_data_eng():
-    return assets_with_resources + [analytics_schedule] + [orders_sensor, watch_s3_sensor, freshness_sla_sensor] + [analytics_job, predict_job]
+defs = Definitions(
+    assets = [*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
+    resources = resource_def[get_env()],
+    schedules = [analytics_schedule], 
+    sensors = [orders_sensor, watch_s3_sensor, freshness_sla_sensor],
+    jobs = [analytics_job, predict_job]
+)

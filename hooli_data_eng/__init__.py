@@ -1,1 +1,1 @@
-from .repository import hooli_data_eng
+from .definitions import defs
