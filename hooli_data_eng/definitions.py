@@ -31,6 +31,63 @@ from dagster import (
 )
 from dagster._utils import file_relative_path
 
+# --- BEGIN TEMPORARY PATCH
+
+import dagster
+from dagster._core.definitions.events import AssetKeyPartitionKey
+
+
+def new_get_latest_materialization_record(
+        self,
+        asset,
+        after_cursor = None,
+        before_cursor = None,
+    ):
+        if isinstance(asset, AssetKey):
+            asset_partition = AssetKeyPartitionKey(asset_key=asset)
+        else:
+            asset_partition = asset
+
+        # fancy caching only applies to after_cursor
+        if before_cursor is not None:
+            return self._get_materialization_record(
+                asset_partition=asset_partition,
+                after_cursor=after_cursor,
+                before_cursor=before_cursor,
+            )
+
+        if asset_partition in self._latest_materialization_record_cache:
+            cached_record = self._latest_materialization_record_cache[asset_partition]
+            if after_cursor is None or after_cursor < cached_record.storage_id:
+                return cached_record
+            else:
+                return None
+        elif asset_partition in self._no_materializations_after_cursor_cache:
+            if (
+                after_cursor is not None
+                and after_cursor >= self._no_materializations_after_cursor_cache[asset_partition]
+            ):
+                return None
+
+        record = self._get_materialization_record(
+            asset_partition=asset_partition, after_cursor=after_cursor, before_cursor=before_cursor
+        )
+
+        if record:
+            self._latest_materialization_record_cache[asset_partition] = record
+            return record
+        else:
+            if after_cursor is not None:
+                self._no_materializations_after_cursor_cache[asset_partition] = min(
+                    after_cursor,
+                    self._no_materializations_after_cursor_cache.get(asset_partition, after_cursor),
+                )
+            return None
+
+dagster._utils.caching_instance_queryer.CachingInstanceQueryer.get_latest_materialization_record = new_get_latest_materialization_record
+
+# --- END TEMPORARY PATCH
+
 # ---------------------------------------------------
 # Assets
 
