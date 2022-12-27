@@ -13,6 +13,7 @@ import requests
 import pandas as pd
 from hooli_data_eng.utils import random_data
 import numpy as np
+import random 
 
 class RawDataAPI():
     def __init__(self):
@@ -20,6 +21,10 @@ class RawDataAPI():
 
     @responses.activate
     def get_orders(_):
+        # add lots of flakiness
+        if random.randint(0,10) <= 6:
+            raise Exception("API time out")
+
         responses.get(
             # fake endpoint
             "http://api.jaffleshop.co/v1/orders",
@@ -35,6 +40,10 @@ class RawDataAPI():
 
     @responses.activate
     def get_users(_):
+        # add some of flakiness
+        if random.randint(0,10) <= 3:
+            raise Exception("API time out")
+
         responses.get(
             # fake endpoint
             "http://api.jaffleshop.co/v1/users",

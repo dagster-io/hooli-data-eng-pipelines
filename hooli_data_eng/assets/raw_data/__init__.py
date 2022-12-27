@@ -1,5 +1,5 @@
 import pandas as pd
-from dagster import asset
+from dagster import asset, RetryPolicy, Backoff, Jitter
 
 
 @asset(
@@ -16,7 +16,13 @@ def users(context) -> pd.DataFrame:
 
 @asset(
     compute_kind="api",
-    required_resource_keys={"data_api"}
+    required_resource_keys={"data_api"},
+    retry_policy=RetryPolicy(
+        max_retries=3, 
+        delay=1, 
+        backoff=Backoff.LINEAR,
+        jitter=Jitter.FULL
+    )
 )
 def orders(context) -> pd.DataFrame:
     """A table containing all orders that have been placed"""

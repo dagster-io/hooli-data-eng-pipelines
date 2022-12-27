@@ -250,8 +250,10 @@ resource_def = {
 # which is an asset representing a model in dbt. In this case, 
 # this job will update the raw data assets and then the dbt models
 # upstream of daily_order_summary.
-analytics_job = define_asset_job("refresh_analytics_model_job",
+analytics_job = define_asset_job(
+     name = "refresh_analytics_model_job",
      selection=AssetSelection.keys(["ANALYTICS", "daily_order_summary"]).upstream(), 
+     tags = {"dagster/max_retries": "1"}
 )
 
 # This schedule tells dagster to run the analytics_job daily
@@ -281,7 +283,8 @@ freshness_sla_sensor = build_asset_reconciliation_sensor(
     minimum_interval_seconds = 9,
     asset_selection = 
         AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])).upstream() | 
-        AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"])).upstream() 
+        AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"])).upstream(),
+    run_tags={"dagster/max_retries": "2"} 
 )
 
 # ---------------------------------------------------
