@@ -3,6 +3,7 @@ import os
 from dagster_pyspark import pyspark_resource
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing
+from hooli_data_eng.assets.delayed_asset_alerts import asset_delay_alert_sensor
 from hooli_data_eng.resources.databricks import db_step_launcher
 from hooli_data_eng.resources.api import data_api
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
@@ -263,6 +264,7 @@ analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 * * 
 # assets/forecasting/__init__.py
 predict_job = define_asset_job("predict_job", 
     selection=AssetSelection.keys(["FORECASTING","predicted_orders"]),
+    tags = {"alert_team": "ml"}
 )
 
 
@@ -297,6 +299,6 @@ defs = Definitions(
     assets = [*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
     resources = resource_def[get_env()],
     schedules = [analytics_schedule], 
-    sensors = [orders_sensor, watch_s3_sensor, freshness_sla_sensor],
+    sensors = [orders_sensor, watch_s3_sensor, freshness_sla_sensor, asset_delay_alert_sensor],
     jobs = [analytics_job, predict_job]
 )

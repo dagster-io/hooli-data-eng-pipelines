@@ -12,6 +12,14 @@ pip install -e ".[dev]"
 dagit
 ```
 
+If you want to test features that require a Dagster Daemon (such as freshness sensors or backfills) use:
+
+```
+make -j 2 run
+```
+
+This command will ensure a clean DAGSTER_HOME directory at ~/.dagster_home and then start the dagster-daemon and dagit using this common directory.
+
 ## Code Structure
 
 To understand the structure, start with the file `hooli_data_eng/repository.py`. This example includes a few key Dagster concepts:
@@ -25,6 +33,8 @@ To understand the structure, start with the file `hooli_data_eng/repository.py`.
 - The asset `model_nb` is an example of *Dagstermill* which lets you run Jupyter Notebooks as assets, including notebooks that should take upstream assets as inputs.
 - *Sensors* are used to run jobs based on external events. See for example `hooli_data_eng/jobs/watch_s3.py`. 
 - *Declarative Scheduling* is used to keep certain marketing and analytics assets up to date based on a stakeholder SLA using freshness policies and an asset reconciliation sensor. Examples include `hooli_data_eng/assets/marketing/__init__.py` and `dbt_project/models/ANALYTICS/daily_order_summary.sql`. 
+- *Retries* are enabled for both runs and assets, making the pipeline robust to occassional flakiness. See `hooli_data_eng/definitions.py` for examples of retries on jobs, and `hooli_data_eng/assets/marketing/__init__.py` for an example of a more complex retry policy on an asset including backoff and jitter. Flakiness is generated in `hooli_data_eng/resources/api.py`.
+- *Alerts* are enabled through Dagster Clould alert policies based on job tags. A custom alert is also specified to notify when assets with SLAs are later than expected. See `hooli_data_eng/assets/delayed_asset_alerts.py`. *Note*: This sensor and alert require AWS SES credentials and will not if you've cloned this repository, instead the sensor evaluation will fail when attempting to send an alert email.
 
 ## Deployment Architecture 
 
