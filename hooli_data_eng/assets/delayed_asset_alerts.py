@@ -1,14 +1,35 @@
-from dagster import FreshnessPolicySensorContext, freshness_policy_sensor, AssetSelection, AssetKey
-from dagster._utils.alert import (
-    EMAIL_MESSAGE,
-    send_email_via_ssl
-)
-from dagster._core.errors import DagsterInvalidDefinitionError
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
-import datetime 
-import ssl
-import smtplib
+from dagster import FreshnessPolicySensorContext, freshness_policy_sensor, AssetSelection, AssetKey, build_resources, ResourceDefinition
+from hooli_data_eng.resources.sensor_smtp import local_email_alert, ses_email_alert
+
 import os
+
+def get_env():
+    if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
+        return "BRANCH"
+    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
+        return "PROD"
+    return "LOCAL"
+
+alert_resources = {
+    "LOCAL": {
+        "email": local_email_alert.configured({
+            "smtp_email_to": ["data@awesome.com"],
+            "smtp_email_from": "no-reply@awesome.com"
+        })
+    },
+    "PROD": {
+        "email": ses_email_alert.configured({
+            "smtp_email_to": ["lopp@elementl.com"],
+            "smtp_email_from": "lopp@elementl.com",
+            "smtp_host": "email-smtp.us-west-2.amazonaws.com",
+            "smtp_username": {"env": "SMTP_USERNAME"},
+            "smtp_password": {"env": "SMTP_PASSWORD"},
+        })
+    },
+    "BRANCH": {
+        "email": ResourceDefinition.none_resource()
+    }
+}
 
 assets_to_monitor = AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])) | AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"]))
 
@@ -18,74 +39,9 @@ def asset_delay_alert_sensor(context: FreshnessPolicySensorContext):
         return
 
     if context.minutes_late >= 2 and context.previous_minutes_late < 2:
-        send_email_alert(
-            context = context,
-            email_username= os.getenv("SMTP_USERNAME"),
-            email_from = "lopp@elementl.com",
-            email_to=["lopp@elementl.com"],
-            email_password=os.getenv("SMTP_PASSWORD"),
-            smtp_host="email-smtp.us-west-2.amazonaws.com",
-            smtp_type="STARTTLS",
-            smtp_port=587
-        )
+        with build_resources(
+            alert_resources[get_env()]
+        ) as resources:
+            resources.email.send_email_alert(context)
     
     return
-
-
-def send_email_via_starttls(
-    email_from: str,
-    email_password: str,
-    email_username: str,
-    email_to: Sequence[str],
-    message: str,
-    smtp_host: str,
-    smtp_port: int,
-):
-    context = ssl.create_default_context()
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls(context=context)
-        server.login(email_username, email_password)
-        server.sendmail(email_from, email_to, message)
-
-def _default_delay_email_body(context) -> str:
-    return "<br>".join(
-        [
-            f"Asset { context.asset_key } late!",
-            f"Late by: { context.minutes_late } minutes"
-        ]
-    )
-
-def _default_delay_email_subject(context) -> str:
-    return f"Dagster Asset Late: { context.asset_key }" 
-
-def send_email_alert(
-    context: FreshnessPolicySensorContext,
-    email_from: str,
-    email_username: str,
-    email_password: str,
-    email_to: Sequence[str],
-    email_body_fn: Callable[["FreshnessPolicySensorContext"], str] = _default_delay_email_body,
-    email_subject_fn: Callable[["FreshnessPolicySensorContext"], str] = _default_delay_email_subject,
-    smtp_host: str = "smtp.gmail.com",
-    smtp_type: str = "SSL",
-    smtp_port: Optional[int] = None,
-):
-    email_body = email_body_fn(context)
-    message = EMAIL_MESSAGE.format(
-        email_to=",".join(email_to),
-        email_from=email_from,
-        email_subject=email_subject_fn(context),
-        email_body=email_body,
-        randomness=datetime.datetime.now(),
-    )
-
-    if smtp_type == "SSL":
-        send_email_via_ssl(
-            email_from, email_password, email_to, message, smtp_host, smtp_port=smtp_port or 465
-        )
-    elif smtp_type == "STARTTLS":
-        send_email_via_starttls(
-            email_from, email_password, email_username, email_to, message, smtp_host, smtp_port=smtp_port or 587
-        )
-    else:
-        raise DagsterInvalidDefinitionError(f'smtp_type "{smtp_type}" is not supported.')
