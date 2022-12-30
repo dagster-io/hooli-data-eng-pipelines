@@ -1,5 +1,5 @@
 
-from dagster import resource
+from dagster import resource, StringSource
 
 from dagster import FreshnessPolicySensorContext
 from dagster._utils.alert import (
@@ -105,8 +105,8 @@ class SESEmailAlert():
 @resource(
     config_schema= {
         "smtp_host": str,
-        "smtp_username": str,
-        "smtp_password": str,
+        "smtp_username": StringSource,
+        "smtp_password": StringSource,
         "smtp_email_from": str,
         "smtp_email_to": list
     }
