@@ -9,16 +9,8 @@ You can clone and run this example locally:
 ```
 git clone https://github.com/dagster-io/hooli-data-eng-pipelines
 pip install -e ".[dev]"
-dagit
+dagster dev
 ```
-
-If you want to test features that require a Dagster Daemon (such as freshness sensors or backfills) use:
-
-```
-make -j 2 run
-```
-
-This command will ensure a clean DAGSTER_HOME directory at ~/.dagster_home and then start the dagster-daemon and dagit using this common directory.
 
 ## Code Structure
 
