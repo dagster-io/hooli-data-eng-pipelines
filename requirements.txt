@@ -1,0 +1,9 @@
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/dagster
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/dagster-graphql
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/dagit
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-aws
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-databricks
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-dbt
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-duckdb-pandas
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-snowflake-pandas
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-spark
