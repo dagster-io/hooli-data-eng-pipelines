@@ -1,59 +1,70 @@
-name: Hybrid Branch Deployments
-
+name: Serverless Branch Deployments
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
-
-concurrency: 
+concurrency:
   # Cancel in-progress runs on same branch
   group: ${{ github.ref }}
   cancel-in-progress: true
-
 env:
-  DAGSTER_CLOUD_URL: "https://hooli.dagster.cloud"
+  DAGSTER_CLOUD_URL: "http://hooli-demo.canary.dagster.cloud"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  ENABLE_FAST_DEPLOYS: 'true'
 
 jobs:
-  parse_workspace:
+  dagster_cloud_default_deploy:
+    name: Dagster Serverless Deploy
     runs-on: ubuntu-latest
     outputs:
       build_info: ${{ steps.parse-workspace.outputs.build_info }}
+    
     steps:
-      - uses: actions/checkout@v3
       - name: Parse cloud workspace
+        if: env.ENABLE_FAST_DEPLOYS != 'true'
         id: parse-workspace
         uses: dagster-io/dagster-cloud-action/actions/utils/parse_workspace@v0.1
         with:
           dagster_cloud_file: dagster_cloud.yaml
 
-  dagster_cloud_build_push:
+      - name: Checkout
+        if: env.ENABLE_FAST_DEPLOYS == 'true'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          path: project-repo
+          
+      - name: Build and deploy Python executable
+        if: env.ENABLE_FAST_DEPLOYS == 'true'
+        uses: dagster-io/dagster-cloud-action/actions/build_deploy_python_executable@pex-v0.1
+        with:
+          dagster_cloud_file: "$GITHUB_WORKSPACE/project-repo/dagster_cloud.yaml"
+          build_output_dir: "$GITHUB_WORKSPACE/build"
+          python_version: "3.8"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dagster_cloud_docker_deploy:
+    name: Dagster Serverless Docker Deploy
     runs-on: ubuntu-latest
-    needs: parse_workspace
-    name: Dagster Hybrid Deploy
+    if: needs.dagster_cloud_default_deploy.outputs.build_info
+    needs: dagster_cloud_default_deploy
     strategy:
       fail-fast: false
       matrix:
-        location: ${{ fromJSON(needs.parse_workspace.outputs.build_info) }}
+        location: ${{ fromJSON(needs.dagster_cloud_default_deploy.outputs.build_info) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           ref: ${{ github.head_ref }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build and deploy to Dagster Cloud hybrid
-        uses: dagster-io/dagster-cloud-action/actions/hybrid_branch_deploy@v0.1
+      - name: Build and deploy to Dagster Cloud serverless
+        uses: dagster-io/dagster-cloud-action/actions/serverless_branch_deploy@v0.1
         with:
           dagster_cloud_api_token: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
           location: ${{ toJson(matrix.location) }}
+          # Uncomment to pass through Github Action secrets as a JSON string of key-value pairs
+          # env_vars: ${{ toJson(secrets) }}
+          organization_id: ${{ secrets.ORGANIZATION_ID }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
