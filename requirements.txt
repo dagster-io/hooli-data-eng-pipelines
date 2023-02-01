@@ -7,3 +7,4 @@ git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules
 git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-duckdb-pandas
 git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-snowflake-pandas
 git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagster-spark
+git+https://github.com/dagster-io/dagster.git@master#subdirectory=python_modules/libraries/dagstermill
