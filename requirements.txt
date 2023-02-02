@@ -41,3 +41,6 @@
 -e ./dagster/python_modules/libraries/dagstermill
 -e ./internal/dagster-cloud/python_modules/dagster-cloud
 dbt-duckdb
+responses
+plotnine
+requests
