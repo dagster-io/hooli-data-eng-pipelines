@@ -30,7 +30,6 @@ jobs:
   dagster_cloud_docker_deploy:
     name: Dagster Serverless Docker Deploy
     runs-on: ubuntu-latest
-    if: needs.parse_workspacde.outputs.build_info
     needs: parse_workspace
     strategy:
       fail-fast: false
