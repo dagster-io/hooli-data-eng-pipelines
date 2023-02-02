@@ -29,43 +29,44 @@ jobs:
   
   dagster_cloud_docker_deploy:
     name: Dagster Serverless Docker Deploy
-      runs-on: ubuntu-latest
-      if: needs.parse_workspacde.outputs.build_info
-      needs: parse_workspace
-      strategy:
-        fail-fast: false
-        matrix:
-          location: ${{ fromJSON(needs.parse_workspace.outputs.build_info) }}
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v3
-          with:
-            ref: ${{ github.head_ref }}
-        - name: Checkout dagster master
-          uses: actions/checkout@v3
-          with:
-            repository: dagster-io/dagster
-            path: ./dagster
+    runs-on: ubuntu-latest
+    if: needs.parse_workspacde.outputs.build_info
+    needs: parse_workspace
+    strategy:
+      fail-fast: false
+      matrix:
+        location: ${{ fromJSON(needs.parse_workspace.outputs.build_info) }}
 
-        - name: Checkout dagster-cloud master from internal
-          uses: actions/checkout@v3
-          with:
-            repository: dagster-io/internal
-            path: ./internal
-            token: ${{ secrets.DAGSTER_INTERNAL_CLONE_PAT}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Checkout dagster master
+        uses: actions/checkout@v3
+        with:
+          repository: dagster-io/dagster
+          path: ./dagster
 
-        - name: Build and deploy to Dagster Cloud serverless
-          uses: dagster-io/dagster-cloud-action/actions/serverless_prod_deploy@v0.1
-          with:
-            dagster_cloud_api_token: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
-            location: ${{ toJson(matrix.location) }}
-            # Uncomment to pass through Github Action secrets as a JSON string of key-value pairs
-            # env_vars: ${{ toJson(secrets) }}
-            organization_id: ${{ secrets.ORGANIZATION_ID }}
-            checkout_repo: 'false'
+      - name: Checkout dagster-cloud master from internal
+        uses: actions/checkout@v3
+        with:
+          repository: dagster-io/internal
+          path: ./internal
+          token: ${{ secrets.DAGSTER_INTERNAL_CLONE_PAT}}
 
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and deploy to Dagster Cloud serverless
+        uses: dagster-io/dagster-cloud-action/actions/serverless_prod_deploy@v0.1
+        with:
+          dagster_cloud_api_token: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+          location: ${{ toJson(matrix.location) }}
+          # Uncomment to pass through Github Action secrets as a JSON string of key-value pairs
+          # env_vars: ${{ toJson(secrets) }}
+          organization_id: ${{ secrets.ORGANIZATION_ID }}
+          checkout_repo: 'false'
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
    
 
 jobs:
