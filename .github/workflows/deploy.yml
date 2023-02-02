@@ -48,11 +48,11 @@ jobs:
           path: ./dagster
 
       - name: Checkout dagster-cloud master from internal
-        uses: actions/checkout@v3
-        with:
-          repository: dagster-io/internal
-          path: ./internal
-          token: ${{ secrets.DAGSTER_INTERNAL_CLONE_PAT}}
+        shell: bash
+        env:
+          PAT: ${{ secrets.DAGSTER_INTERNAL_CLONE_PAT }}
+        run: |
+          git clone "https://slopp:${PAT}@github.com/dagster-io/internal"
 
       - name: Build and deploy to Dagster Cloud serverless
         uses: dagster-io/dagster-cloud-action/actions/serverless_prod_deploy@v0.1
