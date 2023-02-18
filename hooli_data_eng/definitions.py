@@ -201,7 +201,7 @@ analytics_job = define_asset_job(
 )
 
 # This schedule tells dagster to run the analytics_job daily
-analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 * * * *")
+analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 */3 * * *")
 
 # This job selects the predicted_orders asset defined in 
 # assets/forecasting/__init__.py

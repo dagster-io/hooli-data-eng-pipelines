@@ -7,7 +7,7 @@ import pandas as pd
 # and an associated reconciliation sensor
 @asset(
     key_prefix="MARKETING", 
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=90), 
+    freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
     compute_kind="pandas"
 )
 def avg_order(company_perf: pd.DataFrame) -> pd.DataFrame:
@@ -18,7 +18,7 @@ def avg_order(company_perf: pd.DataFrame) -> pd.DataFrame:
 
 @asset(
     key_prefix="MARKETING", 
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=90), 
+    freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
     compute_kind="snowflake"
 )
 def max_order(company_perf: pd.DataFrame) -> pd.DataFrame:
