@@ -35,7 +35,6 @@ def model_func(x, a, b):
 )
 def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
 
-    DbtCliResource().cli()
 
     """Model parameters that best fit the observed data"""
     df = daily_order_summary
