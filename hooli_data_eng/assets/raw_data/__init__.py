@@ -22,7 +22,7 @@ def users(context) -> pd.DataFrame:
         delay=1, 
         backoff=Backoff.LINEAR,
         jitter=Jitter.FULL
-    )
+    ),
 )
 def orders(context) -> pd.DataFrame:
     """A table containing all orders that have been placed"""

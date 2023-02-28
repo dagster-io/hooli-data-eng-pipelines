@@ -3,6 +3,7 @@ from typing import Any, Tuple
 import numpy as np
 import pandas as pd
 from scipy import optimize
+from dagster_dbt import DbtCliResource
 
 from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output, Field, Int
 from dagstermill import define_dagstermill_asset
@@ -33,6 +34,8 @@ def model_func(x, a, b):
     
 )
 def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
+
+
     """Model parameters that best fit the observed data"""
     df = daily_order_summary
     p0 = [context.op_config["a_init"], context.op_config["b_init"]]
