@@ -7,12 +7,12 @@ import pandas as pd
 # and an associated reconciliation sensor
 @asset(
     key_prefix="MARKETING", 
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=90), 
+    freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
     compute_kind="pandas",
     op_tags={"owner": "bi@hooli.com"}
 )
 def avg_order(company_perf: pd.DataFrame) -> pd.DataFrame:
-    """ Computes avg order KPI, must be updated every 90 mins for exec dashboard """
+    """ Computes avg order KPI, must be updated regularly for exec dashboard """
 
     return pd.DataFrame({
         "avg_order": company_perf['total_revenue'] / company_perf['n_orders'] 
@@ -21,7 +21,7 @@ def avg_order(company_perf: pd.DataFrame) -> pd.DataFrame:
 
 @asset(
     key_prefix="MARKETING", 
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=90), 
+    freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
     compute_kind="snowflake", 
     metadata={
         "owner": "bi@hooli.com"
