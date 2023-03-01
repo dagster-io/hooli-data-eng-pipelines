@@ -28,7 +28,8 @@ from dagster import (
     fs_io_manager,
     load_assets_from_package_module,
     AssetKey,
-    build_asset_reconciliation_sensor
+    build_asset_reconciliation_sensor,
+    multiprocess_executor
 )
 from dagster._utils import file_relative_path
 
@@ -59,10 +60,18 @@ raw_data_assets = load_assets_from_package_module(
 DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_project/config")
 
+def dbt_metadata(context, node_info):
+    print(node_info)
+    return {
+        "owner": "data@hooli.com",
+        "name": node_info["name"],
+    }
+
 dbt_assets = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"]
+    key_prefix=["ANALYTICS"],
+    runtime_metadata_fn=dbt_metadata
 )
 
 
@@ -197,11 +206,12 @@ resource_def = {
 analytics_job = define_asset_job(
      name = "refresh_analytics_model_job",
      selection=AssetSelection.keys(["ANALYTICS", "daily_order_summary"]).upstream(), 
-     tags = {"dagster/max_retries": "1"}
+     tags = {"dagster/max_retries": "1"},
+     # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
 )
 
 # This schedule tells dagster to run the analytics_job daily
-analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 * * * *")
+analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 */3 * * *")
 
 # This job selects the predicted_orders asset defined in 
 # assets/forecasting/__init__.py
@@ -239,6 +249,7 @@ freshness_sla_sensor = build_asset_reconciliation_sensor(
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
 defs = Definitions(
+    executor = multiprocess_executor.configured({"max_concurrent": 1}),
     assets = [*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
     resources = resource_def[get_env()],
     schedules = [analytics_schedule], 
