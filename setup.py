@@ -6,7 +6,7 @@ if __name__ == "__main__":
         packages=find_packages(exclude=["hooli_data_eng_tests"]),
         package_data={"hooli_data_eng": ["dbt_project/*"]},
         install_requires=[
-            "dagster==1.1.19",
+            "dagster",
             "dagster-dbt",
             "pandas",
             "numpy",
@@ -17,7 +17,7 @@ if __name__ == "__main__":
             "dagster-duckdb",
             "dagster-aws",
             "dagster-duckdb-pandas",
-            "dagster-snowflake==0.17.19",
+            "dagster-snowflake",
             "dagster-snowflake-pandas",
             "dagster-cloud",
             "dagster-pyspark",
