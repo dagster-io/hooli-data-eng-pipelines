@@ -5,3 +5,10 @@ locations:
     build:
       directory: ./
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+  - location_name: basics
+    code_source:
+      file_name: definitions.py
+    build:
+      directory: ./hooli_basics
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+  
