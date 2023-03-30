@@ -5,7 +5,7 @@ from dagster_pyspark import pyspark_resource
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.delayed_asset_alerts import asset_delay_alert_sensor
 from hooli_data_eng.resources.databricks import db_step_launcher
-from hooli_data_eng.resources.api import data_api
+from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
 from dagster_duckdb import build_duckdb_io_manager
 from dagster_duckdb_pandas import DuckDBPandasTypeHandler
@@ -31,7 +31,8 @@ from dagster import (
     load_assets_from_package_module,
     AssetKey,
     build_asset_reconciliation_sensor,
-    multiprocess_executor
+    multiprocess_executor,
+    ConfigurableResource
 )
 
 from dagster._utils import file_relative_path
@@ -119,7 +120,7 @@ resource_def = {
         "io_manager": duckdb_io_manager,
         "model_io_manager": fs_io_manager,
         "output_notebook_io_manager": local_output_notebook_io_manager,
-        "data_api": data_api,
+        "data_api": RawDataAPI(),
         "s3": ResourceDefinition.none_resource(),
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -142,7 +143,7 @@ resource_def = {
             "s3_bucket": "hooli-demo-branch"
         }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
-        "data_api": data_api,
+        "data_api": RawDataAPI(),
         "s3": s3,
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
@@ -167,7 +168,7 @@ resource_def = {
         }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
-        "data_api": data_api,
+        "data_api": RawDataAPI(),
         "dbt": dbt_cli_resource.configured({
             "project_dir": DBT_PROJECT_DIR,
             "profiles_dir": DBT_PROFILES_DIR,
@@ -239,7 +240,7 @@ freshness_sla_sensor = build_asset_reconciliation_sensor(
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
 defs = Definitions(
-    executor = multiprocess_executor.configured({"max_concurrent": 1}),
+    executor = multiprocess_executor.configured({"max_concurrent": 3}), # should executors be config driven instead of .configured?
     assets = [*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
     resources = resource_def[get_env()],
     schedules = [analytics_schedule], 
