@@ -1,7 +1,5 @@
 
-from dagster import resource, StringSource
-
-from dagster import FreshnessPolicySensorContext
+from dagster import FreshnessPolicySensorContext, ConfigurableResource
 from dagster._utils.alert import (
     EMAIL_MESSAGE,
     send_email_via_ssl
@@ -74,79 +72,38 @@ def send_email_alert(
         raise DagsterInvalidDefinitionError(f'smtp_type "{smtp_type}" is not supported.')
 
 
-class SESEmailAlert():
-    def __init__(
-        self, 
-        smtp_host, 
-        smtp_username, 
-        smtp_password, 
-        smtp_email_from, 
-        smtp_email_to
-    ):
-        self._smtp_host = smtp_host
-        self._smtp_username = smtp_username
-        self._smtp_password = smtp_password
-        self._smtp_email_from = smtp_email_from
-        self._smtp_email_to = smtp_email_to
+class SESEmailAlert(ConfigurableResource):
+    smtp_host: str
+    smtp_username: str 
+    smtp_password: str  
+    smtp_email_from: str 
+    smtp_email_to: list[str]
 
     def send_email_alert(self, context):
         
         return send_email_alert(
             context = context,
-            email_username= self._smtp_username,
-            email_from = self._smtp_email_from,
-            email_to= self._smtp_email_to,
-            email_password= self._smtp_password,
-            smtp_host= self._smtp_host,
+            email_username= self.smtp_username,
+            email_from = self.smtp_email_from,
+            email_to= self.smtp_email_to,
+            email_password= self.smtp_password,
+            smtp_host= self.smtp_host,
             smtp_type="STARTTLS",
             smtp_port=587
         )
 
-@resource(
-    config_schema= {
-        "smtp_host": str,
-        "smtp_username": StringSource,
-        "smtp_password": StringSource,
-        "smtp_email_from": str,
-        "smtp_email_to": list
-    }
-)
-def ses_email_alert(context):
-    smtp_host = context.resource_config["smtp_host"]
-    smtp_username = context.resource_config["smtp_username"]
-    smtp_password = context.resource_config["smtp_password"]
-    smtp_email_from = context.resource_config["smtp_email_from"]
-    smtp_email_to = context.resource_config["smtp_email_to"]
-    return SESEmailAlert(smtp_host, smtp_username, smtp_password, smtp_email_from, smtp_email_to)
-
-class LocalEmailAlert():
-    def __init__(
-        self, 
-        smtp_email_from, 
-        smtp_email_to
-    ):
-        self._smtp_email_from = smtp_email_from
-        self._smtp_email_to = smtp_email_to
+class LocalEmailAlert(ConfigurableResource):
+    smtp_email_from: str  
+    smtp_email_to: list[str]
 
     def send_email_alert(self,context):
         email_body = _default_delay_email_body(context)
         message = EMAIL_MESSAGE.format(
-            email_to=",".join(self._smtp_email_to),
-            email_from=self._smtp_email_from,
+            email_to=",".join(self.smtp_email_to),
+            email_from=self.smtp_email_from,
             email_subject=_default_delay_email_subject(context),
             email_body=email_body,
             randomness=datetime.datetime.now(),
         )
         print(message)
         return 
-
-@resource(
-    config_schema= {
-        "smtp_email_from": str,
-        "smtp_email_to": list
-    }
-)
-def local_email_alert(context):
-    smtp_email_from = context.resource_config["smtp_email_from"]
-    smtp_email_to = context.resource_config["smtp_email_to"]
-    return LocalEmailAlert(smtp_email_from, smtp_email_to)
