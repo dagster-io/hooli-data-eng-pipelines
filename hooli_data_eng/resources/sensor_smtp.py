@@ -87,8 +87,11 @@ def send_email_alert(
             f'smtp_type "{smtp_type}" is not supported.'
         )
 
+class EmailAlert(ConfigurableResource):
+    def send_email_alert(self, context):
+        raise NotImplementedError()
 
-class SESEmailAlert(ConfigurableResource):
+class SESEmailAlert(EmailAlert):
     smtp_host: str
     smtp_username: str
     smtp_password: str
@@ -109,7 +112,7 @@ class SESEmailAlert(ConfigurableResource):
         )
 
 
-class LocalEmailAlert(ConfigurableResource):
+class LocalEmailAlert(EmailAlert):
     smtp_email_from: str
     smtp_email_to: List[str]
 

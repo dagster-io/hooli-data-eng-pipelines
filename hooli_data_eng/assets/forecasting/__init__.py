@@ -9,6 +9,8 @@ from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output, Field,
 from dagstermill import define_dagstermill_asset
 from dagster._utils import file_relative_path
 
+from pydantic import Field
+
 def model_func(x, a, b):
     return a * np.exp(b * (x / 10**18 - 1.6095))
 
@@ -29,8 +31,8 @@ def model_func(x, a, b):
 
 class modelHyperParams(Config):
     """ Hyper parameters for the ML model with default values """
-    a_init = 5
-    b_init = 5
+    a_init = Field(5, description="initial value for a parameter, intercept")
+    b_init = Field(5, description="initial value for b parameter, slope")
 
 @asset(
     ins={"daily_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
