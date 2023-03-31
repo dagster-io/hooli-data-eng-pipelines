@@ -6,11 +6,8 @@
 from typing import Any
 from hooli_data_eng.resources.sensor_file_managers import (
     FileSystem,
-    LocalFileSystem,
-    s3FileSystem,
 )
-from dagster import job, sensor, op, RunRequest, build_resources, SkipReason, Resource
-from dagster._utils import file_relative_path
+from dagster import job, sensor, op, RunRequest, SkipReason
 import os
 
 
