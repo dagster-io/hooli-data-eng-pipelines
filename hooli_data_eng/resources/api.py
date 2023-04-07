@@ -20,9 +20,9 @@ class RawDataAPI():
         pass
 
     @responses.activate
-    def get_orders(_):
+    def get_orders(_, datetime_to_process):
         # add lots of flakiness
-        if random.randint(0,10) <= 6:
+        if random.randint(0,10) <= -1:
             raise Exception("API time out")
 
         responses.get(
@@ -41,7 +41,7 @@ class RawDataAPI():
     @responses.activate
     def get_users(_):
         # add some of flakiness
-        if random.randint(0,10) <= 3:
+        if random.randint(0,10) <= -1:
             raise Exception("API time out")
 
         responses.get(

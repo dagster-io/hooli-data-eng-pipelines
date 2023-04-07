@@ -2,20 +2,21 @@ import os
 
 from dagster_pyspark import pyspark_resource
 
-from hooli_data_eng.assets import forecasting, raw_data, marketing
+from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.delayed_asset_alerts import asset_delay_alert_sensor
 from hooli_data_eng.resources.databricks import db_step_launcher
 from hooli_data_eng.resources.api import data_api
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
 from dagster_duckdb import build_duckdb_io_manager
 from dagster_duckdb_pandas import DuckDBPandasTypeHandler
-from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
+from dagster_dbt import dbt_cli_resource
 from dagster_snowflake import build_snowflake_io_manager
 from dagster_snowflake_pandas import SnowflakePandasTypeHandler
 from dagster_aws.s3 import s3_resource, s3_pickle_io_manager
 from dagstermill import local_output_notebook_io_manager
 
 from dagster import (
+    build_schedule_from_partitioned_job,
     AssetSelection,
     Definitions,
     EventLogEntry,
@@ -26,11 +27,13 @@ from dagster import (
     asset_sensor,
     define_asset_job,
     fs_io_manager,
+    load_assets_from_modules,
     load_assets_from_package_module,
     AssetKey,
     build_asset_reconciliation_sensor,
     multiprocess_executor
 )
+
 from dagster._utils import file_relative_path
 
 # ---------------------------------------------------
@@ -57,23 +60,10 @@ raw_data_assets = load_assets_from_package_module(
 # The dbt file dbt_project/config/profiles.yaml 
 # specifies what databases to targets, and locally will 
 # execute against a DuckDB
+dbt_assets = load_assets_from_modules([dbt_assets])
+
 DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_project/config")
-
-def dbt_metadata(context, node_info):
-    print(node_info)
-    return {
-        "owner": "data@hooli.com",
-        "name": node_info["name"],
-    }
-
-dbt_assets = load_assets_from_dbt_project(
-    DBT_PROJECT_DIR,
-    DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"],
-    runtime_metadata_fn=dbt_metadata
-)
-
 
 # Our final set of assets represent Python code that
 # should run after dbt. These assets are defined in 
@@ -205,13 +195,13 @@ resource_def = {
 # upstream of daily_order_summary.
 analytics_job = define_asset_job(
      name = "refresh_analytics_model_job",
-     selection=AssetSelection.keys(["ANALYTICS", "daily_order_summary"]).upstream(), 
+     selection=AssetSelection.keys(["ANALYTICS", "order_stats"]).upstream(), 
      tags = {"dagster/max_retries": "1"},
      # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
 )
 
 # This schedule tells dagster to run the analytics_job daily
-analytics_schedule = ScheduleDefinition(job=analytics_job, cron_schedule="0 */3 * * *")
+analytics_schedule = build_schedule_from_partitioned_job(analytics_job)
 
 # This job selects the predicted_orders asset defined in 
 # assets/forecasting/__init__.py
