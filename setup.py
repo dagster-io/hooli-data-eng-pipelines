@@ -26,7 +26,7 @@ if __name__ == "__main__":
             "plotnine",
             "responses", 
             "requests",
-            "html5-lib", 
+            "html5lib", 
             "scikit-learn"
         ],
         extras_require={"dev": ["dagit", "pytest"]},
