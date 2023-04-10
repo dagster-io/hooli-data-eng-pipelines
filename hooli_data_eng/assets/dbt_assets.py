@@ -17,6 +17,7 @@ def dbt_metadata(context, node_info):
     return {
         "owner": "data@hooli.com",
         "name": node_info["name"],
+        "partition_expr": "dt"
     }
 
 def partition_key_to_vars(partition_key):
@@ -26,17 +27,28 @@ hourly_dbt_assets = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
     key_prefix=["ANALYTICS"],
+    source_key_prefix="ANALYTICS",
     runtime_metadata_fn=dbt_metadata,
     partition_key_to_vars_fn=partition_key_to_vars,
     partitions_def=hourly_partitions,
-    select="+orders_augmented", 
-    exclude="users_cleaned"
+    select="orders_augmented"
+)
+
+hourly_dbt_assets_orders = load_assets_from_dbt_project(
+    DBT_PROJECT_DIR,
+    DBT_PROFILES_DIR,
+    key_prefix=["ANALYTICS"],
+    runtime_metadata_fn=dbt_metadata,
+    partition_key_to_vars_fn=partition_key_to_vars,
+    partitions_def=hourly_partitions,
+    select="orders_cleaned"
 )
 
 daily_dbt_assets = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
     key_prefix=["ANALYTICS"],
+    source_key_prefix="ANALYTICS",
     runtime_metadata_fn=dbt_metadata,
     partition_key_to_vars_fn=partition_key_to_vars,
     partitions_def=daily_partitions,
@@ -47,6 +59,16 @@ dbt_views = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
     key_prefix=["ANALYTICS"],
+    source_key_prefix="ANALYTICS",
     runtime_metadata_fn=dbt_metadata,
-    select="company_perf sku_stats company_stats users_cleaned"
+    select="company_perf sku_stats company_stats"
 )
+
+dbt_views_users = load_assets_from_dbt_project(
+    DBT_PROJECT_DIR,
+    DBT_PROFILES_DIR,
+    key_prefix=["ANALYTICS"],
+    runtime_metadata_fn=dbt_metadata,
+    select="users_cleaned"
+)
+
