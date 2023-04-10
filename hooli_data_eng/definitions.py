@@ -9,12 +9,10 @@ from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
 from hooli_data_eng.resources.databricks import db_step_launcher
 from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
-from dagster_duckdb import build_duckdb_io_manager
-from dagster_duckdb_pandas import DuckDBPandasTypeHandler
+from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_dbt import dbt_cli_resource
-from dagster_snowflake import build_snowflake_io_manager
-from dagster_snowflake_pandas import SnowflakePandasTypeHandler
-from dagster_aws.s3 import s3_resource, s3_pickle_io_manager
+from dagster_snowflake_pandas import SnowflakePandasIOManager
+from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 from dagstermill import local_output_notebook_io_manager
 
 from dagster import (
@@ -101,22 +99,13 @@ def get_env():
         return "PROD"
     return "LOCAL"
 
-
-# Locally, have dagster use DuckDB as the database
-# See dbt_project/config/profiles.yml to see the matching dbt config
-duckdb_io_manager = build_duckdb_io_manager([DuckDBPandasTypeHandler()]).configured(
-    {"database": os.path.join(DBT_PROJECT_DIR, "example.duckdb")}
-)
-
-# For production we'll use snowflake and s3
-snowflake_io_manager = build_snowflake_io_manager([SnowflakePandasTypeHandler()])
-s3 = s3_resource.configured({"region_name": "us-west-2"})
-
 # Similar to having different dbt targets, here we create the resource
 # configuration by environment
+s3 = s3_resource.configured({ "region_name": "us-west-2"})
+
 resource_def = {
     "LOCAL": {
-        "io_manager": duckdb_io_manager,
+        "io_manager": DuckDBPandasIOManager(database=os.path.join(DBT_PROJECT_DIR, "example.duckdb")),
         "model_io_manager": fs_io_manager,
         "output_notebook_io_manager": local_output_notebook_io_manager,
         "data_api": RawDataAPI(),
@@ -134,21 +123,19 @@ resource_def = {
         "email": LocalEmailAlert(smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"),
     },
     "BRANCH": {
-        "io_manager": snowflake_io_manager.configured(
-            {
-                "database": "DEMO_DB2_BRANCH",
-                "account": {"env": "SNOWFLAKE_ACCOUNT"},
-                "user": {"env": "SNOWFLAKE_USER"},
-                "password": {"env": "SNOWFLAKE_PASSWORD"},
-                "warehouse": "TINY_WAREHOUSE",
-            }
+        "io_manager": SnowflakePandasIOManager(
+            database="DEMO_DB2_BRANCH", 
+            account=EnvVar("SNOWFLAKE_ACCOUNT"),
+            user=EnvVar("SNOWFLAKE_USER"),
+            password=EnvVar("SNOWFLAKE_PASSWORD"),
+            warehouse="TINY_WAREHOUSE"
         ),
-        "model_io_manager": s3_pickle_io_manager.configured(
-            {"s3_bucket": "hooli-demo-branch"}
-        ),
+        "s3": s3,
+        "model_io_manager": s3_pickle_io_manager.configured({
+            "s3_bucket": "hooli-demo-branch"
+        }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
         "data_api": RawDataAPI(),
-        "s3": s3,
         "dbt": dbt_cli_resource.configured(
             {
                 "project_dir": DBT_PROJECT_DIR,
@@ -164,20 +151,18 @@ resource_def = {
         "email": ResourceDefinition.none_resource(),
     },
     "PROD": {
-        "io_manager": snowflake_io_manager.configured(
-            {
-                "database": "DEMO_DB2",
-                "account": {"env": "SNOWFLAKE_ACCOUNT"},
-                "user": {"env": "SNOWFLAKE_USER"},
-                "password": {"env": "SNOWFLAKE_PASSWORD"},
-                "warehouse": "TINY_WAREHOUSE",
-            }
+        "io_manager": SnowflakePandasIOManager(
+            database="DEMO_DB2", 
+            account=EnvVar("SNOWFLAKE_ACCOUNT"),
+            user=EnvVar("SNOWFLAKE_USER"),
+            password=EnvVar("SNOWFLAKE_PASSWORD"),
+            warehouse="TINY_WAREHOUSE"
         ),
-        "model_io_manager": s3_pickle_io_manager.configured(
-            {"s3_bucket": "hooli-demo"}
-        ),
-        "output_notebook_io_manager": local_output_notebook_io_manager,
         "s3": s3,
+        "model_io_manager": s3_pickle_io_manager.configured({
+            "s3_bucket": "hooli-demo"
+        }),
+        "output_notebook_io_manager": local_output_notebook_io_manager,
         "data_api": RawDataAPI(),
         "dbt": dbt_cli_resource.configured(
             {
