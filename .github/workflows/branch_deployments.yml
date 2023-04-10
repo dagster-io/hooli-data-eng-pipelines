@@ -1,12 +1,14 @@
-name: Hybrid Prod Deployment
+name: Hybrid Branch Deployments
+
 on:
-  push:
-    branches:
-      - "master"
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
 concurrency: 
-  # Cancel in-progress deploys to main branch
+  # Cancel in-progress runs on same branch
   group: ${{ github.ref }}
   cancel-in-progress: true
+
 env:
   DAGSTER_CLOUD_URL: "https://hooli.dagster.cloud"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
@@ -20,7 +22,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Parse cloud workspace
         id: parse-workspace
-        uses: dagster-io/dagster-cloud-action/actions/utils/parse_workspace@v0.1.6
+        uses: dagster-io/dagster-cloud-action/actions/utils/parse_workspace@v0.1
         with:
           dagster_cloud_file: dagster_cloud.yaml
 
@@ -49,10 +51,9 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build and deploy to Dagster Cloud hybrid
-        uses: dagster-io/dagster-cloud-action/actions/hybrid_prod_deploy@v0.1.6
+        uses: dagster-io/dagster-cloud-action/actions/hybrid_branch_deploy@v0.1
         with:
           dagster_cloud_api_token: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
           location: ${{ toJson(matrix.location) }}
-          deployment: data-eng-prod
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
