@@ -3,7 +3,7 @@ from dagster import asset, RetryPolicy, Backoff, Jitter, HourlyPartitionsDefinit
 
 
 hourly_partitions = HourlyPartitionsDefinition(
-    start_date="2023-04-01-00:00"
+    start_date="2023-04-10-17:00"
 )
 
 @asset(
