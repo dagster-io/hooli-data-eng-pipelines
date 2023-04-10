@@ -1,4 +1,4 @@
-from dagster import asset, FreshnessPolicy, AssetIn
+from dagster import asset, FreshnessPolicy, AssetIn, DynamicPartitionsDefinition, MetadataValue
 import pandas as pd
 
 # These assets take data from a SQL table managed by 
@@ -38,3 +38,24 @@ def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({
         "min_order": [min_order]
     })
+
+
+product_skus = DynamicPartitionsDefinition(name="product_skus")
+
+@asset(
+    partitions_def=product_skus,
+    io_manager_key="model_io_manager",
+    compute_kind="hex",
+    key_prefix="MARKETING",
+    ins={"sku_stats": AssetIn(key_prefix=["ANALYTICS"])}
+)
+def key_product_deepdive(context, sku_stats):
+    """ Creates a file for a BI tool based on the current quarters top product, represented as a dynamic partition """
+    key_sku = context.partition_key
+    sku = sku_stats[sku_stats['sku'] == key_sku]
+    context.add_output_metadata(
+        {
+            "sku_preview": MetadataValue.md(sku.head().to_markdown())
+        }
+    )
+    return sku

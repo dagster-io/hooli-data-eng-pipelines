@@ -28,14 +28,11 @@ def model_func(x, a, b):
 # using context.log.info
 @asset(
     ins={"daily_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
-    compute_kind="ml_tool",
+    compute_kind="scikitlearn",
     io_manager_key="model_io_manager",
     config_schema={"a_init": Field(Int, default_value=5), "b_init": Field(Int, default_value=5)}
-    
 )
 def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
-
-
     """Model parameters that best fit the observed data"""
     df = daily_order_summary
     p0 = [context.op_config["a_init"], context.op_config["b_init"]]
@@ -58,7 +55,7 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
         "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
-    compute_kind="ml_tool",
+    compute_kind="scikitlearn",
     key_prefix=["forecasting"],
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01")
@@ -88,7 +85,7 @@ def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forec
         "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
-    compute_kind="ml_tool",
+    compute_kind="pandas",
     key_prefix=["FORECASTING"],
 )
 def predicted_orders(

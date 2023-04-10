@@ -9,3 +9,6 @@ select
         order_date,
         n_orders as num_orders
 from {{ ref("order_stats") }}
+{% if is_incremental() %}
+WHERE o.order_date = '{{ var('datetime_to_process') }}'
+{% endif %}
