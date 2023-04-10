@@ -29,7 +29,7 @@ hourly_dbt_assets = load_assets_from_dbt_project(
     runtime_metadata_fn=dbt_metadata,
     partition_key_to_vars_fn=partition_key_to_vars,
     partitions_def=hourly_partitions,
-    select="+order_stats", 
+    select="+orders_augmented", 
     exclude="users_cleaned"
 )
 
@@ -40,7 +40,7 @@ daily_dbt_assets = load_assets_from_dbt_project(
     runtime_metadata_fn=dbt_metadata,
     partition_key_to_vars_fn=partition_key_to_vars,
     partitions_def=daily_partitions,
-    select="daily_order_summary"
+    select="daily_order_summary order_stats"
 )
 
 dbt_views = load_assets_from_dbt_project(

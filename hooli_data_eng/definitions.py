@@ -195,7 +195,7 @@ resource_def = {
 # upstream of daily_order_summary.
 analytics_job = define_asset_job(
      name = "refresh_analytics_model_job",
-     selection=AssetSelection.keys(["ANALYTICS", "order_stats"]).upstream(), 
+     selection=AssetSelection.keys(["ANALYTICS", "orders_augmented"]).upstream(), 
      tags = {"dagster/max_retries": "1"},
      # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
 )
