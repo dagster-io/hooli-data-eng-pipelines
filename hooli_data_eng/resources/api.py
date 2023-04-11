@@ -22,7 +22,7 @@ class RawDataAPI():
     @responses.activate
     def get_orders(_, datetime_to_process):
         # add lots of flakiness
-        if random.randint(0,10) <= 4:
+        if random.randint(0,10) <= -4:
             raise Exception("API time out")
 
         responses.get(
@@ -40,9 +40,9 @@ class RawDataAPI():
         return requests.get("http://api.jaffleshop.co/v1/orders")
 
     @responses.activate
-    def get_users(_):
+    def get_users(_, datetime_to_process):
         # add some of flakiness
-        if random.randint(0,10) <= 2:
+        if random.randint(0,10) <= -2:
             raise Exception("API time out")
 
         responses.get(
@@ -57,6 +57,7 @@ class RawDataAPI():
                         ["FoodCo", "ShopMart", "SportTime", "FamilyLtd"], size=1000
                     ),
                     "is_test_user": np.random.choice([True, False], p=[0.002, 0.998], size=1000),
+                    "created_at": pd.to_datetime(datetime_to_process)
                 }
             ).to_json()
         )

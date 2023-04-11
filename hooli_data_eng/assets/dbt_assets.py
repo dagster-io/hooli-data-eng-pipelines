@@ -35,6 +35,10 @@ def io_partition_metadata_fn_order_date(_):
     """ Tells dagster how to load partitioned dbt assets by mapping a partition to a column """
     return {"partition_expr": "order_date"}
 
+def io_partition_metadata_fn_users(_):
+    """ Tells dagster how to load partitioned dbt assets by mapping a partition to a column """
+    return {"partition_expr": "created_at"}
+
 orders_cleaned_hourly = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
@@ -58,11 +62,14 @@ orders_augmented_hourly = load_assets_from_dbt_project(
     select="orders_augmented"
 )
 
-users_cleaned = load_assets_from_dbt_project(
+users_cleaned_hourly = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
     key_prefix=["ANALYTICS"],
     runtime_metadata_fn=dbt_metadata,
+    partition_key_to_vars_fn=partition_key_to_vars,
+    partitions_def=hourly_partitions,
+    node_info_to_definition_metadata_fn=io_partition_metadata_fn_users,
     select="users_cleaned"
 )
 

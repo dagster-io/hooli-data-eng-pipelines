@@ -33,3 +33,6 @@ models:
       - name: "company"
         description: "The name of the company that this user belongs to."
         data_type: "str"
+      - name: "created_at"
+        description: "When the user account was crated"
+        data_type: "timestamp"

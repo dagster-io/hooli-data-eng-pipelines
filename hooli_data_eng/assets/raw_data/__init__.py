@@ -9,11 +9,14 @@ hourly_partitions = HourlyPartitionsDefinition(
 @asset(
     compute_kind="api",
     required_resource_keys={"data_api"},
+    partitions_def=hourly_partitions,
+    metadata={"partition_expr": "created_at"},
 )
 def users(context) -> pd.DataFrame:
     """A table containing all users data"""
     api = context.resources.data_api
-    resp = api.get_users()
+    datetime_to_process = context.asset_partition_key_for_output()
+    resp = api.get_users(datetime_to_process)
     users = pd.read_json(resp.json())
     return users
 
