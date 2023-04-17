@@ -8,8 +8,6 @@ locations:
     container_context:
       k8s:
         run_k8s_config:
-          pod_spec_config:
-            ttl_seconds_after_finished: 60
           job_spec_config:
             ttl_seconds_after_finished: 60
           container_config:
