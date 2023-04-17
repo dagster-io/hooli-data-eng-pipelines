@@ -6,16 +6,17 @@ locations:
       directory: ./
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
     container_context:
-      run_k8s_config:
-        pod_spec_config:
-          ttl_seconds_after_finished: 60
-        job_spec_config:
-          ttl_seconds_after_finished: 60
-        container_config:
-          resources:
-            limits:
-              cpu: 500m
-              memory: 1G
+      k8s:
+        run_k8s_config:
+          pod_spec_config:
+            ttl_seconds_after_finished: 60
+          job_spec_config:
+            ttl_seconds_after_finished: 60
+          container_config:
+            resources:
+              limits:
+                cpu: 500m
+                memory: 1G
   - location_name: basics
     code_source:
       python_file: definitions.py
