@@ -108,7 +108,7 @@ resource_def = {
         "io_manager": DuckDBPandasIOManager(database=os.path.join(DBT_PROJECT_DIR, "example.duckdb")),
         "model_io_manager": fs_io_manager,
         "output_notebook_io_manager": local_output_notebook_io_manager,
-        "data_api": RawDataAPI(),
+        "api": RawDataAPI(),
         "s3": ResourceDefinition.none_resource(),
         "dbt": dbt_cli_resource.configured(
             {
@@ -135,7 +135,7 @@ resource_def = {
             "s3_bucket": "hooli-demo-branch"
         }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
-        "data_api": RawDataAPI(),
+        "api": RawDataAPI(),
         "dbt": dbt_cli_resource.configured(
             {
                 "project_dir": DBT_PROJECT_DIR,
@@ -163,7 +163,7 @@ resource_def = {
             "s3_bucket": "hooli-demo"
         }),
         "output_notebook_io_manager": local_output_notebook_io_manager,
-        "data_api": RawDataAPI(),
+        "api": RawDataAPI(),
         "dbt": dbt_cli_resource.configured(
             {
                 "project_dir": DBT_PROJECT_DIR,
