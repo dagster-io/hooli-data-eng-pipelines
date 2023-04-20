@@ -1,4 +1,4 @@
-all:
+locally:
 	clear
 	dagster dev
 
