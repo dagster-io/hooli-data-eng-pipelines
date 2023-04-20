@@ -1,3 +1,6 @@
+all:
+	clear
+	dagster dev
 
 clean: 
 	rm -rf ~/.dagster_home; mkdir ~/.dagster_home; cp dagster.yaml ~/.dagster_home/dagster.yaml
@@ -20,3 +23,5 @@ daemon_prod:
 
 run_prod: dagit_prod daemon_prod
 
+dependencies:
+	pip install -e ".[dev]"
