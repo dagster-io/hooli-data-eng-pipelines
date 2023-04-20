@@ -1,7 +1,7 @@
 # ---------------------------------------------------
 # Define a job and sensor that watch s3
 # On file updates, this sensor triggers a job
-# To see an example of sensors off of assets, see repository.py
+# To see an example of sensors off of assets, see definitions.py
 
 from hooli_data_eng.resources.sensor_file_managers import local_fs, s3_fs
 from dagster import job, sensor, op, RunRequest, build_resources, SkipReason
