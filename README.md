@@ -14,7 +14,7 @@ dagster dev
 
 ## Code Structure
 
-To understand the structure, start with the file `hooli_data_eng/repository.py`. This example includes a few key Dagster concepts:
+To understand the structure, start with the file `hooli_data_eng/definitions.py`. This example includes a few key Dagster concepts:
 
 - *Assets*: are used to represent the datasets the Hooli data team manages. This example includes assets generated from dbt and Python.
 - *Resources*: represent external systems. This example uses different resources for different environments (DuckDB locally, snowflake + s3 in production). The example also shows how to create custom resources, see `resources/api.py`.
