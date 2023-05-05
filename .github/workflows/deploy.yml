@@ -53,21 +53,21 @@ jobs:
         if : ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
         
-      # Build 'data-eng-pipelines' code location
-      - name: Build and upload Docker image for data-eng-pipelines
+      # Build 'data-eng-pipeline' code location
+      - name: Build and upload Docker image for data-eng-pipeline
         if : steps.prerun.outputs.result != 'skip'
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipelines
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
 
       - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output-data-eng-pipeline
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
         with:
-          command: "ci set-build-output --location-name=data-eng-pipelines --image-tag=$IMAGE_TAG-data-eng-pipelines"
+          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
