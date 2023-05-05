@@ -13,7 +13,8 @@ concurrency:
 env:
   DAGSTER_CLOUD_ORGANIZATION: "hooli"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
-
+  # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
+  IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-20.04
@@ -52,20 +53,39 @@ jobs:
         if : ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
         
-      - name: Build and upload Docker image
+      # Build 'data-eng-pipelines' code location
+      - name: Build and upload Docker image for data-eng-pipelines
         if : steps.prerun.outputs.result != 'skip'
         uses: docker/build-push-action@v4
         with:
+          context: .
           push: true
-          tags: 764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod:${{ env.IMAGE_TAG }}
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipelines
 
-      - name: Update build session with image tag
+      - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
         with:
-          command: "ci set-build-output --image-tag=$IMAGE_TAG"
+          command: "ci set-build-output --location-name=data-eng-pipelines --image-tag=$IMAGE_TAG-data-eng-pipelines"
 
+      # Build 'basics' code location
+      - name: Build and upload Docker image for basics
+        if : steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_basics
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
+
+      - name: Update build session with image tag for basis
+        id: ci-set-build-output
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
+        with:
+          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
+
+      # Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if : steps.prerun.outputs.result != 'skip'
