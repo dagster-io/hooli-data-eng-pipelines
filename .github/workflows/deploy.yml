@@ -63,7 +63,7 @@ jobs:
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipelines
 
       - name: Update build session with image tag for data-eng-pipeline
-        id: ci-set-build-output
+        id: ci-set-build-output-data-eng-pipeline
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
         with:
@@ -78,8 +78,8 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
 
-      - name: Update build session with image tag for basis
-        id: ci-set-build-output
+      - name: Update build session with image tag for basics
+        id: ci-set-build-output-basics
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
         with:
