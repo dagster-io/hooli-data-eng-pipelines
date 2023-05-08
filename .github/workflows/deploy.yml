@@ -30,6 +30,13 @@ jobs:
         if : steps.prerun.outputs.result != 'skip'
         with:
           ref: ${{ github.head_ref }}
+          
+      - name: Validate configuration
+        id: ci-validate
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
+        with:
+          command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
