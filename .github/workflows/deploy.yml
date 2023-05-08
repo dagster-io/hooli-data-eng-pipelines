@@ -13,6 +13,8 @@ concurrency:
 env:
   DAGSTER_CLOUD_ORGANIZATION: "hooli"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  DAGSTER_PROJECT_DIR: "."
+  DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
   IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
 jobs:
@@ -34,7 +36,8 @@ jobs:
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@ci-new-commands
         with:
-          project_dir: .
+          project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
+          dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
 
       - name: Generate docker image tag
         id: generate-image-tag
