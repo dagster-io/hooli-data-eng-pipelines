@@ -1,5 +1,6 @@
 locations:
   - location_name: data-eng-pipeline
+    test_syntax: "this should error"
     code_source:
       package_name: hooli_data_eng
     build:
