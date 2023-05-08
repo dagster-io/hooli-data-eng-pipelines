@@ -10,10 +10,10 @@ from hooli_data_eng.resources.databricks import db_step_launcher
 from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
 from dagster_duckdb_pandas import DuckDBPandasIOManager
-from dagster_dbt import dbt_cli_resource
+from dagster_dbt import DbtCliClientResource
 from dagster_snowflake_pandas import SnowflakePandasIOManager
-from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
-from dagstermill import local_output_notebook_io_manager
+from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
+from dagstermill import ConfigurableLocalOutputNotebookIOManager
 
 from dagster import (
     build_schedule_from_partitioned_job,
@@ -22,18 +22,16 @@ from dagster import (
     EnvVar,
     EventLogEntry,
     RunRequest,
-    ScheduleDefinition,
     SensorEvaluationContext,
     ResourceDefinition,
     asset_sensor,
     define_asset_job,
-    fs_io_manager,
+    FilesystemIOManager,
     load_assets_from_modules,
     load_assets_from_package_module,
     AssetKey,
     build_asset_reconciliation_sensor,
     multiprocess_executor,
-    ConfigurableResource,
 )
 
 from dagster._utils import file_relative_path
@@ -99,49 +97,45 @@ def get_env():
         return "PROD"
     return "LOCAL"
 
+
 # Similar to having different dbt targets, here we create the resource
 # configuration by environment
-s3 = s3_resource.configured({ "region_name": "us-west-2"})
 
 resource_def = {
     "LOCAL": {
-        "io_manager": DuckDBPandasIOManager(database=os.path.join(DBT_PROJECT_DIR, "example.duckdb")),
-        "model_io_manager": fs_io_manager,
-        "output_notebook_io_manager": local_output_notebook_io_manager,
+        "io_manager": DuckDBPandasIOManager(
+            database=os.path.join(DBT_PROJECT_DIR, "example.duckdb")
+        ),
+        "model_io_manager": FilesystemIOManager(),
+        "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI(),
         "s3": ResourceDefinition.none_resource(),
-        "dbt": dbt_cli_resource.configured(
-            {
-                "project_dir": DBT_PROJECT_DIR,
-                "profiles_dir": DBT_PROFILES_DIR,
-                "target": "LOCAL",
-            }
+        "dbt": DbtCliClientResource(
+            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
         ),
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
-        "email": LocalEmailAlert(smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"),
+        "email": LocalEmailAlert(
+            smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
+        ),
     },
     "BRANCH": {
         "io_manager": SnowflakePandasIOManager(
-            database="DEMO_DB2_BRANCH", 
+            database="DEMO_DB2_BRANCH",
             account=EnvVar("SNOWFLAKE_ACCOUNT"),
             user=EnvVar("SNOWFLAKE_USER"),
             password=EnvVar("SNOWFLAKE_PASSWORD"),
-            warehouse="TINY_WAREHOUSE"
+            warehouse="TINY_WAREHOUSE",
         ),
-        "s3": s3,
-        "model_io_manager": s3_pickle_io_manager.configured({
-            "s3_bucket": "hooli-demo-branch"
-        }),
-        "output_notebook_io_manager": local_output_notebook_io_manager,
+        "model_io_manager": ConfigurablePickledObjectS3IOManager(
+            s3_bucket="hooli-demo-branch",
+            s3_resource=S3Resource(region_name="us-west-2"),
+        ),
+        "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI(),
-        "dbt": dbt_cli_resource.configured(
-            {
-                "project_dir": DBT_PROJECT_DIR,
-                "profiles_dir": DBT_PROFILES_DIR,
-                "target": "BRANCH",
-            }
+        "dbt": DbtCliClientResource(
+            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
@@ -152,35 +146,31 @@ resource_def = {
     },
     "PROD": {
         "io_manager": SnowflakePandasIOManager(
-            database="DEMO_DB2", 
+            database="DEMO_DB2",
             account=EnvVar("SNOWFLAKE_ACCOUNT"),
             user=EnvVar("SNOWFLAKE_USER"),
             password=EnvVar("SNOWFLAKE_PASSWORD"),
-            warehouse="TINY_WAREHOUSE"
+            warehouse="TINY_WAREHOUSE",
         ),
-        "s3": s3,
-        "model_io_manager": s3_pickle_io_manager.configured({
-            "s3_bucket": "hooli-demo"
-        }),
-        "output_notebook_io_manager": local_output_notebook_io_manager,
+        "model_io_manager": ConfigurablePickledObjectS3IOManager(
+            s3_bucket="hooli-demo-branch",
+            s3_resource=S3Resource(region_name="us-west-2"),
+        ),
+        "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI(),
-        "dbt": dbt_cli_resource.configured(
-            {
-                "project_dir": DBT_PROJECT_DIR,
-                "profiles_dir": DBT_PROFILES_DIR,
-                "target": "PROD",
-            }
+        "dbt": DbtCliClientResource(
+            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),
         "email": SESEmailAlert(
-            smtp_host="email-smtp.us-west-2.amazonaws.com", 
-            smtp_email_from="lopp@elementl.com", 
-            smtp_email_to= ["lopp@elementl.com"], 
-            smtp_username=EnvVar("SMTP_USERNAME"), 
-            smtp_password=EnvVar("SMTP_PASSWORD")
-        )
+            smtp_host="email-smtp.us-west-2.amazonaws.com",
+            smtp_email_from="lopp@elementl.com",
+            smtp_email_to=["lopp@elementl.com"],
+            smtp_username=EnvVar("SMTP_USERNAME"),
+            smtp_password=EnvVar("SMTP_PASSWORD"),
+        ),
     },
 }
 
@@ -199,10 +189,10 @@ resource_def = {
 # this job will update the raw data assets and then the dbt models
 # upstream of daily_order_summary.
 analytics_job = define_asset_job(
-     name = "refresh_analytics_model_job",
-     selection=AssetSelection.keys(["ANALYTICS", "orders_augmented"]).upstream(), 
-     tags = {"dagster/max_retries": "1"},
-     # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
+    name="refresh_analytics_model_job",
+    selection=AssetSelection.keys(["ANALYTICS", "orders_augmented"]).upstream(),
+    tags={"dagster/max_retries": "1"},
+    # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
 )
 
 # This schedule tells dagster to run the analytics_job daily
