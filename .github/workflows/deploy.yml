@@ -77,7 +77,7 @@ jobs:
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
         with:
-          command: "ci set-build-output --location-name=data-eng-pipeline --docker-image-tag=$IMAGE_TAG-data-eng-pipeline"
+          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
@@ -93,7 +93,7 @@ jobs:
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@ci-new-commands
         with:
-          command: "ci set-build-output --location-name=basics --docker-image-tag=$IMAGE_TAG-basics"
+          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
 
       # Deploy
       - name: Deploy to Dagster Cloud
