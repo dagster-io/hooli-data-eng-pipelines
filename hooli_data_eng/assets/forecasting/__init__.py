@@ -5,9 +5,11 @@ import pandas as pd
 from scipy import optimize
 from dagster_dbt import DbtCliResource
 
-from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output, Field, Int
+from dagster import AssetIn, asset,  MonthlyPartitionsDefinition, Output, Field, Int, Config
 from dagstermill import define_dagstermill_asset
 from dagster._utils import file_relative_path
+
+from pydantic import Field
 
 def model_func(x, a, b):
     return a * np.exp(b * (x / 10**18 - 1.6095))
@@ -26,16 +28,22 @@ def model_func(x, a, b):
 # Launchpad (see config_schema)
 # The final model coefficients are logged to Dagster 
 # using context.log.info
+
+class modelHyperParams(Config):
+    """ Hyper parameters for the ML model with default values """
+    a_init = Field(5, description="initial value for a parameter, intercept")
+    b_init = Field(5, description="initial value for b parameter, slope")
+
 @asset(
     ins={"daily_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     compute_kind="scikitlearn",
     io_manager_key="model_io_manager",
-    config_schema={"a_init": Field(Int, default_value=5), "b_init": Field(Int, default_value=5)}
 )
-def order_forecast_model(context, daily_order_summary: pd.DataFrame) -> Any:
+def order_forecast_model(context, daily_order_summary: pd.DataFrame, config: modelHyperParams) -> Any:
+
     """Model parameters that best fit the observed data"""
     df = daily_order_summary
-    p0 = [context.op_config["a_init"], context.op_config["b_init"]]
+    p0 = [config.a_init, config.b_init]
     coeffs = tuple(
         optimize.curve_fit(
             f=model_func, xdata=df.order_date.astype(np.int64), ydata=df.num_orders, p0=p0

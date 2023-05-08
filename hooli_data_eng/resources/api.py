@@ -7,18 +7,18 @@
 # This demo uses the responses package to mock an API
 # instead of relying on a real API
 
-from dagster import resource, Field
 import responses 
 import requests
 import pandas as pd
 from hooli_data_eng.utils import random_data
 import numpy as np
 import random 
+from dagster import ConfigurableResource
+from typing import Optional
 
-class RawDataAPI():
-    def __init__(self, flaky):
-        print(f"HERE! Flakiness set to: {flaky}")
-        self.flaky = flaky
+class RawDataAPI(ConfigurableResource):
+    
+    flaky: Optional[bool] = True 
 
     @responses.activate
     def get_orders(self, datetime_to_process):
@@ -64,11 +64,3 @@ class RawDataAPI():
         )
 
         return requests.get("http://api.jaffleshop.co/v1/users")
-    
-
-@resource(
-        config_schema={"flaky": Field(config=bool, default_value=True)}
-)
-def data_api(context):
-    flaky = context.resource_config["flaky"]
-    return RawDataAPI(flaky)      

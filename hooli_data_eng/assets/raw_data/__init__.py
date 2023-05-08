@@ -1,7 +1,8 @@
 import pandas as pd
 from dagster import asset, RetryPolicy, Backoff, Jitter, HourlyPartitionsDefinition, OpExecutionContext, build_op_context, build_resources
 from datetime import datetime, timedelta
-from hooli_data_eng.resources.api import data_api
+from hooli_data_eng.resources.api import RawDataAPI
+
 
 hourly_partitions = HourlyPartitionsDefinition(
     start_date="2023-04-11-00:00"
@@ -18,13 +19,11 @@ def _hourly_partition_seq(start, end):
 
 @asset(
     compute_kind="api",
-    required_resource_keys={"data_api"},
     partitions_def=hourly_partitions,
     metadata={"partition_expr": "created_at"},
 )
-def users(context: OpExecutionContext) -> pd.DataFrame:
+def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
-    api = context.resources.data_api
     # during a backfill the partition range will span multiple hours
     # during a single run the partition range will be for a single hour
     first_partition, last_partition = context.asset_partitions_time_window_for_output()
@@ -40,7 +39,6 @@ def users(context: OpExecutionContext) -> pd.DataFrame:
 
 @asset(
     compute_kind="api",
-    required_resource_keys={"data_api"},
     partitions_def=hourly_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=RetryPolicy(
@@ -50,9 +48,8 @@ def users(context: OpExecutionContext) -> pd.DataFrame:
         jitter=Jitter.FULL
     ),
 )
-def orders(context) -> pd.DataFrame:
+def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
-    api = context.resources.data_api
     first_partition, last_partition = context.asset_partitions_time_window_for_output()
     partition_seq = _hourly_partition_seq(first_partition, last_partition)
     all_orders = []
