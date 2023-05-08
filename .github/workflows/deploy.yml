@@ -49,7 +49,7 @@ jobs:
       - name: Generate docker image tag
         id: generate-image-tag
         if : steps.prerun.outputs.result != 'skip'
-        run: echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID" >> $GITHUB_ENV && echo $IMAGE_TAG
+        run: echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
