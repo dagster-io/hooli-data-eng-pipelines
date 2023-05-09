@@ -45,7 +45,7 @@ jobs:
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          location_names: '["wrong-location"]'
+          location_names: '["basics", "data-eng-pipeline"]'
 
       - name: Generate docker image tag
         id: generate-image-tag
