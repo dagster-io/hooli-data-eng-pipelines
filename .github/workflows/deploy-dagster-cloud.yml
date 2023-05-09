@@ -1,0 +1,104 @@
+name: Dagster Cloud Hybrid Deployment
+on:
+  push: # for full deployment
+    branches:
+      - "main"
+  pull_request:  # for branch deployments
+     types: [opened, synchronize, reopened, closed]
+
+concurrency: 
+  # Cancel in-progress deploys to main branch
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+env:
+  DAGSTER_CLOUD_ORGANIZATION: "hooli"
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  DAGSTER_PROJECT_DIR: "."
+  DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
+  # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
+  IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
+jobs:
+  dagster-cloud-deploy:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Pre-run checks
+        id: prerun
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.27
+
+      - name: Checkout
+        uses: actions/checkout@v3      
+        if : steps.prerun.outputs.result != 'skip'
+        with:
+          ref: ${{ github.head_ref }}
+          
+      - name: Validate configuration
+        id: ci-validate
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
+
+      - name: Initialize build session
+        id: ci-init
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.27
+        with:
+          project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
+          dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
+
+      - name: Generate docker image tag
+        id: generate-image-tag
+        if : steps.prerun.outputs.result != 'skip'
+        run: echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        if : steps.prerun.outputs.result != 'skip'
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:  us-west-2
+
+      - name: Login to ECR
+        if : ${{ steps.prerun.outputs.result != 'skip' }}
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      # Build 'data-eng-pipeline' code location
+      - name: Build and upload Docker image for data-eng-pipeline
+        if : steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
+
+      - name: Update build session with image tag for data-eng-pipeline
+        id: ci-set-build-output-data-eng-pipeline
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+
+      # Build 'basics' code location
+      - name: Build and upload Docker image for basics
+        if : steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_basics
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
+
+      - name: Update build session with image tag for basics
+        id: ci-set-build-output-basics
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
+
+      # Deploy
+      - name: Deploy to Dagster Cloud
+        id: ci-deploy
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci deploy"
