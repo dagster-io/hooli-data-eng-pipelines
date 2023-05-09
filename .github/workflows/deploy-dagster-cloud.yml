@@ -3,6 +3,7 @@ on:
   push: # for full deployment
     branches:
       - "main"
+      - "master"
   pull_request:  # for branch deployments
      types: [opened, synchronize, reopened, closed]
 
