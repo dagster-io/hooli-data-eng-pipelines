@@ -20,8 +20,8 @@ def dbt_metadata(context, node_info):
 # re-processing all data on each run
 # this approach can be modelled in dagster using partitions 
 # this project includes assets with hourly and daily partitions
-hourly_partitions = HourlyPartitionsDefinition(start_date="2023-04-11-00:00")
-daily_partitions = DailyPartitionsDefinition(start_date="2023-04-12")
+hourly_partitions = HourlyPartitionsDefinition(start_date="2023-05-10-00:00")
+daily_partitions = DailyPartitionsDefinition(start_date="2023-05-11")
 
 def partition_key_to_vars(partition_key):
     """ Map dagster partitions to the dbt var used in our model WHERE clauses """
@@ -82,7 +82,7 @@ daily_dbt_assets = load_assets_from_dbt_project(
     partition_key_to_vars_fn=partition_key_to_vars,
     partitions_def=daily_partitions,
     node_info_to_definition_metadata_fn=io_partition_metadata_fn_order_date,
-    select="daily_order_summary order_stats"
+    select="daily_order_summary order_stats",
 )
 
 dbt_views = load_assets_from_dbt_project(

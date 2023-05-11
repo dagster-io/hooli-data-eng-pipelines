@@ -1,4 +1,4 @@
-from dagster import asset, FreshnessPolicy, AssetIn, DynamicPartitionsDefinition, MetadataValue
+from dagster import asset, FreshnessPolicy, AssetIn, DynamicPartitionsDefinition, MetadataValue, AutoMaterializePolicy
 import pandas as pd
 
 # These assets take data from a SQL table managed by 
@@ -8,6 +8,7 @@ import pandas as pd
 @asset(
     key_prefix="MARKETING", 
     freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
+    auto_materialize_policy=AutoMaterializePolicy.lazy(),
     compute_kind="pandas",
     op_tags={"owner": "bi@hooli.com"}
 )
