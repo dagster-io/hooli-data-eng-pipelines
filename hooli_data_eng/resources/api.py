@@ -23,6 +23,7 @@ class RawDataAPI(ConfigurableResource):
     @responses.activate
     def get_orders(self, datetime_to_process):
         # add lots of flakiness
+        print(f"Flakiness set to: {self.flaky} with type: {type(self.flaky)}")
         if self.flaky and random.randint(0,10) <= 4:
             raise Exception("API time out")
 

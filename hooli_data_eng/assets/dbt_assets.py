@@ -21,7 +21,7 @@ def dbt_metadata(context, node_info):
 # this approach can be modelled in dagster using partitions 
 # this project includes assets with hourly and daily partitions
 hourly_partitions = HourlyPartitionsDefinition(start_date="2023-05-10-00:00")
-daily_partitions = DailyPartitionsDefinition(start_date="2023-05-11")
+daily_partitions = DailyPartitionsDefinition(start_date="2023-05-10")
 
 def partition_key_to_vars(partition_key):
     """ Map dagster partitions to the dbt var used in our model WHERE clauses """

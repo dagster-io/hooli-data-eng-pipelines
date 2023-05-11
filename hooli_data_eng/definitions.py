@@ -108,7 +108,7 @@ resource_def = {
         ),
         "model_io_manager": FilesystemIOManager(),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
-        "api": RawDataAPI(),
+        "api": RawDataAPI.configure_at_launch(),
         "s3": ResourceDefinition.none_resource(),
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
@@ -133,7 +133,7 @@ resource_def = {
             s3_resource=S3Resource(region_name="us-west-2"),
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
-        "api": RawDataAPI(),
+        "api": RawDataAPI.configure_at_launch(),
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
@@ -157,7 +157,7 @@ resource_def = {
             s3_resource=S3Resource(region_name="us-west-2"),
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
-        "api": RawDataAPI(),
+        "api": RawDataAPI.configure_at_launch(),
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
