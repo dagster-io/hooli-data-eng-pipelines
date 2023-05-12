@@ -96,7 +96,7 @@ jobs:
         if : steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
         with:
-          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
+          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics-TYPO"
 
       # Deploy
       - name: Deploy to Dagster Cloud
