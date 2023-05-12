@@ -66,21 +66,21 @@ jobs:
         if : ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
         
-      # Build 'data-eng-pipeline' code location
-      - name: Build and upload Docker image for data-eng-pipeline
-        if : steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
+      # # Build 'data-eng-pipeline' code location
+      # - name: Build and upload Docker image for data-eng-pipeline
+      #   if : steps.prerun.outputs.result != 'skip'
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: .
+      #     push: true
+      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
 
-      - name: Update build session with image tag for data-eng-pipeline
-        id: ci-set-build-output-data-eng-pipeline
-        if : steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
-        with:
-          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+      # - name: Update build session with image tag for data-eng-pipeline
+      #   id: ci-set-build-output-data-eng-pipeline
+      #   if : steps.prerun.outputs.result != 'skip'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+      #   with:
+      #     command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
@@ -106,7 +106,8 @@ jobs:
         with:
           command: "ci deploy"
 
-      - name: Update PR comment
+      # Summary and comment updates - note these always() run
+      - name: Update PR comment for branch deployments
         id: ci-notify
         if: always()
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
