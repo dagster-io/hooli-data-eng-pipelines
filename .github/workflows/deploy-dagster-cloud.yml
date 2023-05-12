@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Pre-run checks
         id: prerun
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.27
 
       - name: Checkout
         uses: actions/checkout@v3      
@@ -36,14 +36,14 @@ jobs:
       - name: Validate configuration
         id: ci-validate
         if : steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
         if : steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.27
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
@@ -78,7 +78,7 @@ jobs:
       - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output-data-eng-pipeline
         if : steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
@@ -94,7 +94,7 @@ jobs:
       - name: Update build session with image tag for basics
         id: ci-set-build-output-basics
         if : steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
 
@@ -102,7 +102,7 @@ jobs:
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if : steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci deploy"
 
@@ -110,13 +110,13 @@ jobs:
       - name: Update PR comment for branch deployments
         id: ci-notify
         if: always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
 
       - name: Generate summary
         id: ci-summary
         if: always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
