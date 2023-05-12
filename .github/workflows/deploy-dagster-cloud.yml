@@ -48,7 +48,6 @@ jobs:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
           deployment: 'data-eng-prod'
-          location_names: "['basics']"
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -67,21 +66,21 @@ jobs:
         if : ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
         
-      # # Build 'data-eng-pipeline' code location
-      # - name: Build and upload Docker image for data-eng-pipeline
-      #   if : steps.prerun.outputs.result != 'skip'
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: .
-      #     push: true
-      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
+      # Build 'data-eng-pipeline' code location
+      - name: Build and upload Docker image for data-eng-pipeline
+        if : steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
 
-      # - name: Update build session with image tag for data-eng-pipeline
-      #   id: ci-set-build-output-data-eng-pipeline
-      #   if : steps.prerun.outputs.result != 'skip'
-      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
-      #   with:
-      #     command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+      - name: Update build session with image tag for data-eng-pipeline
+        id: ci-set-build-output-data-eng-pipeline
+        if : steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        with:
+          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
