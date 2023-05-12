@@ -105,3 +105,10 @@ jobs:
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
         with:
           command: "ci deploy"
+
+      - name: Update PR comment
+        id: ci-notify
+        if: always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@release-0.1.27
+        with:
+          command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
