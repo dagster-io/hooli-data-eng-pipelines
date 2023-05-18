@@ -18,6 +18,7 @@ env:
   DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
   IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-20.04
@@ -104,3 +105,18 @@ jobs:
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci deploy"
+
+      # Summary and comment updates - note these always() run
+      - name: Update PR comment for branch deployments
+        id: ci-notify
+        if: always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
+
+      - name: Generate summary
+        id: ci-summary
+        if: always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
