@@ -30,7 +30,7 @@ from dagster import (
     load_assets_from_modules,
     load_assets_from_package_module,
     AssetKey,
-    build_asset_reconciliation_sensor,
+    AutoMaterializePolicy,
     multiprocess_executor,
 )
 
@@ -108,7 +108,7 @@ resource_def = {
         ),
         "model_io_manager": FilesystemIOManager(),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
-        "api": RawDataAPI(),
+        "api": RawDataAPI.configure_at_launch(),
         "s3": ResourceDefinition.none_resource(),
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
@@ -133,7 +133,7 @@ resource_def = {
             s3_resource=S3Resource(region_name="us-west-2"),
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
-        "api": RawDataAPI(),
+        "api": RawDataAPI.configure_at_launch(),
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
@@ -157,7 +157,7 @@ resource_def = {
             s3_resource=S3Resource(region_name="us-west-2"),
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
-        "api": RawDataAPI(),
+        "api": RawDataAPI.configure_at_launch(),
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
@@ -215,17 +215,6 @@ predict_job = define_asset_job(
 def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
     yield RunRequest(run_key=context.cursor)
 
-
-# This sensor kicks off runs when assets are stale and violoating their
-# freshness policies
-freshness_sla_sensor = build_asset_reconciliation_sensor(
-    name="freshness_sla_sensor",
-    minimum_interval_seconds=9,
-    asset_selection=AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])).upstream()
-    | AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"])).upstream(),
-    run_tags={"dagster/max_retries": "2"},
-)
-
 # ---------------------------------------------------
 # Definitions
 
@@ -235,14 +224,13 @@ freshness_sla_sensor = build_asset_reconciliation_sensor(
 defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
-    ),  # should executors be config driven instead of .configured?
+    ),  
     assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule],
     sensors=[
         orders_sensor,
         watch_s3_sensor,
-        freshness_sla_sensor,
         asset_delay_alert_sensor,
     ],
     jobs=[analytics_job, predict_job],

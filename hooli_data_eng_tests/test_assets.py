@@ -1,6 +1,6 @@
 
 from hooli_data_eng.assets.raw_data import orders, users, hourly_partitions, build_op_context
-from hooli_data_eng.resources.api import data_api
+from hooli_data_eng.resources.api import RawDataAPI
 
 from dagster import define_asset_job, Definitions
 
@@ -11,7 +11,7 @@ import os
 def test_orders_single_partition():
     orders_df = orders(
         build_op_context(
-            resources={"data_api": data_api.configured({"flaky": False})},
+            resources={"api": RawDataAPI(flaky=False)},
             partition_key="2023-04-10-22:00"
         )
     )
@@ -20,7 +20,7 @@ def test_orders_single_partition():
 def test_users_single_partition():
     users_df = users(
         build_op_context(
-            resources={"data_api": data_api.configured({"flaky": False})},
+            resources={"api": RawDataAPI(flaky=False)},
             partition_key="2023-04-10-22:00"
         )
     )
@@ -28,7 +28,7 @@ def test_users_single_partition():
 
 def test_orders_multi_partition_backfill():
     test_job = define_asset_job("test_job", selection=["orders"])
-    test_resources = {"io_manager": DuckDBPandasIOManager(database="test.duckdb"), "data_api": data_api.configured({"flaky": False})}
+    test_resources = {"io_manager": DuckDBPandasIOManager(database="test.duckdb"), "api": RawDataAPI(flaky=False)}
     defs = Definitions(
         assets=[orders], 
         jobs=[test_job],
@@ -52,7 +52,7 @@ def test_orders_multi_partition_backfill():
 
 def test_users_multi_partition_backfill():
     test_job = define_asset_job("test_job", selection=["users"])
-    test_resources = {"io_manager": DuckDBPandasIOManager(database="test.duckdb"), "data_api": data_api.configured({"flaky": False})}
+    test_resources = {"io_manager": DuckDBPandasIOManager(database="test.duckdb"), "api": RawDataAPI(flaky=False)}
     defs = Definitions(
         assets=[users], 
         jobs=[test_job],
