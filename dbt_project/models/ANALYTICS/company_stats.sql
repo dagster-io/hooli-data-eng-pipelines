@@ -1,3 +1,8 @@
+{{
+        config(
+                dagster_auto_materialize_policy={"type":"lazy"}
+        )
+}}
 select
         order_date,
         company,
