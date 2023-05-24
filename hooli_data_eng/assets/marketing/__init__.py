@@ -12,7 +12,7 @@ import pandas as pd
     compute_kind="pandas",
     op_tags={"owner": "bi@hooli.com"}
 )
-def avg_order(company_perf: pd.DataFrame) -> pd.DataFrame:
+def avg_orders(company_perf: pd.DataFrame) -> pd.DataFrame:
     """ Computes avg order KPI, must be updated regularly for exec dashboard """
 
     return pd.DataFrame({
