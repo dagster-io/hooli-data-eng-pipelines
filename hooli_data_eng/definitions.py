@@ -11,7 +11,7 @@ from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_dbt import DbtCliClientResource
-from dagster_dbt.cli import DbtCli
+from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
 from dagster_snowflake_pandas import SnowflakePandasIOManager
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
 from dagstermill import ConfigurableLocalOutputNotebookIOManager
