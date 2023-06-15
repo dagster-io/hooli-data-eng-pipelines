@@ -6,6 +6,7 @@ clean:
 	rm -rf ~/.dagster_home; mkdir ~/.dagster_home; cp dagster.yaml ~/.dagster_home/dagster.yaml
 
 manifest:
+	pip install pyopenssl --upgrade;
 	pip install dbt-core dbt-duckdb dbt-snowflake; 
 	dbt parse --project-dir=dbt_project --profiles-dir=dbt_project/config
 
