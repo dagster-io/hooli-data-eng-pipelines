@@ -7,6 +7,7 @@ clean:
 
 manifest:
 	pip install pyopenssl --upgrade;
+	pip install click --upgrade;
 	pip install dbt-core dbt-duckdb dbt-snowflake; 
 	dbt parse --project-dir=dbt_project --profiles-dir=dbt_project/config
 
