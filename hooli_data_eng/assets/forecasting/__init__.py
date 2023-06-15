@@ -35,14 +35,14 @@ class modelHyperParams(Config):
     b_init = Field(5, description="initial value for b parameter, slope")
 
 @asset(
-    ins={"daily_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
+    ins={"weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     compute_kind="scikitlearn",
     io_manager_key="model_io_manager",
 )
-def order_forecast_model(context, daily_order_summary: pd.DataFrame, config: modelHyperParams) -> Any:
+def order_forecast_model(context, weekly_order_summary: pd.DataFrame, config: modelHyperParams) -> Any:
 
     """Model parameters that best fit the observed data"""
-    df = daily_order_summary
+    df = weekly_order_summary
     p0 = [config.a_init, config.b_init]
     coeffs = tuple(
         optimize.curve_fit(
@@ -60,7 +60,7 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame, config: mod
 # Helpful information is surfaced in dagster using the Output(... metadata)
 @asset(
   ins={
-        "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
+        "weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
     compute_kind="scikitlearn",
@@ -68,14 +68,14 @@ def order_forecast_model(context, daily_order_summary: pd.DataFrame, config: mod
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01")
 )
-def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> Output[pd.DataFrame]:
+def model_stats_by_month(context, weekly_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]) -> Output[pd.DataFrame]:
     """Model errors by month"""
     a, b = order_forecast_model
     target_date = pd.to_datetime(context.asset_partition_key_for_output())
     target_month = target_date.month
-    daily_order_summary['order_date'] = pd.to_datetime(daily_order_summary['order_date'])
-    daily_order_summary['order_month'] = pd.DatetimeIndex(daily_order_summary['order_date']).month
-    target_orders = daily_order_summary[(daily_order_summary['order_month'] == target_month)]
+    weekly_order_summary['order_date'] = pd.to_datetime(weekly_order_summary['order_date'])
+    weekly_order_summary['order_month'] = pd.DatetimeIndex(weekly_order_summary['order_date']).month
+    target_orders = weekly_order_summary[(weekly_order_summary['order_month'] == target_month)]
     date_range  = pd.date_range(
         start=target_date, end=target_date + pd.DateOffset(days=30)
     )
@@ -90,18 +90,18 @@ def model_stats_by_month(context, daily_order_summary: pd.DataFrame, order_forec
 # and stores the result in the warehouse
 @asset(
     ins={
-        "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
+        "weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
     compute_kind="pandas",
     key_prefix=["FORECASTING"],
 )
 def predicted_orders(
-    daily_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
+    weekly_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
 ) -> pd.DataFrame:
     """Predicted orders for the next 30 days based on the fit paramters"""
     a, b = order_forecast_model
-    start_date = daily_order_summary.order_date.max()
+    start_date = weekly_order_summary.order_date.max()
     future_dates = pd.date_range(
         start=start_date, end=pd.to_datetime(start_date) + pd.DateOffset(days=30)
     )
@@ -133,7 +133,7 @@ model_nb = define_dagstermill_asset(
     name = "model_nb",
     notebook_path = file_relative_path(__file__, "model.ipynb"),
     ins = {
-          "daily_order_summary": AssetIn(key_prefix=["ANALYTICS"], dagster_type = pd.DataFrame),
+          "weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"], dagster_type = pd.DataFrame),
           "order_forecast_model": AssetIn(),
     },
     required_resource_keys = {"io_manager"}

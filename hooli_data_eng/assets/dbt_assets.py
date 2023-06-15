@@ -1,96 +1,128 @@
 
+from typing import Any, Mapping
 from dagster._utils import file_relative_path
 from dagster_dbt import load_assets_from_dbt_project
-from dagster import DailyPartitionsDefinition, HourlyPartitionsDefinition
-
-DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
-DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
-
-# dbt assets contain some default metadata
-# for example dagster will show the schema definitions from
-# the dbt project on the asset definition page 
-# this function adds extra metadata to each asset materialization
-def dbt_metadata(context, node_info):
-    return {
-        "owner": "data@hooli.com",
-        "name": node_info["name"]
-    }
+from dagster_dbt.asset_decorator import dbt_assets
+from dagster_dbt.cli import DbtCli, DbtManifest
+from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output
+from dateutil import parser
+import json 
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
 # this approach can be modelled in dagster using partitions 
 # this project includes assets with hourly and daily partitions
-hourly_partitions = HourlyPartitionsDefinition(start_date="2023-05-10-00:00")
-daily_partitions = DailyPartitionsDefinition(start_date="2023-05-10")
+daily_partitions = DailyPartitionsDefinition(start_date="2023-05-25")
+weekly_partitions = WeeklyPartitionsDefinition(start_date="2023-05-25")
 
-def partition_key_to_vars(partition_key):
-    """ Map dagster partitions to the dbt var used in our model WHERE clauses """
-    return {"datetime_to_process": partition_key}
+DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
+DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
-def io_partition_metadata_fn_dt(_):
-    """ Tells dagster how to load partitioned dbt assets by mapping a partition to dt column """
-    return {"partition_expr": "dt"}
 
-def io_partition_metadata_fn_order_date(_):
-    """ Tells dagster how to load partitioned dbt assets by mapping a partition to a column """
-    return {"partition_expr": "order_date"}
+DBT_MANIFEST = file_relative_path(__file__, "../../target/manifest.json")
 
-def io_partition_metadata_fn_users(_):
-    """ Tells dagster how to load partitioned dbt assets by mapping a partition to a column """
-    return {"partition_expr": "created_at"}
+class CustomizedDbtManifest(DbtManifest):
 
-orders_cleaned_hourly = load_assets_from_dbt_project(
-    DBT_PROJECT_DIR,
-    DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"],
-    runtime_metadata_fn=dbt_metadata,
-    partition_key_to_vars_fn=partition_key_to_vars,
-    partitions_def=hourly_partitions,
-    node_info_to_definition_metadata_fn=io_partition_metadata_fn_dt,
-    select="orders_cleaned"
+    @classmethod
+    def node_info_to_metadata(cls, node_info: Mapping[str, Any]) -> Mapping[str, Any]:
+            metadata = {"partition_expr": "orders_date"}
+           
+            if node_info['name'] == 'orders_cleaned':
+                metadata = {"partition_expr": "dt"}
+            
+            if node_info['name'] == 'users_cleaned':
+                metadata = {"partition_expr": "created_at"}
+
+            return metadata   
+
+    @classmethod
+    def node_info_to_asset_key(cls, node_info: Mapping[str, Any]) -> AssetKey:
+        
+        node_path = node_info['path']
+        prefix = node_path.split('/')[0]
+        
+        if node_path == 'models/sources.yml':
+            prefix = "RAW_DATA"
+        
+        return AssetKey([prefix, node_info['name']])
+    
+    @classmethod
+    def node_info_to_description(cls, node_info: Mapping[str, Any]) -> str:
+        description_sections = []
+
+        description = node_info.get("description", "")
+        if description:
+            description_sections.append(description)
+
+        raw_code = node_info.get("raw_code", "")
+        if raw_code:
+            description_sections.append(f"#### Raw SQL:\n```\n{raw_code}\n```")
+
+        return "\n\n".join(description_sections)
+
+manifest = CustomizedDbtManifest.read(path=DBT_MANIFEST)
+
+def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
+     # map partition key range to dbt vars
+    first_partition, last_partition = context.asset_partitions_time_window_for_output(list(context.selected_output_names)[0])
+    dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
+    dbt_args = ["run", "--vars", json.dumps(dbt_vars)]
+
+    dbt_cli_task = dbt2.cli(dbt_args, manifest=manifest, context=context)
+
+    dbt_events = list(dbt_cli_task.stream_raw_events())
+
+    for event in dbt_events:
+        # add custom metadata to the asset materialization event 
+        context.log.info(event)
+        for dagster_event in event.to_default_asset_events(manifest=manifest):
+            
+            if isinstance(dagster_event, Output):
+                event_node_info = event.event["data"]["node_info"]
+
+                started_at = parser.isoparse(event_node_info["node_started_at"])
+                completed_at = parser.isoparse(event_node_info["node_finished_at"])
+
+                metadata = {
+                    "Execution Started At": started_at.isoformat(timespec="seconds"),
+                    "Execution Completed At": completed_at.isoformat(timespec="seconds"),
+                    "Execution Duration": (completed_at - started_at).total_seconds(),
+                    "Owner": "data@hooli.com"
+                }
+
+                context.add_output_metadata(
+                    metadata=metadata,
+                    output_name=dagster_event.output_name,
+                )
+
+            yield dagster_event
+    
+    if not dbt_cli_task.is_successful():
+        raise Exception('dbt command failed, see preceding events')
+    
+
+@dbt_assets(
+        manifest=manifest,
+        select="orders_cleaned users_cleaned orders_augmented", 
+        partitions_def=daily_partitions,
 )
+def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
+    yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
 
-orders_augmented_hourly = load_assets_from_dbt_project(
-    DBT_PROJECT_DIR,
-    DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"],
-    source_key_prefix="ANALYTICS",
-    runtime_metadata_fn=dbt_metadata,
-    partition_key_to_vars_fn=partition_key_to_vars,
-    partitions_def=hourly_partitions,
-    node_info_to_definition_metadata_fn=io_partition_metadata_fn_order_date,
-    select="orders_augmented"
+@dbt_assets(
+        manifest=manifest,
+        select="weekly_order_summary order_stats", 
+        partitions_def=weekly_partitions
 )
+def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
+    yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
 
-users_cleaned_hourly = load_assets_from_dbt_project(
-    DBT_PROJECT_DIR,
-    DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"],
-    runtime_metadata_fn=dbt_metadata,
-    partition_key_to_vars_fn=partition_key_to_vars,
-    partitions_def=hourly_partitions,
-    node_info_to_definition_metadata_fn=io_partition_metadata_fn_users,
-    select="users_cleaned"
-)
-
-daily_dbt_assets = load_assets_from_dbt_project(
-    DBT_PROJECT_DIR,
-    DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"],
-    source_key_prefix="ANALYTICS",
-    runtime_metadata_fn=dbt_metadata,
-    partition_key_to_vars_fn=partition_key_to_vars,
-    partitions_def=daily_partitions,
-    node_info_to_definition_metadata_fn=io_partition_metadata_fn_order_date,
-    select="daily_order_summary order_stats",
-)
 
 dbt_views = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
     key_prefix=["ANALYTICS"],
     source_key_prefix="ANALYTICS",
-    runtime_metadata_fn=dbt_metadata,
     select="company_perf sku_stats company_stats"
 )
 

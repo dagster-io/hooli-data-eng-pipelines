@@ -1,25 +1,25 @@
 import pandas as pd
-from dagster import asset, RetryPolicy, Backoff, Jitter, HourlyPartitionsDefinition, OpExecutionContext, build_op_context, build_resources
+from dagster import asset, RetryPolicy, Backoff, Jitter, DailyPartitionsDefinition, OpExecutionContext, build_op_context, build_resources
 from datetime import datetime, timedelta
 from hooli_data_eng.resources.api import RawDataAPI
 
 
-hourly_partitions = HourlyPartitionsDefinition(
-    start_date="2023-05-10-00:00"
+daily_partitions = DailyPartitionsDefinition(
+    start_date="2023-05-25"
 )
 
 
-def _hourly_partition_seq(start, end):
+def _daily_partition_seq(start, end):
     start = pd.to_datetime(start)
     end = pd.to_datetime(end)
-    hourly_diffs = int((end - start) / timedelta(hours=1))
+    daily_diffs = int((end - start) / timedelta(hours=24))
     
-    return [str(start + timedelta(hours=i)) for i in range(hourly_diffs)]
+    return [str(start + timedelta(hours=i)) for i in range(daily_diffs)]
 
 
 @asset(
     compute_kind="api",
-    partitions_def=hourly_partitions,
+    partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
@@ -27,7 +27,7 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
     # during a backfill the partition range will span multiple hours
     # during a single run the partition range will be for a single hour
     first_partition, last_partition = context.asset_partitions_time_window_for_output()
-    partition_seq = _hourly_partition_seq(first_partition, last_partition)
+    partition_seq = _daily_partition_seq(first_partition, last_partition)
     all_users = []
     for partition in partition_seq:
         resp = api.get_users(partition)
@@ -39,7 +39,7 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 
 @asset(
     compute_kind="api",
-    partitions_def=hourly_partitions,
+    partitions_def=daily_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=RetryPolicy(
         max_retries=3, 
@@ -51,7 +51,7 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
     first_partition, last_partition = context.asset_partitions_time_window_for_output()
-    partition_seq = _hourly_partition_seq(first_partition, last_partition)
+    partition_seq = _daily_partition_seq(first_partition, last_partition)
     all_orders = []
     for partition in partition_seq:
         resp = api.get_orders(partition)
