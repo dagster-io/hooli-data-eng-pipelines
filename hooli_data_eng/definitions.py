@@ -142,7 +142,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
-        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
+        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(
@@ -167,7 +167,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
-        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
+        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),
