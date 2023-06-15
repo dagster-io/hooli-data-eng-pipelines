@@ -3,7 +3,7 @@ from hooli_data_eng.resources.sensor_smtp import EmailAlert
 
 import os
 
-assets_to_monitor = AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])) | AssetSelection.keys(AssetKey(["ANALYTICS", "daily_order_summary"]))
+assets_to_monitor = AssetSelection.keys(AssetKey(["MARKETING", "avg_order"])) | AssetSelection.keys(AssetKey(["ANALYTICS", "weekly_order_summary"]))
 
 @freshness_policy_sensor(asset_selection=assets_to_monitor)
 def asset_delay_alert_sensor(context: FreshnessPolicySensorContext, email: EmailAlert):

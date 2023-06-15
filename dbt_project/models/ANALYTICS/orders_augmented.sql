@@ -5,5 +5,5 @@ from
         {{ ref("orders_cleaned") }} o left join
         {{ ref("users_cleaned") }} u on (o.user_id = u.user_id)
 {% if is_incremental() %}
-WHERE o.order_date = '{{ var('datetime_to_process') }}'
+WHERE o.order_date >= '{{ var('min_date') }}' AND o.order_date <= '{{ var('max_date') }}'
 {% endif %}

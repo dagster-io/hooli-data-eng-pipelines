@@ -11,9 +11,11 @@ from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.jobs.watch_s3 import watch_s3_sensor
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_dbt import DbtCliClientResource
+from dagster_dbt.cli import DbtCli
 from dagster_snowflake_pandas import SnowflakePandasIOManager
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
 from dagstermill import ConfigurableLocalOutputNotebookIOManager
+
 
 from dagster import (
     build_schedule_from_partitioned_job,
@@ -58,10 +60,12 @@ raw_data_assets = load_assets_from_package_module(
 # The dbt file dbt_project/config/profiles.yaml
 # specifies what databases to targets, and locally will
 # execute against a DuckDB
-dbt_assets = load_assets_from_modules([dbt_assets])
+
 
 DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_project/config")
+
+dbt_assets = load_assets_from_modules([dbt_assets])
 
 # Our final set of assets represent Python code that
 # should run after dbt. These assets are defined in
@@ -113,6 +117,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
         ),
+        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
@@ -137,6 +142,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
+        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(
@@ -161,6 +167,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
+        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),
@@ -184,10 +191,8 @@ resource_def = {
 # Jobs can be run on a schedule, or in response to an external
 # event using a sensor.
 
-# This job updates all of the assets upstream of "daily_order_summary",
-# which is an asset representing a model in dbt. In this case,
-# this job will update the raw data assets and then the dbt models
-# upstream of daily_order_summary.
+# This job updates all of the assets upstream of "orders_augmented",
+# which is an asset representing a model in dbt
 analytics_job = define_asset_job(
     name="refresh_analytics_model_job",
     selection=AssetSelection.keys(["ANALYTICS", "orders_augmented"]).upstream(),
@@ -230,7 +235,7 @@ defs = Definitions(
     schedules=[analytics_schedule],
     sensors=[
         orders_sensor,
-        watch_s3_sensor,
+      #  watch_s3_sensor,
         asset_delay_alert_sensor,
     ],
     jobs=[analytics_job, predict_job],

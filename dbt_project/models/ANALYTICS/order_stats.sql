@@ -9,6 +9,6 @@ select
         sum(order_total) as total_revenue
 from {{ ref("orders_augmented") }}
 {% if is_incremental() %}
-WHERE {{ date_trunc("day", "order_date") }} = '{{ var('datetime_to_process') }}'
+WHERE {{ date_trunc("day", "order_date") }} >=  '{{ var('min_date') }}' AND {{ date_trunc("day", "order_date") }} <=  '{{ var('max_date') }}'
 {% endif %}
 group by 1
