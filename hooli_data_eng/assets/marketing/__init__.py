@@ -7,7 +7,7 @@ import pandas as pd
 # and an associated reconciliation sensor
 @asset(
     key_prefix="MARKETING", 
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
+    freshness_policy=FreshnessPolicy(maximum_lag_minutes=24*60), 
     auto_materialize_policy=AutoMaterializePolicy.lazy(),
     compute_kind="pandas",
     op_tags={"owner": "bi@hooli.com"}
@@ -22,7 +22,7 @@ def avg_orders(company_perf: pd.DataFrame) -> pd.DataFrame:
 
 @asset(
     key_prefix="MARKETING", 
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=240), 
+    freshness_policy=FreshnessPolicy(maximum_lag_minutes=24*60), 
     compute_kind="snowflake", 
     metadata={
         "owner": "bi@hooli.com"
