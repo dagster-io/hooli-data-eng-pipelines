@@ -25,7 +25,7 @@ class CustomizedDbtManifest(DbtManifest):
 
     @classmethod
     def node_info_to_metadata(cls, node_info: Mapping[str, Any]) -> Mapping[str, Any]:
-            metadata = {"partition_expr": "orders_date"}
+            metadata = {"partition_expr": "order_date"}
            
             if node_info['name'] == 'orders_cleaned':
                 metadata = {"partition_expr": "dt"}

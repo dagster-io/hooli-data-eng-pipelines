@@ -13,7 +13,7 @@ from typing import Sequence
 class MyDBIOManager(DbIOManager):
 
     def _get_table_slice(self, context, output_context: OutputContext):
-        metadata = {"partition_expr": "orders_date"}
+        metadata = {"partition_expr": "order_date"}
 
         if 'orders_cleaned' in output_context.asset_key.path:   
             metadata = {"partition_expr": "dt"}
