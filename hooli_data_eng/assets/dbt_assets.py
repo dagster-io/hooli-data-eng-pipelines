@@ -19,7 +19,7 @@ DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
 
-DBT_MANIFEST = file_relative_path(__file__, "../../target/manifest.json")
+DBT_MANIFEST = file_relative_path(__file__, "../../dbt_project/target/manifest.json")
 
 class CustomizedDbtManifest(DbtManifest):
 
