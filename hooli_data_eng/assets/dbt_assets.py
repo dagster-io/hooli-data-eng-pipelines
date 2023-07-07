@@ -3,7 +3,7 @@ from typing import Any, Mapping
 from dagster._utils import file_relative_path
 from dagster_dbt import load_assets_from_dbt_project
 from dagster_dbt.asset_decorator import dbt_assets
-from dagster_dbt.cli import DbtCli, DbtManifest
+from dagster_dbt.core import DbtCli, DbtManifest
 from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output
 from dateutil import parser
 import json 
@@ -78,7 +78,7 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
         for dagster_event in event.to_default_asset_events(manifest=manifest):
             
             if isinstance(dagster_event, Output):
-                event_node_info = event.event["data"]["node_info"]
+                event_node_info = event.raw_event["data"]["node_info"]
 
                 started_at = parser.isoparse(event_node_info["node_started_at"])
                 completed_at = parser.isoparse(event_node_info["node_finished_at"])

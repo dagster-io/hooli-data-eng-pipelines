@@ -1,4 +1,4 @@
-from dagster_dbt.cli import DbtCli
+from dagster_dbt.core import DbtCli
 from dagster_dbt.asset_decorator import DbtManifest
 from typing import List, Optional
 from dagster import OpExecutionContext
