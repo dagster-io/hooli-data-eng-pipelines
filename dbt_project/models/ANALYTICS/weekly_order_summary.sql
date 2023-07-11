@@ -2,7 +2,7 @@
 {{
         config(
                 dagster_auto_materialize_policy={"type":"lazy"},
-                dagster_freshness_policy={"cron_schedule": "0 9 * * MON", "maximum_lag_minutes": 9*60}
+                dagster_freshness_policy={"cron_schedule": "0 9 * * MON", "maximum_lag_minutes": (24+9)*60}
         )
 }}
 
