@@ -1,6 +1,6 @@
 <div align="center">
   
-# [Hooli, Inc. Data Engineering](https://github.com/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines/)
+# [Hooli, Inc. Data Engineering.](https://github.com/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines/)
 
 </div>
 
