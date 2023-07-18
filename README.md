@@ -1,5 +1,9 @@
 # Hooli, Inc. Data Engineering
 
+<p align="center">
+  <img src="https://wakatime.com/badge/github/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines.svg" alt="wakatime" />
+</p>
+
 This repository includes Dagster application code developed by the fictional data engineering team at Hooli.
 
 ## Getting Started
