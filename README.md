@@ -1,4 +1,8 @@
+<div align="center">
+  
 # [Hooli, Inc. Data Engineering](https://github.com/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines/)
+
+</div>
 
 <p align="center">
   <img src="https://wakatime.com/badge/github/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines.svg" alt="wakatime" />
