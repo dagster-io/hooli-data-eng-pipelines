@@ -1,6 +1,6 @@
 <div align="center">
   
-# [Dagster Cloud - Hooli, Inc. Data Engineering.](https://github.com/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines/)
+# [Dagster Cloud - Hooli Inc. Data Engineering.](https://github.com/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines/)
 
 </div>
 
