@@ -5,9 +5,13 @@
 </div>
 
 <div align="center">
+
+---
   
 This repository includes Dagster application code developed by the fictional data engineering team at Hooli.
 
+---
+  
 </div>
 
 <p align="center">
