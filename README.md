@@ -8,6 +8,12 @@
   <img src="https://wakatime.com/badge/github/BrenoFariasdaSilva/Dagster-Data-Engineering-Pipelines.svg" alt="wakatime" />
 </p>
 
+<div align="center">
+  
+![RepoBeats Statistics](https://repobeats.axiom.co/api/embed/73650a6aa618db050c06a37b0cf1c12b38e56e94.svg "Repobeats analytics image")
+
+</div>
+
 This repository includes Dagster application code developed by the fictional data engineering team at Hooli.
 
 ## Getting Started
