@@ -1,12 +1,13 @@
 
 from typing import Any, Mapping
 from dagster._utils import file_relative_path
+from dagster_dbt import DbtCliResource, DagsterDbtTranslator
 from dagster_dbt import load_assets_from_dbt_project
 from dagster_dbt.asset_decorator import dbt_assets
-from dagster_dbt.core import DbtCli, DbtManifest
 from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output
 from dateutil import parser
 import json 
+import textwrap
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
@@ -20,6 +21,12 @@ DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
 
 DBT_MANIFEST = file_relative_path(__file__, "../../dbt_project/target/manifest.json")
+
+class CustomDagsterDbtTranslator(DagsterDbtTranslator):
+    def get_description(self, dbt_resource_props: Mapping[str, Any]) -> str:
+        return textwrap.indent(dbt_resource_props.get("raw_sql", ""), "\t")    
+    
+
 
 class CustomizedDbtManifest(DbtManifest):
 
