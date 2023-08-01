@@ -2,6 +2,7 @@
 from typing import Any, Mapping
 from dagster._utils import file_relative_path
 from dagster_dbt import DbtCliResource, DagsterDbtTranslator
+from dagster_dbt import DbtCliResource, DagsterDbtTranslator
 from dagster_dbt import load_assets_from_dbt_project
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output, MetadataValue
