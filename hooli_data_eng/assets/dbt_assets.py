@@ -1,12 +1,14 @@
 
 from typing import Any, Mapping
 from dagster._utils import file_relative_path
+from dagster_dbt import DbtCliResource, DagsterDbtTranslator
 from dagster_dbt import load_assets_from_dbt_project
 from dagster_dbt.asset_decorator import dbt_assets
-from dagster_dbt.core import DbtCli, DbtManifest
-from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output
+from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output, MetadataValue
 from dateutil import parser
 import json 
+import textwrap
+from pathlib import Path
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
@@ -19,63 +21,64 @@ DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
 
-DBT_MANIFEST = file_relative_path(__file__, "../../dbt_project/target/manifest.json")
+DBT_MANIFEST = Path(file_relative_path(__file__, "../../dbt_project/target/manifest.json"))
 
-class CustomizedDbtManifest(DbtManifest):
+class CustomDagsterDbtTranslator(DagsterDbtTranslator):
+    def get_description(self, dbt_resource_props: Mapping[str, Any]) -> str:
 
-    @classmethod
-    def node_info_to_metadata(cls, node_info: Mapping[str, Any]) -> Mapping[str, Any]:
-            metadata = {"partition_expr": "order_date"}
-           
-            if node_info['name'] == 'orders_cleaned':
-                metadata = {"partition_expr": "dt"}
-            
-            if node_info['name'] == 'users_cleaned':
-                metadata = {"partition_expr": "created_at"}
+        description = f"dbt model for: {dbt_resource_props['name']} \n \n"
 
-            return metadata   
-
-    @classmethod
-    def node_info_to_asset_key(cls, node_info: Mapping[str, Any]) -> AssetKey:
-        
-        node_path = node_info['path']
+        return description + textwrap.indent(dbt_resource_props.get("raw_code", ""), "\t")    
+    
+    def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> AssetKey:
+        node_path = dbt_resource_props['path']
         prefix = node_path.split('/')[0]
         
         if node_path == 'models/sources.yml':
             prefix = "RAW_DATA"
         
-        return AssetKey([prefix, node_info['name']])
+        return AssetKey([prefix, dbt_resource_props['name']])
     
-    @classmethod
-    def node_info_to_description(cls, node_info: Mapping[str, Any]) -> str:
-        description_sections = []
+    def get_group_name(
+        self, dbt_resource_props: Mapping[str, Any]
+    ):
+        
+        node_path = dbt_resource_props['path']
+        prefix = node_path.split('/')[0]
+        
+        if node_path == 'models/sources.yml':
+            prefix = "RAW_DATA"
 
-        description = node_info.get("description", "")
-        if description:
-            description_sections.append(description)
+        return prefix
+        
+        
+    def get_metadata(
+        self, dbt_resource_props: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        metadata = {"partition_expr": "order_date"}
+        
+        if dbt_resource_props['name'] == 'orders_cleaned':
+            metadata = {"partition_expr": "dt"}
+        
+        if dbt_resource_props['name'] == 'users_cleaned':
+            metadata = {"partition_expr": "created_at"}
 
-        raw_code = node_info.get("raw_code", "")
-        if raw_code:
-            description_sections.append(f"#### Raw SQL:\n```\n{raw_code}\n```")
+        return metadata
 
-        return "\n\n".join(description_sections)
-
-manifest = CustomizedDbtManifest.read(path=DBT_MANIFEST)
-
-def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
+def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
      # map partition key range to dbt vars
     first_partition, last_partition = context.asset_partitions_time_window_for_output(list(context.selected_output_names)[0])
     dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
     dbt_args = ["run", "--vars", json.dumps(dbt_vars)]
 
-    dbt_cli_task = dbt2.cli(dbt_args, manifest=manifest, context=context)
+    dbt_cli_task = dbt2.cli(dbt_args, context=context)
 
     dbt_events = list(dbt_cli_task.stream_raw_events())
 
     for event in dbt_events:
         # add custom metadata to the asset materialization event 
         context.log.info(event)
-        for dagster_event in event.to_default_asset_events(manifest=manifest):
+        for dagster_event in event.to_default_asset_events(manifest=dbt_cli_task.manifest):
             
             if isinstance(dagster_event, Output):
                 event_node_info = event.raw_event["data"]["node_info"]
@@ -102,19 +105,21 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
     
 
 @dbt_assets(
-        manifest=manifest,
+        manifest=DBT_MANIFEST,
         select="orders_cleaned users_cleaned orders_augmented", 
         partitions_def=daily_partitions,
+        dagster_dbt_translator=CustomDagsterDbtTranslator(),
 )
-def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
+def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
 
 @dbt_assets(
-        manifest=manifest,
+        manifest=DBT_MANIFEST,
         select="weekly_order_summary order_stats", 
-        partitions_def=weekly_partitions
+        partitions_def=weekly_partitions,
+        dagster_dbt_translator=CustomDagsterDbtTranslator(),
 )
-def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCli):
+def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
 
 
@@ -123,7 +128,8 @@ dbt_views = load_assets_from_dbt_project(
     DBT_PROFILES_DIR,
     key_prefix=["ANALYTICS"],
     source_key_prefix="ANALYTICS",
-    select="company_perf sku_stats company_stats"
+    select="company_perf sku_stats company_stats", 
+    node_info_to_group_fn= lambda x: "ANALYTICS"
 )
 
 

@@ -34,6 +34,7 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
         users = pd.read_json(resp.json())
         all_users.append(users)
 
+
     return pd.concat(all_users)
 
 
