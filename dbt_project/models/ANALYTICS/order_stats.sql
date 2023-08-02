@@ -1,6 +1,6 @@
 {{
         config(
-                dagster_auto_materialize_policy={"type":"lazy"}
+                dagster_auto_materialize_policy={"type":"eager"}
         )
 }}
 select

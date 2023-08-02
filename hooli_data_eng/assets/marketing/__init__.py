@@ -10,7 +10,8 @@ import pandas as pd
     freshness_policy=FreshnessPolicy(maximum_lag_minutes=24*60), 
     auto_materialize_policy=AutoMaterializePolicy.lazy(),
     compute_kind="pandas",
-    op_tags={"owner": "bi@hooli.com"}
+    op_tags={"owner": "bi@hooli.com"},
+    ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])}
 )
 def avg_orders(company_perf: pd.DataFrame) -> pd.DataFrame:
     """ Computes avg order KPI, must be updated regularly for exec dashboard """
@@ -26,7 +27,8 @@ def avg_orders(company_perf: pd.DataFrame) -> pd.DataFrame:
     compute_kind="snowflake", 
     metadata={
         "owner": "bi@hooli.com"
-    }
+    },
+    ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])}
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """ Computes min order KPI """
