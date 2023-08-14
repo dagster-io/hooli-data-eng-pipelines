@@ -9,6 +9,7 @@ You can clone and run this example locally:
 ```
 git clone https://github.com/dagster-io/hooli-data-eng-pipelines
 pip install -e ".[dev]"
+make manifest
 dagster dev
 ```
 
