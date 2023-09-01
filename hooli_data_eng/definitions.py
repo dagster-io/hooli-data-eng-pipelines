@@ -3,6 +3,8 @@ import os
 from dagster_pyspark import pyspark_resource
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
+from hooli_data_eng.assets.raw_data import check_users
+from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.delayed_asset_alerts import asset_delay_alert_sensor
 from hooli_data_eng.resources.sensor_file_managers import s3FileSystem, LocalFileSystem
 from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
@@ -232,6 +234,7 @@ defs = Definitions(
         {"max_concurrent": 3}
     ),  
     assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
+    asset_checks=[check_users, check_avg_orders],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule],
     sensors=[
