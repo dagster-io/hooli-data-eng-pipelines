@@ -1,4 +1,4 @@
-from dagster import asset
+from dagster import asset, asset_check, AssetCheckResult, Definitions
 from pandas import DataFrame, read_html, get_dummies, to_numeric
 from sklearn.linear_model import LinearRegression as Regression
 
@@ -9,11 +9,19 @@ def country_stats() -> DataFrame:
     df["pop_change"] = ((to_numeric(df["pop_2023"]) / to_numeric(df["pop_2022"])) - 1)*100
     return df
 
+@asset_check(
+        
+)
+def check_country_stats(country_stats):
+    return AssetCheckResult(success=True)
+
 @asset
 def change_model(country_stats: DataFrame) -> Regression:
     data = country_stats.dropna(subset=["pop_change"])
     dummies = get_dummies(data[["continent"]])
     return Regression().fit(dummies, data["pop_change"])
+
+
 
 @asset
 def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataFrame:
@@ -21,3 +29,8 @@ def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataF
     result["pop_change_factor"] = change_model.coef_
     return result
 
+
+defs = Definitions(
+    assets=[country_stats, continent_stats, change_model], 
+    asset_checks=[check_country_stats]
+)
