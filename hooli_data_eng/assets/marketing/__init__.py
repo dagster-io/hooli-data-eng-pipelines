@@ -22,8 +22,8 @@ def avg_orders(context: AssetExecutionContext, company_perf: pd.DataFrame) -> pd
     })
 
 @asset_check(
-        description="check that avg ordres are expected",
-        severity=AssetCheckSeverity.WARN,
+        description="check that avg orders are expected",
+        asset=avg_orders
 )
 def check_avg_orders(context, avg_orders: pd.DataFrame):
     avg = avg_orders['avg_order'][0]
