@@ -10,7 +10,7 @@ def country_stats() -> DataFrame:
     return df
 
 @asset_check(
-        
+       asset=country_stats 
 )
 def check_country_stats(country_stats):
     return AssetCheckResult(success=True)
