@@ -27,7 +27,8 @@ if __name__ == "__main__":
             "responses", 
             "requests",
             "html5lib", 
-            "scikit-learn"
+            "scikit-learn",
+            "beautifulsoup4"
         ],
         extras_require={"dev": ["dagit", "pytest"]},
     )
