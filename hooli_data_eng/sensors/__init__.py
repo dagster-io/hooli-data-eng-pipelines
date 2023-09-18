@@ -6,7 +6,7 @@ from dagster import (
     SensorEvaluationContext,
 )
 
-from ..jobs import predict_job
+from hooli_data_eng.jobs import predict_job
 
 # This sensor listens for changes to the orders_augmented asset which
 # represents a dbt model. When the table managed by dbt is updated,
