@@ -169,3 +169,7 @@ cython_debug/
 #.idea/
 
 tmp*/
+
+# dbt
+dbt_project/example.duckdb
+dbt_project/logs
