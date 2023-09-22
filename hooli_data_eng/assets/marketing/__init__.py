@@ -1,4 +1,14 @@
-from dagster import asset, FreshnessPolicy, AssetIn, DynamicPartitionsDefinition, MetadataValue, AutoMaterializePolicy
+from dagster import (
+    asset,
+    FreshnessPolicy,
+    AssetIn,
+    DynamicPartitionsDefinition,
+    MetadataValue,
+    AutoMaterializePolicy,
+    AssetExecutionContext,
+    AssetCheckResult,
+    asset_check
+)
 import pandas as pd
 
 # These assets take data from a SQL table managed by 
@@ -13,13 +23,23 @@ import pandas as pd
     op_tags={"owner": "bi@hooli.com"},
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])}
 )
-def avg_orders(company_perf: pd.DataFrame) -> pd.DataFrame:
+def avg_orders(context: AssetExecutionContext, company_perf: pd.DataFrame) -> pd.DataFrame:
     """ Computes avg order KPI, must be updated regularly for exec dashboard """
 
     return pd.DataFrame({
         "avg_order": company_perf['total_revenue'] / company_perf['n_orders'] 
     })
 
+@asset_check(
+        description="check that avg orders are expected",
+        asset=avg_orders
+)
+def check_avg_orders(context, avg_orders: pd.DataFrame):
+    avg = avg_orders['avg_order'][0]
+    return AssetCheckResult(
+        success= True if (avg < 50) else False, 
+        metadata={"actual average": avg, "threshold": 50}
+    )
 
 @asset(
     key_prefix="MARKETING", 
