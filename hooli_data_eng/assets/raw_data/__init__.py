@@ -1,6 +1,19 @@
+from datetime import timedelta
+
+from dagster import (
+    asset,
+    asset_check,
+    AssetCheckSeverity,
+    AssetCheckResult,
+    AssetKey,
+    Backoff,
+    DailyPartitionsDefinition,
+    Jitter,
+    RetryPolicy,
+)
 import pandas as pd
-from dagster import asset, RetryPolicy, Backoff, Jitter, DailyPartitionsDefinition, OpExecutionContext, build_op_context, build_resources
-from datetime import datetime, timedelta
+
+
 from hooli_data_eng.resources.api import RawDataAPI
 
 
@@ -37,6 +50,18 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 
     return pd.concat(all_users)
 
+@asset_check(
+        asset=AssetKey(["RAW_DATA", "users"]),
+        description="check that users are from expected companies",
+        #severity=AssetCheckSeverity.WARN,
+)
+def check_users(context, users: pd.DataFrame):
+    unique_companies = pd.unique(users['company']).tolist()
+    return AssetCheckResult(
+        success=  (unique_companies == ["FoodCo", "ShopMart", "SportTime", "FamilyLtd"]),
+        metadata={"companies": unique_companies},
+        severity=AssetCheckSeverity.WARN
+    )
 
 @asset(
     compute_kind="api",
