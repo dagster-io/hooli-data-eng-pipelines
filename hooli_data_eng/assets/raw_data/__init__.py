@@ -58,7 +58,7 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 def check_users(context, users: pd.DataFrame):
     unique_companies = pd.unique(users['company']).tolist()
     return AssetCheckResult(
-        success=  (unique_companies == ["FoodCo", "ShopMart", "SportTime", "FamilyLtd"]),
+        passed=  (unique_companies == ["FoodCo", "ShopMart", "SportTime", "FamilyLtd"]),
         metadata={"companies": unique_companies},
         severity=AssetCheckSeverity.WARN
     )
