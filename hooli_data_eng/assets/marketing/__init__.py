@@ -37,7 +37,7 @@ def avg_orders(context: AssetExecutionContext, company_perf: pd.DataFrame) -> pd
 def check_avg_orders(context, avg_orders: pd.DataFrame):
     avg = avg_orders['avg_order'][0]
     return AssetCheckResult(
-        success= True if (avg < 50) else False, 
+        passed= True if (avg < 50) else False, 
         metadata={"actual average": avg, "threshold": 50}
     )
 
