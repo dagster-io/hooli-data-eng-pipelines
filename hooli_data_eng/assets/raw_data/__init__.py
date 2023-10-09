@@ -6,6 +6,7 @@ from dagster import (
     AssetCheckSeverity,
     AssetCheckResult,
     AssetKey,
+    BackfillPolicy,
     Backoff,
     DailyPartitionsDefinition,
     Jitter,
@@ -34,6 +35,7 @@ def _daily_partition_seq(start, end):
     compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
+    backfill_policy=BackfillPolicy.single_run()
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
@@ -53,7 +55,6 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 @asset_check(
         asset=AssetKey(["RAW_DATA", "users"]),
         description="check that users are from expected companies",
-        #severity=AssetCheckSeverity.WARN,
 )
 def check_users(context, users: pd.DataFrame):
     unique_companies = pd.unique(users['company']).tolist()
@@ -73,6 +74,7 @@ def check_users(context, users: pd.DataFrame):
         backoff=Backoff.LINEAR,
         jitter=Jitter.FULL
     ),
+    backfill_policy=BackfillPolicy.single_run()
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""

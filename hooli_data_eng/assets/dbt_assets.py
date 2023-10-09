@@ -2,7 +2,7 @@
 from typing import Any, Mapping
 from dagster._utils import file_relative_path
 from dagster_dbt import DbtCliResource, DagsterDbtTranslator
-from dagster_dbt import load_assets_from_dbt_project
+from dagster_dbt import load_assets_from_dbt_project, default_metadata_from_dbt_resource_props
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster import AssetKey, DailyPartitionsDefinition, WeeklyPartitionsDefinition, OpExecutionContext, Output, MetadataValue
 from dateutil import parser
@@ -63,7 +63,9 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         if dbt_resource_props['name'] == 'users_cleaned':
             metadata = {"partition_expr": "created_at"}
 
-        return metadata
+        default_metadata = default_metadata_from_dbt_resource_props(dbt_resource_props)
+
+        return {**default_metadata, **metadata}
 
 def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
      # map partition key range to dbt vars
