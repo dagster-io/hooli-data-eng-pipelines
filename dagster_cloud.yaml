@@ -21,4 +21,10 @@ locations:
     build:
       directory: ./hooli_basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+  - location_name: batch_enrichment
+    code_source:
+      package_name: dagster_batch_enrichment
+    build:
+      directory: ./hooli_batch_enrichment
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
   
