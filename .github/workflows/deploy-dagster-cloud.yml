@@ -102,6 +102,22 @@ jobs:
         with:
           command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
 
+      # Build 'batch enrichment' code location
+      - name: Build and upload Docker image for batch enrichment
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_batch_enrichment
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
+
+      - name: Update build session with image tag for batch enrichment
+        id: ci-set-build-output-batch-enrichment
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
+
       # Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
