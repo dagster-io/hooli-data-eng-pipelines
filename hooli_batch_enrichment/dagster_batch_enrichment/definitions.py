@@ -8,7 +8,8 @@ from dagster_batch_enrichment.assets import raw_data, enriched_data
 # alternatively could use freshness policies and auto-materialization, partitions, or other ways to orient the schedule
 run_assets_job = define_asset_job(
     name="run_etl_pipeline",
-    selection=AssetSelection.all()
+    selection=AssetSelection.all(), 
+    tags={"dagster/max_retries": "1"}
 )
 
 run_assets_30min = ScheduleDefinition(

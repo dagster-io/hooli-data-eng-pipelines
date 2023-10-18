@@ -1,4 +1,4 @@
-from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset
+from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy
 from dagster_batch_enrichment.warehouse import MyWarehouse
 from dagster_batch_enrichment.api import EnrichmentAPI
 import numpy as np
@@ -45,7 +45,9 @@ def split_rows(context: OpExecutionContext, raw_data, config: ParallelizationCon
         yield DynamicOutput(c, mapping_key=str(r))
 
 
-@op
+@op(
+        retry_policy=RetryPolicy(max_retries=2)
+)
 def process_chunk(context: OpExecutionContext, chunk, api: EnrichmentAPI) -> pd.DataFrame:
     """
     Process rows in each chunk by calling the enrichment API
