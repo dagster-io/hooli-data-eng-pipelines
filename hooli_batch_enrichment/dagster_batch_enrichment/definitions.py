@@ -12,7 +12,7 @@ run_assets_job = define_asset_job(
 )
 
 run_assets_30min = ScheduleDefinition(
-    name="run_assets_5min",
+    name="run_assets_30min",
     job=run_assets_job,
     cron_schedule="*/30 * * * *"
 )

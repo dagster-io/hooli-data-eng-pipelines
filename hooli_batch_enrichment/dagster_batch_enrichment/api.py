@@ -12,7 +12,9 @@ class EnrichmentAPI(ConfigurableResource):
 
     @responses.activate
     def get_order_details(_, order_id):
-
+        if random.randint(0,10) <= 1:
+            raise Exception("API time out")
+        
         responses.get(
             # fake endpoint
             "http://api.jaffleshop.co/v1/order_details",
