@@ -7,7 +7,8 @@ setup(
         "dagster",
         "dagster-duckdb",
         "pandas",
-        "responses"
+        "responses",
+        "dagster-cloud"
     ],
     extras_require={"dev": ["dagit", "pytest"]},
 )
