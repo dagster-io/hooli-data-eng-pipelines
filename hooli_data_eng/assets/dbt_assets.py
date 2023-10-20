@@ -122,6 +122,11 @@ def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
 
+@dbt_assets(manifest=DBT_MANIFEST,
+            select="DEMO_EXAMPLES")
+def jaffle_shop_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
+    yield from dbt2.cli(["build"], context=context).stream()
+
 
 dbt_views = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
