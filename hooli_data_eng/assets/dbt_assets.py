@@ -1,5 +1,6 @@
 from typing import Any, Mapping
 from dagster._utils import file_relative_path
+from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
 from dagster_dbt import DbtCliResource, DagsterDbtTranslator
 from dagster_dbt import (
     load_assets_from_dbt_project,
@@ -12,7 +13,6 @@ from dagster import (
     WeeklyPartitionsDefinition,
     OpExecutionContext,
     Output,
-    MetadataValue,
     BackfillPolicy,
 )
 from dateutil import parser
@@ -85,8 +85,9 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
     dbt_args = ["run", "--vars", json.dumps(dbt_vars)]
 
     dbt_cli_task = dbt2.cli(dbt_args, context=context)
-
     dbt_events = list(dbt_cli_task.stream_raw_events())
+    
+    yield from dbt_with_snowflake_insights(context, dbt_cli_task, dagster_events=dbt_events)
 
     for event in dbt_events:
         # add custom metadata to the asset materialization event
