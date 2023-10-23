@@ -16,6 +16,9 @@ from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
 from hooli_data_eng.resources.sensor_file_managers import s3FileSystem, LocalFileSystem
 from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
 
+from databricks.sdk import WorkspaceClient
+from dagster_databricks import PipesDatabricksClient
+from unittest import mock
 
 # Resources represent external systems and, and specifically IO Managers
 # tell dagster where our assets should be materialized. In dagster
@@ -38,6 +41,14 @@ def get_env():
         return "PROD"
     return "LOCAL"
 
+client = mock.MagicMock()
+
+if get_env() == "PROD":
+    # Databricks Client
+    client = WorkspaceClient(
+        host=os.environ["DATABRICKS_HOST"],
+        token=os.environ["DATABRICKS_TOKEN"],
+    )
 
 # The dbt file dbt_project/config/profiles.yaml
 # specifies what databases to targets, and locally will
@@ -68,6 +79,7 @@ resource_def = {
         "email": LocalEmailAlert(
             smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
         ),
+        "pipes_client": ResourceDefinition.none_resource(),
     },
     "BRANCH": {
         "io_manager": SnowflakePandasIOManager(
@@ -93,6 +105,7 @@ resource_def = {
             region_name="us-west-2", s3_bucket="hooli-demo-branch"
         ),
         "email": ResourceDefinition.none_resource(),
+        "pipes_client": ResourceDefinition.none_resource(),
     },
     "PROD": {
         "io_manager": SnowflakePandasIOManager(
@@ -122,5 +135,6 @@ resource_def = {
             smtp_username=EnvVar("SMTP_USERNAME"),
             smtp_password=EnvVar("SMTP_PASSWORD"),
         ),
+        "pipes_client": PipesDatabricksClient(client)
     },
 }
