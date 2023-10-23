@@ -16,3 +16,7 @@ clean-targets:
 
 models:
   +materialized: table
+
+query-comment:
+  comment: "snowflake_dagster_dbt_v1_opaque_id[[[{{ node.unique_id }}:{{ invocation_id }}]]]"
+  append: true
