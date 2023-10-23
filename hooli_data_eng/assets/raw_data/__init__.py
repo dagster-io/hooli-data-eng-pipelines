@@ -52,8 +52,13 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 
     return pd.concat(all_users)
 
+@asset 
+def clean_users(users):
+    #users = flatten(users)
+    return users
+
 @asset_check(
-        asset=AssetKey(["RAW_DATA", "users"]),
+        asset=users,#AssetKey(["RAW_DATA", "users"]),
         description="check that users are from expected companies",
 )
 def check_users(context, users: pd.DataFrame):
@@ -89,3 +94,6 @@ def orders(context, api: RawDataAPI) -> pd.DataFrame:
     all_orders_df = pd.concat(all_orders)
     all_orders_df['dt'] = pd.to_datetime(all_orders_df['dt'], unit = "ms")
     return all_orders_df
+
+
+from dagster_dbt import dbt_assets
