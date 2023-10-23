@@ -52,13 +52,8 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 
     return pd.concat(all_users)
 
-@asset 
-def clean_users(users):
-    #users = flatten(users)
-    return users
-
 @asset_check(
-        asset=users,#AssetKey(["RAW_DATA", "users"]),
+        asset=AssetKey(["RAW_DATA", "users"]),
         description="check that users are from expected companies",
 )
 def check_users(context, users: pd.DataFrame):
