@@ -6,6 +6,7 @@ from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
 from dagster_dbt import DbtCliClientResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_pyspark import pyspark_resource
+from dagster_snowflake import SnowflakeResource
 from dagster_snowflake_pandas import SnowflakePandasIOManager
 from dagstermill import ConfigurableLocalOutputNotebookIOManager
 
@@ -68,6 +69,7 @@ resource_def = {
         "email": LocalEmailAlert(
             smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
         ),
+        "snowflake_insights": None,
     },
     "BRANCH": {
         "io_manager": SnowflakePandasIOManager(
@@ -93,6 +95,11 @@ resource_def = {
             region_name="us-west-2", s3_bucket="hooli-demo-branch"
         ),
         "email": ResourceDefinition.none_resource(),
+        "snowflake_insights": SnowflakeResource(
+            account=EnvVar("SNOWFLAKE_ACCOUNT"),
+            user=EnvVar("SNOWFLAKE_USER"),
+            password=EnvVar("SNOWFLAKE_PASSWORD"),
+        ),
     },
     "PROD": {
         "io_manager": SnowflakePandasIOManager(
@@ -122,5 +129,11 @@ resource_def = {
             smtp_username=EnvVar("SMTP_USERNAME"),
             smtp_password=EnvVar("SMTP_PASSWORD"),
         ),
+        "snowflake_insights": SnowflakeResource(
+            account=EnvVar("SNOWFLAKE_ACCOUNT"),
+            user=EnvVar("SNOWFLAKE_USER"),
+            password=EnvVar("SNOWFLAKE_PASSWORD"),
+        ),
     },
 }
+      
