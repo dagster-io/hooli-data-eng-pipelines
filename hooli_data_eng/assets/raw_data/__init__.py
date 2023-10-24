@@ -89,3 +89,6 @@ def orders(context, api: RawDataAPI) -> pd.DataFrame:
     all_orders_df = pd.concat(all_orders)
     all_orders_df['dt'] = pd.to_datetime(all_orders_df['dt'], unit = "ms")
     return all_orders_df
+
+
+from dagster_dbt import dbt_assets
