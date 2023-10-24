@@ -1,8 +1,3 @@
-{{
-        config(
-                dagster_auto_materialize_policy={"type":"eager"}
-        )
-}}
 select
         order_date,
         sku,

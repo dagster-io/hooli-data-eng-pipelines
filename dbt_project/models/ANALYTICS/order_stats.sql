@@ -1,8 +1,3 @@
-{{
-        config(
-                dagster_auto_materialize_policy={"type":"eager"}
-        )
-}}
 select
         {{ date_trunc("day", "order_date") }} as order_date,
         count(*) as n_orders,
