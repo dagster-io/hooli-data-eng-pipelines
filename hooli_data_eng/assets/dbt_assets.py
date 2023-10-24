@@ -8,6 +8,8 @@ from dagster_dbt import (
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster import (
+    AutoMaterializePolicy,
+    AutoMaterializeRule,
     AssetKey,
     DailyPartitionsDefinition,
     WeeklyPartitionsDefinition,
@@ -35,6 +37,15 @@ DBT_MANIFEST = Path(
     file_relative_path(__file__, "../../dbt_project/target/manifest.json")
 )
 
+allow_outdated_parents_policy = AutoMaterializePolicy.eager().without_rules(
+    AutoMaterializeRule.skip_on_parent_outdated()
+)
+
+allow_outdated_and_missing_parents_policy = AutoMaterializePolicy.eager().without_rules(
+    AutoMaterializeRule.skip_on_parent_outdated(), 
+    AutoMaterializeRule.skip_on_parent_missing() # non-partitioned assets should run even if some upstream partitions are missing
+)
+
 
 class CustomDagsterDbtTranslator(DagsterDbtTranslator):
     def get_description(self, dbt_resource_props: Mapping[str, Any]) -> str:
@@ -51,6 +62,9 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         if node_path == "models/sources.yml":
             prefix = "RAW_DATA"
 
+        if node_path == "MARKETING/company_perf.sql":
+            prefix = "ANALYTICS"
+
         return AssetKey([prefix, dbt_resource_props["name"]])
 
     def get_group_name(self, dbt_resource_props: Mapping[str, Any]):
@@ -59,6 +73,9 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 
         if node_path == "models/sources.yml":
             prefix = "RAW_DATA"
+
+        if node_path == "MARKETING/company_perf.sql":
+            prefix = "ANALYTICS"
 
         return prefix
 
@@ -71,10 +88,24 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         if dbt_resource_props["name"] == "users_cleaned":
             metadata = {"partition_expr": "created_at"}
 
+        if dbt_resource_props["name"] in ["company_perf", "sku_stats", "company_stats"]:
+            metadata = {}
+
         default_metadata = default_metadata_from_dbt_resource_props(dbt_resource_props)
 
         return {**default_metadata, **metadata}
 
+    def get_auto_materialize_policy(
+        self, dbt_resource_props: Mapping[str, Any]
+    ):
+        return allow_outdated_parents_policy
+
+
+class CustomDagsterDbtTranslatorForViews(CustomDagsterDbtTranslator):
+    def get_auto_materialize_policy(
+        self, dbt_resource_props: Mapping[str, Any]
+    ):
+        return allow_outdated_and_missing_parents_policy
 
 def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     # map partition key range to dbt vars
@@ -147,8 +178,9 @@ def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 dbt_views = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
-    key_prefix=["ANALYTICS"],
-    source_key_prefix="ANALYTICS",
+    #key_prefix=["ANALYTICS"],
+    #source_key_prefix="ANALYTICS",
     select="company_perf sku_stats company_stats",
-    node_info_to_group_fn=lambda x: "ANALYTICS",
+    #node_info_to_group_fn=lambda x: "ANALYTICS",
+    dagster_dbt_translator=CustomDagsterDbtTranslatorForViews()
 )
