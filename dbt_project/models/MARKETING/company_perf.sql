@@ -1,8 +1,3 @@
-{{
-        config(
-                dagster_auto_materialize_policy={"type":"lazy"}
-        )
-}}
 select
         company,
         sum(n_orders) as n_orders,

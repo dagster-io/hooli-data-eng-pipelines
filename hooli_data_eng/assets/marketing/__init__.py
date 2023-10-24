@@ -11,6 +11,8 @@ from dagster import (
 )
 import pandas as pd
 
+from hooli_data_eng.assets.dbt_assets import allow_outdated_parents_policy
+
 # These assets take data from a SQL table managed by 
 # dbt and create summaries using pandas 
 # The assets are updated via freshness policies 
@@ -18,7 +20,7 @@ import pandas as pd
 @asset(
     key_prefix="MARKETING", 
     freshness_policy=FreshnessPolicy(maximum_lag_minutes=24*60), 
-    auto_materialize_policy=AutoMaterializePolicy.lazy(),
+    auto_materialize_policy=allow_outdated_parents_policy,
     compute_kind="pandas",
     op_tags={"owner": "bi@hooli.com"},
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])}
