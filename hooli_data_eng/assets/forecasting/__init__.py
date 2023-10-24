@@ -13,6 +13,7 @@ from dagster import (
     Int,
     Config,
     AssetExecutionContext,
+    MaterializeResult
 )
 from dagstermill import define_dagstermill_asset
 from dagster._utils import file_relative_path
@@ -177,11 +178,11 @@ model_nb = define_dagstermill_asset(
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @asset(
         deps=[predicted_orders],
-        compute_kind="databricks"
+        compute_kind="databricks",
 )
 def databricks_asset(
     context: AssetExecutionContext, pipes_client: PipesDatabricksClient
-):
+) -> MaterializeResult:
     # cluster config
     cluster_config = {
         "num_workers": 1,
@@ -216,4 +217,4 @@ def databricks_asset(
         task=task,
         context=context,
         extras=extras,
-    ).get_results()
+    ).get_materialize_result()
