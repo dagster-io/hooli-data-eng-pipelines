@@ -85,13 +85,9 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
     dbt_args = ["run", "--vars", json.dumps(dbt_vars)]
 
     dbt_cli_task = dbt2.cli(dbt_args, context=context)
-    dbt_events = list(dbt_cli_task.stream_raw_events())
-    
-    yield from dbt_with_snowflake_insights(context, dbt_cli_task, dagster_events=dbt_events)
 
-    for event in dbt_events:
-        # add custom metadata to the asset materialization event
-        context.log.info(event)
+    # This function adds model start and end time to derive total execution time
+    def handle_dbt_event(event: DbtCliEventMessage) -> Generator[Union[Output, AssetObservation, AssetCheckResult], None, None]:
         for dagster_event in event.to_default_asset_events(
             manifest=dbt_cli_task.manifest
         ):
@@ -100,7 +96,6 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
 
                 started_at = parser.isoparse(event_node_info["node_started_at"])
                 completed_at = parser.isoparse(event_node_info["node_finished_at"])
-
                 metadata = {
                     "Execution Started At": started_at.isoformat(timespec="seconds"),
                     "Execution Completed At": completed_at.isoformat(
@@ -114,8 +109,14 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
                     metadata=metadata,
                     output_name=dagster_event.output_name,
                 )
-
             yield dagster_event
+    
+    # This function emits an AssetObservation with the dbt model's invocation ID and unique ID (needed for Snowflake Insights)
+    def handle_all_dbt_events(dbt_cli_task: DbtCliInvocation) -> Generator[Union[Output, AssetObservation, AssetCheckResult], None, None]:
+        for raw_event in dbt_cli_task.stream_raw_events():
+            yield from handle_dbt_event(raw_event)
+
+    yield from dbt_with_snowflake_insights(context, dbt_cli_task, dagster_events=handle_all_dbt_events(dbt_cli_task))
 
     if not dbt_cli_task.is_successful():
         raise Exception("dbt command failed, see preceding events")
