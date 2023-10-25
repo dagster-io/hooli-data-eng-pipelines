@@ -1,7 +1,7 @@
 from typing import Any, Mapping
 from dagster._utils import file_relative_path
 from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
-from dagster_dbt import DbtCliResource, DagsterDbtTranslator
+from dagster_dbt import DbtCliEventMessage, DbtCliResource, DagsterDbtTranslator
 from dagster_dbt import (
     load_assets_from_dbt_project,
     default_metadata_from_dbt_resource_props,
