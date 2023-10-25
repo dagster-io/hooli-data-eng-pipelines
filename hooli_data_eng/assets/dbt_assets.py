@@ -1,26 +1,37 @@
-from typing import Any, Mapping
-from dagster._utils import file_relative_path
-from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
-from dagster_dbt import DbtCliEventMessage, DbtCliResource, DagsterDbtTranslator
-from dagster_dbt import (
-    load_assets_from_dbt_project,
-    default_metadata_from_dbt_resource_props,
+from dateutil import parser
+import json
+from pathlib import Path
+import textwrap
+from typing import (
+    Any,
+    Generator,
+    Mapping,
+    Union,
 )
-from dagster_dbt.asset_decorator import dbt_assets
+
 from dagster import (
     AutoMaterializePolicy,
     AutoMaterializeRule,
     AssetKey,
+    AssetCheckResult,
+    AssetObservation,
     DailyPartitionsDefinition,
     WeeklyPartitionsDefinition,
     OpExecutionContext,
     Output,
     BackfillPolicy,
 )
-from dateutil import parser
-import json
-import textwrap
-from pathlib import Path
+from dagster_dbt.asset_decorator import dbt_assets
+from dagster._utils import file_relative_path
+from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
+from dagster_dbt import (
+    DbtCliEventMessage,
+    DbtCliInvocation,
+    DbtCliResource,
+    DagsterDbtTranslator,
+    load_assets_from_dbt_project,
+    default_metadata_from_dbt_resource_props,
+)
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
