@@ -5,9 +5,6 @@ from dagster import (
     load_assets_from_package_module,
     multiprocess_executor,
 )
-from dagster_cloud.dagster_insights import (
-    create_snowflake_insights_asset_and_schedule,
-)
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.marketing import check_avg_orders
@@ -56,13 +53,6 @@ marketing_assets = load_assets_from_package_module(marketing, group_name="MARKET
 # ---------------------------------------------------
 # Definitions
 
-# Snowflake insights definition (needed for consumption metrics)
-
-snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
-    "2023-10-24-00:00",
-    snowflake_resource_key="snowflake_insights",
-)
-
 # Definitions are the collection of assets, jobs, schedules, resources, and sensors
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
@@ -75,7 +65,6 @@ defs = Definitions(
         *raw_data_assets,
         *forecasting_assets,
         *marketing_assets,
-        *snowflake_insights_definitions.assets,
     ],
     asset_checks=[
         check_users,
@@ -83,8 +72,7 @@ defs = Definitions(
     ],
     resources=resource_def[get_env()],
     schedules=[
-        analytics_schedule,
-        snowflake_insights_definitions.schedule
+        analytics_schedule
     ],
     sensors=[
        orders_sensor,
