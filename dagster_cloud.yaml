@@ -27,9 +27,9 @@ locations:
     build:
       directory: ./hooli_batch_enrichment
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-  - location_name: snowflake_insights
+  - location_name: hooli_snowflake_insights
     code_source:
-      package_name: dagster_snowflake_insights
+      python_file: definitions.py
     build:
       directory: ./hooli_snowflake_insights
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
