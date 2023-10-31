@@ -29,7 +29,7 @@ locations:
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
   - location_name: snowflake_insights
     code_source:
-      package_name: hooli_snowflake_insights
+      package_name: dagster_snowflake_insights
     build:
       directory: ./hooli_snowflake_insights
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
