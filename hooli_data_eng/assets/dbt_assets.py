@@ -16,11 +16,12 @@ from dagster import (
     Output,
     BackfillPolicy,
 )
+from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
 from dagster_dbt import (
     DbtCliEventMessage,
     DbtCliInvocation,
     DbtCliResource, 
-    DagsterDbtTranslator
+    DagsterDbtTranslator,
     load_assets_from_dbt_project,
     default_metadata_from_dbt_resource_props,
 )
