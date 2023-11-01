@@ -23,9 +23,11 @@ if __name__ == "__main__":
             "dagster-pyspark",
             "dagster-databricks",
             "dagstermill",
+            "gql",
             "plotnine",
             "responses", 
             "requests",
+            "requests_toolbelt",
             "html5lib", 
             "scikit-learn"
         ],
