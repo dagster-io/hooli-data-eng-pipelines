@@ -1,26 +1,33 @@
-from typing import Any, Mapping
-from dagster._utils import file_relative_path
-from dagster_dbt import DbtCliResource, DagsterDbtTranslator
-from dagster_dbt import (
-    load_assets_from_dbt_project,
-    default_metadata_from_dbt_resource_props,
-)
-from dagster_dbt.asset_decorator import dbt_assets
+import json
+import textwrap
+from dateutil import parser
+from pathlib import Path
+from typing import Any, Generator, Mapping, Union
+
 from dagster import (
     AutoMaterializePolicy,
     AutoMaterializeRule,
+    AssetCheckResult,
     AssetKey,
+    AssetObservation,
     DailyPartitionsDefinition,
     WeeklyPartitionsDefinition,
     OpExecutionContext,
     Output,
-    MetadataValue,
     BackfillPolicy,
 )
-from dateutil import parser
-import json
-import textwrap
-from pathlib import Path
+from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
+from dagster_dbt import (
+    DbtCliEventMessage,
+    DbtCliInvocation,
+    DbtCliResource, 
+    DagsterDbtTranslator,
+    load_assets_from_dbt_project,
+    default_metadata_from_dbt_resource_props,
+)
+from dagster_dbt.asset_decorator import dbt_assets
+from dagster._utils import file_relative_path
+
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
@@ -117,11 +124,8 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
 
     dbt_cli_task = dbt2.cli(dbt_args, context=context)
 
-    dbt_events = list(dbt_cli_task.stream_raw_events())
-
-    for event in dbt_events:
-        # add custom metadata to the asset materialization event
-        context.log.info(event)
+    # This function adds model start and end time to derive total execution time
+    def handle_dbt_event(event: DbtCliEventMessage) -> Generator[Union[Output, AssetObservation, AssetCheckResult], None, None]:
         for dagster_event in event.to_default_asset_events(
             manifest=dbt_cli_task.manifest
         ):
@@ -130,7 +134,6 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
 
                 started_at = parser.isoparse(event_node_info["node_started_at"])
                 completed_at = parser.isoparse(event_node_info["node_finished_at"])
-
                 metadata = {
                     "Execution Started At": started_at.isoformat(timespec="seconds"),
                     "Execution Completed At": completed_at.isoformat(
@@ -144,8 +147,14 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
                     metadata=metadata,
                     output_name=dagster_event.output_name,
                 )
-
             yield dagster_event
+    
+    # This function emits an AssetObservation with the dbt model's invocation ID and unique ID (needed for Snowflake Insights)
+    def handle_all_dbt_events(dbt_cli_task: DbtCliInvocation) -> Generator[Union[Output, AssetObservation, AssetCheckResult], None, None]:
+        for raw_event in dbt_cli_task.stream_raw_events():
+            yield from handle_dbt_event(raw_event)
+
+    yield from dbt_with_snowflake_insights(context, dbt_cli_task, dagster_events=handle_all_dbt_events(dbt_cli_task))
 
     if not dbt_cli_task.is_successful():
         raise Exception("dbt command failed, see preceding events")

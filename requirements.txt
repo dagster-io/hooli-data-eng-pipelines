@@ -44,3 +44,5 @@ dbt-duckdb
 responses
 plotnine
 requests
+gql
+requests_toolbelt
