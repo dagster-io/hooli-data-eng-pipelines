@@ -39,7 +39,7 @@ resource_def = {
 snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
     "2023-10-29-00:00",
     snowflake_resource_key="snowflake_insights",
-    snowflake_usage_latency=200
+    snowflake_usage_latency=45
 )
 
 defs = Definitions(
