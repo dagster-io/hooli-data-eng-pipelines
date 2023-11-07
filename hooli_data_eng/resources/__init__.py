@@ -3,7 +3,7 @@ import os
 from dagster import EnvVar, FilesystemIOManager, ResourceDefinition
 from dagster._utils import file_relative_path
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
-from dagster_dbt import DbtCliClientResource
+from dagster_dbt import DbtCliClientResource, DbtCliResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_pyspark import pyspark_resource
 from dagster_snowflake_pandas import SnowflakePandasIOManager
@@ -11,7 +11,7 @@ from dagstermill import ConfigurableLocalOutputNotebookIOManager
 
 from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.resources.databricks import db_step_launcher
-from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
+#from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
 #from hooli_data_eng.resources.warehouse import MySnowflakeIOManager as SnowflakePandasIOManager
 from hooli_data_eng.resources.sensor_file_managers import s3FileSystem, LocalFileSystem
 from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
@@ -72,7 +72,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
         ),
-        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
+        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
@@ -98,7 +98,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
-        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"),
+        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(
@@ -124,7 +124,7 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
-        "dbt2": DbtCli(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"),
+        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),

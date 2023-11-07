@@ -2,6 +2,8 @@ from dagster_dbt import DbtCliResource
 from typing import List, Optional
 from dagster import OpExecutionContext
 
+# NO LONGER USED IN PROJECT, BUT EXAMPLE OF CUSTOMIZING AN INTEGRATION RESOURCE
+
 class DbtCli2(DbtCliResource):
     profiles_dir: str
 

@@ -39,7 +39,8 @@ weekly_partitions = WeeklyPartitionsDefinition(start_date="2023-05-25")
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
-
+# this manifest is created at build/deploy time, see the Makefile & .github/workflows/deploy-dagster-cloud.yml#70
+# see also: https://docs.dagster.io/integrations/dbt/reference#deploying-a-dagster-project-with-a-dbt-project
 DBT_MANIFEST = Path(
     file_relative_path(__file__, "../../dbt_project/target/manifest.json")
 )
@@ -90,13 +91,13 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         metadata = {"partition_expr": "order_date"}
 
         if dbt_resource_props["name"] == "orders_cleaned":
-            metadata = {"partition_expr": "dt"}
+            metadata = {"partition_expr": "dt", "owner":"data@hooli.org"}
 
         if dbt_resource_props["name"] == "users_cleaned":
-            metadata = {"partition_expr": "created_at"}
+            metadata = {"partition_expr": "created_at", "owner":"data@hooli.org"}
 
         if dbt_resource_props["name"] in ["company_perf", "sku_stats", "company_stats"]:
-            metadata = {}
+            metadata = {"owner":"bi@hooli.org"}
 
         default_metadata = default_metadata_from_dbt_resource_props(dbt_resource_props)
 
@@ -114,7 +115,7 @@ class CustomDagsterDbtTranslatorForViews(CustomDagsterDbtTranslator):
     ):
         return allow_outdated_and_missing_parents_policy
 
-def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
+def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliResource):
     # map partition key range to dbt vars
     first_partition, last_partition = context.asset_partitions_time_window_for_output(
         list(context.selected_output_names)[0]
@@ -122,42 +123,9 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
     dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
     dbt_args = ["run", "--vars", json.dumps(dbt_vars)]
 
-    dbt_cli_task = dbt2.cli(dbt_args, context=context)
+    dbt_cli_task = dbt.cli(dbt_args, context=context)
 
-    # This function adds model start and end time to derive total execution time
-    def handle_dbt_event(event: DbtCliEventMessage) -> Generator[Union[Output, AssetObservation, AssetCheckResult], None, None]:
-        for dagster_event in event.to_default_asset_events(
-            manifest=dbt_cli_task.manifest
-        ):
-            if isinstance(dagster_event, Output):
-                event_node_info = event.raw_event["data"]["node_info"]
-
-                started_at = parser.isoparse(event_node_info["node_started_at"])
-                completed_at = parser.isoparse(event_node_info["node_finished_at"])
-                metadata = {
-                    "Execution Started At": started_at.isoformat(timespec="seconds"),
-                    "Execution Completed At": completed_at.isoformat(
-                        timespec="seconds"
-                    ),
-                    "Execution Duration": (completed_at - started_at).total_seconds(),
-                    "Owner": "data@hooli.com",
-                }
-
-                context.add_output_metadata(
-                    metadata=metadata,
-                    output_name=dagster_event.output_name,
-                )
-            yield dagster_event
-    
-    # This function emits an AssetObservation with the dbt model's invocation ID and unique ID (needed for Snowflake Insights)
-    def handle_all_dbt_events(dbt_cli_task: DbtCliInvocation) -> Generator[Union[Output, AssetObservation, AssetCheckResult], None, None]:
-        for raw_event in dbt_cli_task.stream_raw_events():
-            yield from handle_dbt_event(raw_event)
-
-    yield from dbt_with_snowflake_insights(context, dbt_cli_task, dagster_events=handle_all_dbt_events(dbt_cli_task))
-
-    if not dbt_cli_task.is_successful():
-        raise Exception("dbt command failed, see preceding events")
+    yield from dbt_with_snowflake_insights(context, dbt_cli_task)
 
 
 @dbt_assets(
@@ -168,7 +136,7 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt2: DbtCliRes
     backfill_policy=BackfillPolicy.single_run(),
 )
 def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
-    yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
+    yield from _process_partitioned_dbt_assets(context=context, dbt=dbt2)
 
 
 @dbt_assets(
@@ -179,15 +147,12 @@ def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     backfill_policy=BackfillPolicy.single_run(),
 )
 def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
-    yield from _process_partitioned_dbt_assets(context=context, dbt2=dbt2)
+    yield from _process_partitioned_dbt_assets(context=context, dbt=dbt2)
 
 
 dbt_views = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
-    #key_prefix=["ANALYTICS"],
-    #source_key_prefix="ANALYTICS",
     select="company_perf sku_stats company_stats",
-    #node_info_to_group_fn=lambda x: "ANALYTICS",
     dagster_dbt_translator=CustomDagsterDbtTranslatorForViews()
 )
