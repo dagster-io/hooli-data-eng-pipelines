@@ -10,6 +10,8 @@ from dagster._core.storage.db_io_manager import (
 from dagster._core.execution.context.output import OutputContext
 from typing import Sequence
 
+# NO LONGER USED IN PROJECT, BUT EXAMPLE OF CUSTOMIZING AN INTEGRATION RESOURCE
+
 class MyDBIOManager(DbIOManager):
 
     def _get_table_slice(self, context, output_context: OutputContext):
