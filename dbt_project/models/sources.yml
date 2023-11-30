@@ -5,6 +5,7 @@ sources:
     tables:
       - name: "orders"
       - name: "users"
+      - name: "raw_location"
   - name: "FORECASTING"
     tables:
       - name: "predicted_orders"
