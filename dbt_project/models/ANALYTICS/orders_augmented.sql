@@ -8,7 +8,7 @@ from {{ ref("orders_cleaned") }} o
 left join {{ ref("users_cleaned") }} u
        on o.user_id = u.user_id
 
- left join {{ ref("location_cleaned") }} l
+ left join {{ ref("locations_cleaned") }} l
         on o.user_id = l.user_id
 
 {% if is_incremental() %}
