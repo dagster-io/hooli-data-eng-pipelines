@@ -6,6 +6,9 @@ sources:
       - name: "orders"
       - name: "users"
       - name: "raw_location"
+        meta:
+          dagster:
+            asset_key: ['raw_location']
   - name: "FORECASTING"
     tables:
       - name: "predicted_orders"

@@ -10,7 +10,7 @@ from hooli_demo_assets.resources import get_env, resource_def
 from hooli_demo_assets.schedules import daily_sling_assets 
 
 
-sling_assets = load_assets_from_modules([sling], group_name="RAW_DATA")
+sling_assets = load_assets_from_modules([sling], key_prefix="RAW_DATA", group_name="RAW_DATA")
 
 defs = Definitions(
     assets=[*sling_assets],
