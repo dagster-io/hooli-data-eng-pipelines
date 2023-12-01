@@ -1,20 +1,11 @@
 ####
 # This represents an "external" script that is mostly independent of dagster
 # that dagster will orchestrate via pipes
-# This script must be uploaded to Databricks manually (or via some other process)
-# `dagster_pipes` must be available in the databricks python environment
 
-from dagster_pipes import (
-    PipesDbfsContextLoader,
-    PipesDbfsMessageWriter,
-    open_dagster_pipes,
-)
+from dagster_pipes import open_dagster_pipes
 import random
 
-with open_dagster_pipes(
-    context_loader=PipesDbfsContextLoader(),
-    message_writer=PipesDbfsMessageWriter(),
-) as context:
+with open_dagster_pipes() as context:
     sample_rate = context.get_extra("sample_rate")
 
     # Stream log message back to Dagster

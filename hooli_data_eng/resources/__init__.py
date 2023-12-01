@@ -5,14 +5,16 @@ from dagster._utils import file_relative_path
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
 from dagster_dbt import DbtCliClientResource, DbtCliResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
+from dagster_k8s import PipesK8sClient
 from dagster_pyspark import pyspark_resource
 from dagster_snowflake_pandas import SnowflakePandasIOManager
 from dagstermill import ConfigurableLocalOutputNotebookIOManager
 
 from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.resources.databricks import db_step_launcher
-#from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
-#from hooli_data_eng.resources.warehouse import MySnowflakeIOManager as SnowflakePandasIOManager
+
+# from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
+# from hooli_data_eng.resources.warehouse import MySnowflakeIOManager as SnowflakePandasIOManager
 from hooli_data_eng.resources.sensor_file_managers import s3FileSystem, LocalFileSystem
 from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
 
@@ -34,12 +36,14 @@ from unittest import mock
 # The production deployment on Dagster Cloud uses production Snowflake
 # and S3 resources
 
+
 def get_env():
     if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
         return "BRANCH"
     if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
         return "PROD"
     return "LOCAL"
+
 
 client = mock.MagicMock()
 
@@ -72,14 +76,17 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
         ),
-        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"),
+        "dbt2": DbtCliResource(
+            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
+        ),
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
         "email": LocalEmailAlert(
             smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
         ),
-        "pipes_client": ResourceDefinition.none_resource(),
+        "pipes_databricks_client": ResourceDefinition.none_resource(),
+        "pipes_k8s_client": ResourceDefinition.none_resource(),
     },
     "BRANCH": {
         "io_manager": SnowflakePandasIOManager(
@@ -98,14 +105,17 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
         ),
-        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"),
+        "dbt2": DbtCliResource(
+            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
+        ),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(
             region_name="us-west-2", s3_bucket="hooli-demo-branch"
         ),
         "email": ResourceDefinition.none_resource(),
-        "pipes_client": ResourceDefinition.none_resource(),
+        "pipes_databricks_client": ResourceDefinition.none_resource(),
+        "pipes_k8s_client": PipesK8sClient(),
     },
     "PROD": {
         "io_manager": SnowflakePandasIOManager(
@@ -124,7 +134,9 @@ resource_def = {
         "dbt": DbtCliClientResource(
             project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
         ),
-        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"),
+        "dbt2": DbtCliResource(
+            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
+        ),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),
@@ -135,6 +147,7 @@ resource_def = {
             smtp_username=EnvVar("SMTP_USERNAME"),
             smtp_password=EnvVar("SMTP_PASSWORD"),
         ),
-        "pipes_client": PipesDatabricksClient(client)
+        "pipes_databricks_client": PipesDatabricksClient(client),
+        "pipes_k8s_client": PipesK8sClient(),
     },
 }
