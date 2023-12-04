@@ -7,7 +7,7 @@ on:
   pull_request:  # For branch deployments
      types: [opened, synchronize, reopened, closed]
 
-concurrency: 
+concurrency:
   # Cancel in-progress deploys to the same branch
   group: ${{ github.ref }}
   cancel-in-progress: true
@@ -28,11 +28,11 @@ jobs:
         uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.27
 
       - name: Checkout
-        uses: actions/checkout@v3      
+        uses: actions/checkout@v3
         if: steps.prerun.outputs.result != 'skip'
         with:
           ref: ${{ github.head_ref }}
-          
+
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
@@ -65,7 +65,7 @@ jobs:
       - name: Login to ECR
         if: ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
-        
+
       # Build 'data-eng-pipeline' code location
       - name: Build dbt manifest for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
@@ -150,7 +150,16 @@ jobs:
         with:
           command: "ci set-build-output --location-name=demo_assets --image-tag=$IMAGE_TAG-demo-assets"
 
-          # Deploy
+      # Build pipes example container
+      - name: Build and upload Docker image for pipes example
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_data_eng/utils/example_container
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
+
+      # Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
