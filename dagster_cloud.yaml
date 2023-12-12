@@ -34,3 +34,9 @@ locations:
       directory: ./hooli_snowflake_insights
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
   
+  - location_name: demo_assets
+    code_source:
+      package_name: hooli_demo_assets
+    build:
+      directory: ./hooli-demo-assets
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

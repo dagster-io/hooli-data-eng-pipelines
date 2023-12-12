@@ -134,6 +134,22 @@ jobs:
         with:
           command: "ci set-build-output --location-name=snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
 
+      # Build 'demo_assets' code location
+      - name: Build and upload Docker image for demo_assets
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli-demo-assets
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-demo-assets
+
+      - name: Update build session with image tag for demo_assets
+        id: ci-set-build-output-demo-assets
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=demo_assets --image-tag=$IMAGE_TAG-demo-assets"
+
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
         if: steps.prerun.outputs.result != 'skip'
