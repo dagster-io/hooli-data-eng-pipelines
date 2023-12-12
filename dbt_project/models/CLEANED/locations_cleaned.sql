@@ -12,7 +12,7 @@ source_renamed as (
            l_state as state,
            l_country as country,
            l_zip_code as zip_code,
-           l_sling_loaded_at
+           _sling_loaded_at
     from source
 
 )
