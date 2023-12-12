@@ -1,6 +1,6 @@
 from dagster import AssetSelection, define_asset_job
 
-raw_location_by_day = AssetSelection.keys(["RAW_DATA", "location"])
+raw_location_by_day = AssetSelection.keys(["RAW_DATA", "locations"])
 
 daily_sling_job = define_asset_job(
     name="daily_sling_job",
