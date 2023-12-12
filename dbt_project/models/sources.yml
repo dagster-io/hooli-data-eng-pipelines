@@ -5,10 +5,10 @@ sources:
     tables:
       - name: "orders"
       - name: "users"
-      - name: "raw_location"
+      - name: "location"
         meta:
           dagster:
-            asset_key: ['raw_location']
+            asset_key: ['location']
   - name: "FORECASTING"
     tables:
       - name: "predicted_orders"
