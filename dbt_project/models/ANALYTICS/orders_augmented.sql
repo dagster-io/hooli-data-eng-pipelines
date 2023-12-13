@@ -2,7 +2,7 @@ select
         o.*,
         u.company,
         l.state,
-        l_zip_code
+        l.zip_code
 from {{ ref("orders_cleaned") }} o 
 
 left join {{ ref("users_cleaned") }} u
