@@ -11,7 +11,7 @@ from dagster import AssetSelection, define_asset_job
 # which is an asset representing a model in dbt
 analytics_job = define_asset_job(
     name="refresh_analytics_model_job",
-    selection=AssetSelection.keys(["ANALYTICS", "orders_augmented"]).upstream(),
+    selection=AssetSelection.keys(["ANALYTICS", "orders_augmented"]).upstream() - AssetSelection.keys(["CLEANED", "locations_cleaned"]),
     tags={"dagster/max_retries": "1"},
     # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
 )
