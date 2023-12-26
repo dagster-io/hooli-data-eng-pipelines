@@ -13,8 +13,8 @@ locations:
           container_config:
             resources:
               limits:
-                cpu: 500m
-                memory: 1G
+                cpu: 1000m
+                memory: 2G
   - location_name: basics
     code_source:
       python_file: definitions.py
