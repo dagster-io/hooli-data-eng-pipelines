@@ -24,6 +24,7 @@ from dagster_dbt import (
     DagsterDbtTranslator,
     load_assets_from_dbt_project,
     default_metadata_from_dbt_resource_props,
+    DagsterDbtTranslatorSettings
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster._utils import file_relative_path
@@ -132,7 +133,7 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
     manifest=DBT_MANIFEST,
     select="orders_cleaned users_cleaned orders_augmented",
     partitions_def=daily_partitions,
-    dagster_dbt_translator=CustomDagsterDbtTranslator(),
+    dagster_dbt_translator=CustomDagsterDbtTranslator(settings=DagsterDbtTranslatorSettings(enable_asset_checks=True)),
     backfill_policy=BackfillPolicy.single_run(),
 )
 def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
@@ -143,7 +144,7 @@ def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     manifest=DBT_MANIFEST,
     select="weekly_order_summary order_stats",
     partitions_def=weekly_partitions,
-    dagster_dbt_translator=CustomDagsterDbtTranslator(),
+    dagster_dbt_translator=CustomDagsterDbtTranslator(DagsterDbtTranslatorSettings(enable_asset_checks=True)),
     backfill_policy=BackfillPolicy.single_run(),
 )
 def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
