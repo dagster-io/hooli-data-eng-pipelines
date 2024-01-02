@@ -122,7 +122,7 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
         list(context.selected_output_names)[0]
     )
     dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
-    dbt_args = ["run", "--vars", json.dumps(dbt_vars)]
+    dbt_args = ["build", "--vars", json.dumps(dbt_vars)]
 
     dbt_cli_task = dbt.cli(dbt_args, context=context)
 
