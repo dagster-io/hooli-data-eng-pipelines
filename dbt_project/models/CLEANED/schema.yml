@@ -30,7 +30,7 @@ models:
         description: "The total purchase price for this order"
         data_type: "float"
         tests:
-          - greater_than_zero
+          - greater_than_zero:
             config: 
               severity: warn
   - name: users_cleaned
