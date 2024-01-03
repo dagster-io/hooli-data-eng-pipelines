@@ -8,7 +8,6 @@ models:
         description: "Platform id of the user that placed this order."
         data_type: "int"
         tests:
-          - unique
           - not_null
       - name: quantity
         description: "The quantity of items purchased in this order."
