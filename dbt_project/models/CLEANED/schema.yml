@@ -8,9 +8,6 @@ models:
         description: "Platform id of the user that placed this order."
         data_type: "int"
         tests:
-          - unique:
-            config:
-                severity: warn
           - not_null
       - name: quantity
         description: "The quantity of items purchased in this order."
@@ -30,9 +27,7 @@ models:
         description: "The total purchase price for this order"
         data_type: "float"
         tests:
-          - greater_than_zero:
-            config: 
-              severity: warn
+          - greater_than_zero
   - name: users_cleaned
     description: "Raw users data with test accounts removed"
     columns:
