@@ -49,8 +49,8 @@ CONTAINER_REGISTRY = (
 class modelHyperParams(Config):
     """Hyper parameters for the ML model with default values"""
 
-    a_init = Field(5, description="initial value for a parameter, intercept")
-    b_init = Field(5, description="initial value for b parameter, slope")
+    a_init: float = Field(5, description="initial value for a parameter, intercept")
+    b_init: float = Field(5, description="initial value for b parameter, slope")
 
 
 @asset(
