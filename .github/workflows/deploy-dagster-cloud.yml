@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DAGSTER_CLOUD_ORGANIZATION: "hooli"
+  DAGSTER_CLOUD_URL: ${{ secrets.DAGSTER_CLOUD_URL }}
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
   DAGSTER_PROJECT_DIR: "."
   DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
@@ -66,10 +67,26 @@ jobs:
         if: ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
 
+      # Use AWS CLI to copy the dbt manifest.json to or from S3 for slim CI
+      - name: Setup AWS CLI
+        if: steps.prerun.outputs.result != 'skip'
+        uses: aws-actions/setup-aws-cli@v2
+
+      - name: Download dbt manifest from S3
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          output=$(aws s3 cp s3://hooli-demo/dbt_slim_ci/manifest.json ./dbt_project/target/slim_ci/manifest.json 2>&1) || echo "Error: $output"
+
       # Build 'data-eng-pipeline' code location
       - name: Build dbt manifest for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
         run: make manifest
+
+      - name: Upload dbt manifest to S3
+        if: steps.prerun.outputs.result != 'skip' && github.event.pull_request.merged == true
+        run: |
+          aws s3 cp ./dbt_project/target/manifest.json s3://hooli-demo/dbt_slim_ci/manifest.json
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
@@ -166,6 +183,15 @@ jobs:
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci deploy"
+
+      # Trigger dbt slim CI job
+      - name: Trigger dbt slim CI
+        if: github.event.action != 'pull_request'
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+        with:
+          location_name: ${{ matrix.location.name }}
+          deployment: ${{ steps.deploy.outputs.deployment }}
+          job: dbt_slim_ci_job
 
       # Summary and comment updates - note these always() run
       - name: Update PR comment for branch deployments

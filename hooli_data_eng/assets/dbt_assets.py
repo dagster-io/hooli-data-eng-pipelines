@@ -1,25 +1,21 @@
 import json
 import textwrap
-from dateutil import parser
 from pathlib import Path
-from typing import Any, Generator, Mapping, Union
+from typing import Any, Mapping
 
 from dagster import (
     AutoMaterializePolicy,
     AutoMaterializeRule,
-    AssetCheckResult,
     AssetKey,
-    AssetObservation,
-    DailyPartitionsDefinition,
-    WeeklyPartitionsDefinition,
-    OpExecutionContext,
-    Output,
     BackfillPolicy,
+    DailyPartitionsDefinition,
+    job,
+    op,
+    OpExecutionContext,
+    WeeklyPartitionsDefinition,
 )
 from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
 from dagster_dbt import (
-    DbtCliEventMessage,
-    DbtCliInvocation,
     DbtCliResource, 
     DagsterDbtTranslator,
     load_assets_from_dbt_project,
@@ -44,6 +40,11 @@ DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 # see also: https://docs.dagster.io/integrations/dbt/reference#deploying-a-dagster-project-with-a-dbt-project
 DBT_MANIFEST = Path(
     file_relative_path(__file__, "../../dbt_project/target/manifest.json")
+)
+
+# this manifest represents the last successful dbt deployment and will be compared against the current deployment
+SLIM_CI_MANIFEST =  Path(
+    file_relative_path(__file__, "../../dbt_project/target/slim_ci/")
 )
 
 allow_outdated_parents_policy = AutoMaterializePolicy.eager().without_rules(
@@ -157,3 +158,27 @@ dbt_views = load_assets_from_dbt_project(
     select="company_perf sku_stats company_stats locations_cleaned",
     dagster_dbt_translator=CustomDagsterDbtTranslatorForViews()
 )
+
+
+# This op will be used to run slim CI
+@op
+def dbt_slim_ci(dbt2: DbtCliResource):
+    slim_ci_manifest = SLIM_CI_MANIFEST if SLIM_CI_MANIFEST.exists() else DBT_MANIFEST 
+
+    dbt_command = [
+        "build",
+        "--select", "state:modified+",
+        "--defer",
+        "--state", f"{slim_ci_manifest}"
+    ]
+
+    yield from dbt2.cli(
+        args=dbt_command,
+        manifest=DBT_MANIFEST,
+        dagster_dbt_translator=CustomDagsterDbtTranslator(DagsterDbtTranslatorSettings(enable_asset_checks=True))
+        ).stream()
+
+# This job will be triggered by Pull Request and should only run new or changed dbt models
+@job
+def dbt_slim_ci_job():
+    dbt_slim_ci()
