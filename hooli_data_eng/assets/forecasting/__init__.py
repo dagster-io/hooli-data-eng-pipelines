@@ -99,7 +99,7 @@ def model_stats_by_month(
 ) -> Output[pd.DataFrame]:
     """Model errors by month"""
     a, b = order_forecast_model
-    target_date = pd.to_datetime(context.asset_partition_key_for_output())
+    target_date = pd.to_datetime(context.partition_context.partition_key)
     target_month = target_date.month
     weekly_order_summary["order_date"] = pd.to_datetime(
         weekly_order_summary["order_date"]
