@@ -183,7 +183,7 @@ jobs:
       # Get branch deployment as input to job trigger below
       - name: Get branch deployment
         id: get-branch-deployment
-        if: github.event.action == 'opened' || github.event.action == 'reopened'
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
         uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
         with:
           organization_id: 'hooli'
