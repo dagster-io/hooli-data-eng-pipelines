@@ -185,8 +185,8 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
         uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
         with:
-          location_name: data-eng-pipeline
-          deployment: data-eng-prod
+          location_name: ${{ matrix.location.name }}
+          deployment: ${{ steps.deploy.outputs.deployment }}
           job_name: dbt_slim_ci_job
           organization_id: hooli
 
