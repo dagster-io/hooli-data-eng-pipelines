@@ -188,6 +188,7 @@ jobs:
           location_name: data-eng-pipeline
           deployment: data-eng-prod
           job_name: dbt_slim_ci_job
+          organization_id: hooli
 
       # Summary and comment updates - note these always() run
       - name: Update PR comment for branch deployments
