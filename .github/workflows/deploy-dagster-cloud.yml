@@ -180,13 +180,21 @@ jobs:
         with:
           command: "ci deploy"
 
+      # Get branch deployment as input to job trigger below
+      - name: Get branch deployment
+        id: get-branch-deployment
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        with:
+          organization_id: 'hooli'
+
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
         uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
         with:
-          location_name: ${{ matrix.location.name }}
-          deployment: ${{ steps.deploy.outputs.deployment }}
+          location_name: data-eng-pipeline
+          deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
           job_name: dbt_slim_ci_job
           organization_id: hooli
 
