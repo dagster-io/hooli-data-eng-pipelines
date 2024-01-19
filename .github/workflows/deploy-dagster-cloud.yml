@@ -80,7 +80,7 @@ jobs:
 
       # Copy production manifest.json to S3 on merge
       - name: Upload dbt manifest to S3
-        if: steps.prerun.outputs.result != 'skip' && github.event.pull_request.merged == true
+        if: steps.prerun.outputs.result != 'skip' && ${{ ! startsWith(github.ref, 'refs/heads/master') }}
         run: |
           aws s3 cp ./dbt_project/target/manifest.json s3://hooli-demo/dbt_slim_ci/manifest.json
 
