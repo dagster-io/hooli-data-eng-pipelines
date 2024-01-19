@@ -66,10 +66,23 @@ jobs:
         if: ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
 
+      # Copy the production manifest.json to local directory - Raise error if not retrieved
+      - name: Download dbt manifest from S3
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          output=$(aws s3 cp s3://hooli-demo/dbt_slim_ci/manifest.json ./dbt_project/target/slim_ci/manifest.json 2>&1) || echo "Error: $output"
+
       # Build 'data-eng-pipeline' code location
       - name: Build dbt manifest for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
         run: make manifest
+
+      # Copy production manifest.json to S3 on merge
+      - name: Upload dbt manifest to S3
+        if: steps.prerun.outputs.result != 'skip' && github.event.pull_request.merged == true
+        run: |
+          aws s3 cp ./dbt_project/target/manifest.json s3://hooli-demo/dbt_slim_ci/manifest.json
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
@@ -166,6 +179,24 @@ jobs:
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
         with:
           command: "ci deploy"
+
+      # Get branch deployment as input to job trigger below
+      - name: Get branch deployment
+        id: get-branch-deployment
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        with:
+          organization_id: 'hooli'
+
+      # Trigger dbt slim CI job
+      - name: Trigger dbt slim CI
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+        with:
+          location_name: data-eng-pipeline
+          deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
+          job_name: dbt_slim_ci_job
+          organization_id: hooli
 
       # Summary and comment updates - note these always() run
       - name: Update PR comment for branch deployments

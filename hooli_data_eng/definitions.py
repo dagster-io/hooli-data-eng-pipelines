@@ -7,6 +7,7 @@ from dagster import (
 )
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
+from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.raw_data import check_users
 from hooli_data_eng.jobs import analytics_job, predict_job
@@ -69,5 +70,5 @@ defs = Definitions(
        watch_s3_sensor,
        asset_delay_alert_sensor,
     ],
-    jobs=[analytics_job, predict_job],
+    jobs=[analytics_job, predict_job, dbt_slim_ci_job],
 )
