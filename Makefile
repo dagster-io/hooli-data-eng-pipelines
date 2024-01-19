@@ -9,7 +9,7 @@ manifest:
 	pip install pyopenssl --upgrade;
 	pip install click --upgrade;
 	pip install dbt-core dbt-duckdb dbt-snowflake; 
-	dbt parse --project-dir=dbt_project --profiles-dir=dbt_project/config
+	dbt parse --project-dir=dbt_project --profiles-dir=dbt_project/config --target BRANCH
 
 stateful_dev: clean manifest
 	export DAGSTER_HOME="~/.dagster_home"; dagster dev
