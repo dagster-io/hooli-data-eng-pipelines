@@ -155,7 +155,7 @@ def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 dbt_views = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     DBT_PROFILES_DIR,
-    select="company_perf sku_stats company_stats locations_cleaned",
+    select="company_perf sku_stats company_stats locations_cleaned users_cleaned_2",
     dagster_dbt_translator=CustomDagsterDbtTranslatorForViews()
 )
 
