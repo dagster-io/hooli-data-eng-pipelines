@@ -1,4 +1,4 @@
-from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy
+from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy, Config
 from dagster_batch_enrichment.warehouse import MyWarehouse
 from dagster_batch_enrichment.api import EnrichmentAPI
 import numpy as np
@@ -6,9 +6,15 @@ from pydantic import Field
 import pandas as pd
 import json
 
+class experimentConfig(Config):
+    experiment_name: str
 
 @asset
-def raw_data(context: OpExecutionContext, warehouse: MyWarehouse):
+def raw_data(
+    context: OpExecutionContext, 
+    warehouse: MyWarehouse,
+    config: experimentConfig
+):
     """ Placeholder for querying a real data source"""
     orders_to_process = warehouse.get_raw_data()
     
@@ -18,7 +24,8 @@ def raw_data(context: OpExecutionContext, warehouse: MyWarehouse):
     # associate metadata with the raw data asset materialization
     context.add_output_metadata(metadata={
         "preview": MetadataValue.md(orders_to_process.head(3).to_markdown()), 
-        "nrows": len(orders_to_process)
+        "nrows": len(orders_to_process),
+        "user_input": config.experiment_name
     })
 
     return orders_to_process
