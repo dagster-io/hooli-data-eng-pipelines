@@ -161,7 +161,9 @@ dbt_views = load_assets_from_dbt_project(
 
 
 # This op will be used to run slim CI
-@op
+@op(
+    out={}
+)
 def dbt_slim_ci(dbt2: DbtCliResource):
     slim_ci_manifest = SLIM_CI_MANIFEST if SLIM_CI_MANIFEST.exists() else DBT_MANIFEST.parent 
 
