@@ -28,6 +28,7 @@ models:
         data_type: "float"
         tests:
           - greater_than_zero
+  
   - name: users_cleaned
     description: "Raw users data with test accounts removed"
     columns:
@@ -40,3 +41,25 @@ models:
       - name: "created_at"
         description: "When the user account was crated"
         data_type: "timestamp"
+
+  - name: locations_cleaned
+    description: "Locations data with standardized column names"
+    columns:
+      - name: "user_id"
+        description: "The unique identifier for the user"
+        data_type: "int"
+      - name: "street_address"
+        description: "The user's street address"
+        data_type: "str"
+      - name: "state"
+        description: "The state portion of the user's address"
+        data_type: "str"
+      - name: "country"
+        description: "The unique identifier for the user"
+        data_type: "str"
+      - name: "zip_code"
+        description: "The user's street address"
+        data_type: "str"
+      - name: "_sling_loaded_at"
+        description: "The state portion of the user's address"
+        data_type: "int"
