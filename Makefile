@@ -15,4 +15,4 @@ stateful_dev_prod: clean manifest
 	export DAGSTER_HOME="~/.dagster_home"; export DAGSTER_CLOUD_DEPLOYMENT_NAME="data-eng-prod"; dagster dev
 
 dependencies:
-	pip install -e ".[dev]"
+	uv pip install -e ".[dev]"
