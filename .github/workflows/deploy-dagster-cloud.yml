@@ -76,7 +76,9 @@ jobs:
       # Build 'data-eng-pipeline' code location
       - name: Build dbt manifest for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
-        run: make manifest
+        run: | 
+          make deps
+          make manifest
 
       # Copy production manifest.json to S3 on merge
       - name: Upload dbt manifest to S3

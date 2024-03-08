@@ -4,6 +4,9 @@ config-version: 2
 
 profile: "dbt_project"
 
+vars:
+  'dbt_date:time_zone': 'America/Los_Angeles'
+
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
 macro-paths: ["macros"]

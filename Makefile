@@ -11,6 +11,9 @@ manifest:
 	pip install dbt-core dbt-duckdb dbt-snowflake; 
 	dbt parse --project-dir=dbt_project --profiles-dir=dbt_project/config --target BRANCH
 
+deps:
+	dbt deps --project-dir=dbt_project --profiles-dir=dbt_project/config
+
 stateful_dev: clean manifest
 	export DAGSTER_HOME="~/.dagster_home"; dagster dev
 
