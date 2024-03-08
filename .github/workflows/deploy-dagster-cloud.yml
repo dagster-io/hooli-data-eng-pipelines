@@ -76,7 +76,10 @@ jobs:
       # Build 'data-eng-pipeline' code location
       - name: Build dbt manifest for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
-        run: | 
+        run: |
+          pip install pyopenssl --upgrade;
+          pip install click --upgrade;
+          pip install dbt-core dbt-duckdb dbt-snowflake; 
           make deps
           make manifest
 
