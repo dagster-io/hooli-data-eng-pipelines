@@ -1,8 +1,8 @@
 import json
 import textwrap
+import os
 from pathlib import Path
 from typing import Any, Mapping
-
 from dagster import (
     AutoMaterializePolicy,
     AutoMaterializeRule,
@@ -24,6 +24,7 @@ from dagster_dbt import (
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster._utils import file_relative_path
+from ..resources import dbt_resource
 
 
 # many dbt assets use an incremental approach to avoid
@@ -36,11 +37,17 @@ weekly_partitions = WeeklyPartitionsDefinition(start_date="2023-05-25")
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
-# this manifest is created at build/deploy time, see the Makefile & .github/workflows/deploy-dagster-cloud.yml#70
-# see also: https://docs.dagster.io/integrations/dbt/reference#deploying-a-dagster-project-with-a-dbt-project
-DBT_MANIFEST = Path(
-    file_relative_path(__file__, "../../dbt_project/target/manifest.json")
-)
+# taken from dagster & dbt Dagster University Course
+# this creates a manifest on load if DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is present, 
+# otherwise it points to the already-built manifest
+if os.getenv("DAGSTER_DBT_PARSE_PROJECT_ON_LOAD"):
+    DBT_MANIFEST = (
+        dbt_resource.cli(["--quiet", "parse"])
+        .wait()
+        .target_path.joinpath("manifest.json")
+    )
+else:
+    DBT_MANIFEST = os.path.join(DBT_PROJECT_DIR, "target", "manifest.json")
 
 # this manifest represents the last successful dbt deployment and will be compared against the current deployment
 SLIM_CI_MANIFEST =  Path(
