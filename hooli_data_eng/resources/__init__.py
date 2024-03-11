@@ -64,12 +64,6 @@ DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 # Similar to having different dbt targets, here we create the resource
 # configuration by environment
 
-dbt_resource = DbtCliResource(
-    project_dir=DBT_PROJECT_DIR,
-    profiles_dir=DBT_PROFILES_DIR,
-    target=os.getenv("DAGSTER_ENVIRONMENT", "BRANCH")
-)
-
 resource_def = {
     "LOCAL": {
         "io_manager": DuckDBPandasIOManager(

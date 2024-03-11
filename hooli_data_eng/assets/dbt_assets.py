@@ -20,11 +20,11 @@ from dagster_dbt import (
     DagsterDbtTranslator,
     load_assets_from_dbt_project,
     default_metadata_from_dbt_resource_props,
-    DagsterDbtTranslatorSettings
+    DagsterDbtTranslatorSettings,
+    DbtArtifacts,
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster._utils import file_relative_path
-from ..resources import dbt_resource
 
 
 # many dbt assets use an incremental approach to avoid
@@ -37,17 +37,19 @@ weekly_partitions = WeeklyPartitionsDefinition(start_date="2023-05-25")
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
 
-# taken from dagster & dbt Dagster University Course
-# this creates a manifest on load if DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is present, 
+# new in 1.6.9, DbtArtifacts is an experimental class that creates a manifest on load 
+# if DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is present, 
 # otherwise it points to the already-built manifest
-if os.getenv("DAGSTER_DBT_PARSE_PROJECT_ON_LOAD"):
-    DBT_MANIFEST = (
-        dbt_resource.cli(["--quiet", "parse"])
-        .wait()
-        .target_path.joinpath("manifest.json")
-    )
-else:
-    DBT_MANIFEST = os.path.join(DBT_PROJECT_DIR, "target", "manifest.json")
+dbt_artifacts = DbtArtifacts(
+    project_dir=DBT_PROJECT_DIR,
+    prepare_command=["--quiet",
+                     "parse",
+                     "--target",
+                     "BRANCH",
+                     "--profiles-dir",
+                     DBT_PROFILES_DIR],
+)
+DBT_MANIFEST = dbt_artifacts.manifest_path
 
 # this manifest represents the last successful dbt deployment and will be compared against the current deployment
 SLIM_CI_MANIFEST =  Path(
