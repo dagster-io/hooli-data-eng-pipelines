@@ -10,6 +10,7 @@ from dagster import (
     Backoff,
     DailyPartitionsDefinition,
     Jitter,
+    MetadataValue,
     RetryPolicy,
 )
 import pandas as pd
@@ -57,10 +58,17 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
         description="check that users are from expected companies",
 )
 def check_users(context, users: pd.DataFrame):
-    unique_companies = pd.unique(users['company']).tolist()
+    observed_companies = set(pd.unique(users['company']))
+    expected_companies = {"ShopMart", "SportTime", "FamilyLtd", "DiscountStore"}
+
     return AssetCheckResult(
-        passed=  (unique_companies == ["FoodCo", "ShopMart", "SportTime", "FamilyLtd"]),
-        metadata={"companies": unique_companies},
+        passed=  (set(observed_companies) == expected_companies),
+        metadata={"result": MetadataValue.md(
+            f"""
+                Observed the following unexpected companies: 
+                {list(observed_companies - expected_companies)}
+            """
+        )},
         severity=AssetCheckSeverity.WARN
     )
 
