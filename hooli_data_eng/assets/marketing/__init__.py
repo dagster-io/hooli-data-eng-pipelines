@@ -22,7 +22,7 @@ from hooli_data_eng.assets.dbt_assets import allow_outdated_parents_policy
     freshness_policy=FreshnessPolicy(maximum_lag_minutes=24*60), 
     auto_materialize_policy=allow_outdated_parents_policy,
     compute_kind="pandas",
-    op_tags={"owner": "bi@hooli.com"},
+    owners=["team:programmers", "lopp@dagsterlabs.com"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])}
 )
 def avg_orders(context: AssetExecutionContext, company_perf: pd.DataFrame) -> pd.DataFrame:
@@ -47,9 +47,7 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     key_prefix="MARKETING", 
     freshness_policy=FreshnessPolicy(maximum_lag_minutes=24*60), 
     compute_kind="snowflake", 
-    metadata={
-        "owner": "bi@hooli.com"
-    },
+    owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])}
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
