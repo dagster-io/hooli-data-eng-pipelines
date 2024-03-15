@@ -6,7 +6,7 @@ from dagster import (
     multiprocess_executor,
 )
 
-from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
+from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets, amp_test
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.raw_data import check_users
@@ -51,6 +51,7 @@ forecasting_assets = load_assets_from_package_module(
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
 
+amp_assets = load_assets_from_package_module(amp_test, group_name="AMP_TEST")
 # ---------------------------------------------------
 # Definitions
 
@@ -61,7 +62,7 @@ defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
-    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
+    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets, *amp_assets],
     asset_checks=[check_users, check_avg_orders],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule],
