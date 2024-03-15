@@ -29,3 +29,14 @@ def asset_that_depends_on_source(context: AssetExecutionContext) -> pd.DataFrame
     context.log.info("asset completes")
     return df[df["first_column"] == 1]
     
+
+@asset(
+    deps=["observable_source_asset_key"],
+    auto_materialize_policy=AutoMaterializePolicy.eager(),   
+)
+def asset_2_that_depends_on_source(context: AssetExecutionContext) -> pd.DataFrame:
+    context.log.info("asset starts")
+    time.sleep(35)
+    df = pd.read_csv(USERS_CSV_PATH)
+    context.log.info("asset completes")
+    return df[df["second_column"] == 3]
