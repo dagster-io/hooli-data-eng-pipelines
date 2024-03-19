@@ -102,13 +102,10 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         metadata = {"partition_expr": "order_date"}
 
         if dbt_resource_props["name"] == "orders_cleaned":
-            metadata = {"partition_expr": "dt", "owner":"data@hooli.org"}
+            metadata = {"partition_expr": "dt"}
 
         if dbt_resource_props["name"] == "users_cleaned":
-            metadata = {"partition_expr": "created_at", "owner":"data@hooli.org"}
-
-        if dbt_resource_props["name"] in ["company_perf", "sku_stats", "company_stats"]:
-            metadata = {"owner":"bi@hooli.org"}
+            metadata = {"partition_expr": "created_at"}
 
         default_metadata = default_metadata_from_dbt_resource_props(dbt_resource_props)
 
