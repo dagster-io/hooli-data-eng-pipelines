@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: orders_cleaned
+    config:
+      alias: orders_something_else
     description: "Cleaned version of raw orders data"
     columns:
       - name: user_id
@@ -27,8 +29,10 @@ models:
         description: "The total purchase price for this order"
         data_type: "float"
         tests:
-          - greater_than_zero
-  
+          - greater_than_zero:
+              config:
+                alias: testing_alias
+
   - name: users_cleaned
     description: "Raw users data with test accounts removed"
     columns:
@@ -38,6 +42,11 @@ models:
       - name: "company"
         description: "The name of the company that this user belongs to."
         data_type: "str"
+        tests:
+          - dbt_expectations.expect_column_values_to_match_like_pattern_list:
+              like_pattern_list: ["%Sport%","%Co%","%Ltd%", "%Shop%"]
+              match_on: any # (Optional. Default is 'any', which applies an 'OR' for each pattern. If 'all', it applies an 'AND' for each regex.)
+              alias: example_alias
       - name: "created_at"
         description: "When the user account was crated"
         data_type: "timestamp"

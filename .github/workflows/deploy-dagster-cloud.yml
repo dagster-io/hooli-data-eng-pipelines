@@ -79,7 +79,8 @@ jobs:
         run: |
           pip install pyopenssl --upgrade;
           pip install click --upgrade;
-          pip install dbt-core dbt-duckdb dbt-snowflake;
+          pip install dbt-core dbt-duckdb dbt-snowflake; 
+          make deps
           make manifest
 
       # Copy production manifest.json to S3 on merge
