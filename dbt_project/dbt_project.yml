@@ -20,7 +20,7 @@ clean-targets:
 models:
   +materialized: table
   +post-hook:
-    - "{{ dagster.log_columns_in_relation() }}"
+    - "{{ dagster.log_column_level_metadata() }}"
 
 query-comment:
   comment: "snowflake_dagster_dbt_v1_opaque_id[[[{{ node.unique_id }}:{{ invocation_id }}]]]"
