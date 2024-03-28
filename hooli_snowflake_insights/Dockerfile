@@ -9,4 +9,5 @@ RUN python -m pip install git+https://github.com/wbond/oscrypto.git@d5f3437ed242
 
 ADD . .
 
-RUN pip install -r requirements.txt
+RUN python -m pip install -U uv
+RUN uv pip install --system -r requirements.txt
