@@ -33,7 +33,7 @@ class RawDataAPI(ConfigurableResource):
 
             # random order data returned, see utils.py
             json = random_data(
-               extra_columns={"order_id": str, "quantity": int, "purchase_price": float, "sku": str},
+               extra_columns={"order_id": str, "order_desc": str, "quantity": int, "purchase_price": float, "sku": str},
                n = 10,
                filter_date=datetime_to_process
             ).to_json()
