@@ -6,7 +6,7 @@ select
         sku,
         dt,
         cast(dt as datetime) as order_date,
-        date_trunc('month', order_date) as order_month
+        date_trunc('month', order_date) as order_month,
         quantity * purchase_price as order_total
 from {{ source("raw_data", "orders") }}
 {% if is_incremental() %}
