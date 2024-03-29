@@ -93,6 +93,7 @@ def check_users(context, users: pd.DataFrame):
     ),
     backfill_policy=BackfillPolicy.single_run(),
     tags={**StorageKindTagSet(storage_kind=storage_kind)},
+    code_version="1"
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
