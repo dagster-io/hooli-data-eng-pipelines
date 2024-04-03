@@ -170,12 +170,26 @@ def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     yield from _process_partitioned_dbt_assets(context=context, dbt=dbt2)
 
 
-dbt_views = load_assets_from_dbt_project(
-    DBT_PROJECT_DIR,
-    DBT_PROFILES_DIR,
+@dbt_assets(
+    manifest=DBT_MANIFEST,
     select="company_perf sku_stats company_stats locations_cleaned",
-    dagster_dbt_translator=CustomDagsterDbtTranslatorForViews()
+    partitions_def=weekly_partitions,
+    dagster_dbt_translator=CustomDagsterDbtTranslatorForViews(DagsterDbtTranslatorSettings(enable_asset_checks=True)),
+    backfill_policy=BackfillPolicy.single_run(),
 )
+def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
+    # Invoke dbt CLI
+    dbt_cli_task = dbt2.cli(["build"], context=context)
+
+    # Emits an AssetObservation for each asset materialization, which is used to 
+    # identify the Snowflake credit consumption
+    yield from dbt_with_snowflake_insights(context, dbt_cli_task)
+
+    # fetch run_results.json to log compiled SQL
+    run_results_json = dbt_cli_task.get_artifact("run_results.json")
+    for result in run_results_json["results"]:
+        model_name = result.get("unique_id")
+        context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
 
 
 # This op will be used to run slim CI
