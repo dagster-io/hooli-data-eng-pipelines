@@ -95,7 +95,6 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 
         if node_path == "MARKETING/company_perf.sql":
             prefix = "ANALYTICS"
-
         return prefix
 
     def get_metadata(self, dbt_resource_props: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -115,6 +114,10 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         self, dbt_resource_props: Mapping[str, Any]
     ):
         return allow_outdated_parents_policy
+    
+    def get_owners(
+        self, dbt_resource_props: Mapping[str, Any] ):
+        return [dbt_resource_props['group']['owner']['email'], f"team:{dbt_resource_props['group']['name']}"]
 
 
 class CustomDagsterDbtTranslatorForViews(CustomDagsterDbtTranslator):
