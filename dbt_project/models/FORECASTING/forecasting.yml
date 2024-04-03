@@ -1,0 +1,5 @@
+groups:
+  - name: data-science
+    owner:
+      # 'name' or 'email' is required; additional properties allowed
+      email: nelson.bighetti@hooli.com

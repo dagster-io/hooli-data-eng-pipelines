@@ -1,0 +1,5 @@
+groups:
+  - name: core-data-eng
+    owner:
+      # 'name' or 'email' is required; additional properties allowed
+      email: bertram.gilfoyle@hooli.com

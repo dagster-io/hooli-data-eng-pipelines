@@ -18,9 +18,18 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  +materialized: table
-  +post-hook:
+  dbt_project:
+    +materialized: table
+    +post-hook:
     - "{{ dagster.log_column_level_metadata() }}"
+    ANALYTICS:
+      +group: marketing-group
+    CLEANED:
+      +group: core-data-eng
+    FORECASTING:
+      +group: data-science
+    MARKETING:
+      +group: marketing-group
 
 query-comment:
   comment: "snowflake_dagster_dbt_v1_opaque_id[[[{{ node.unique_id }}:{{ invocation_id }}]]]"
