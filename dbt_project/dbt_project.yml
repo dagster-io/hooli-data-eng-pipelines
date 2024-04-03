@@ -26,6 +26,7 @@ models:
       +group: marketing-group
     CLEANED:
       +group: core-data-eng
+      +tags: "all_cleanred_models"
     FORECASTING:
       +group: data-science
     MARKETING:
