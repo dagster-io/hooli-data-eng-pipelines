@@ -41,6 +41,8 @@ models:
   - name: users_cleaned
     # group: core-data-eng
     description: "Raw users data with test accounts removed"
+    config:
+      tags: "core_kpis"
     columns:
       - name: "user_id"
         description: "Platform id of the user."
