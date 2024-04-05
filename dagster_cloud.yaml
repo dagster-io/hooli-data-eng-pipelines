@@ -1,7 +1,42 @@
 locations:
   - location_name: data-eng-pipeline
     code_source:
-      package_name: hooli_data_science
+      package_name: hooli_data_eng
     build:
       directory: ./
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+    container_context:
+      k8s:
+        run_k8s_config:
+          job_spec_config:
+            ttl_seconds_after_finished: 60
+          container_config:
+            resources:
+              limits:
+                cpu: 1000m
+                memory: 2G
+  - location_name: basics
+    code_source:
+      python_file: definitions.py
+    build:
+      directory: ./hooli_basics
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+  - location_name: batch_enrichment
+    code_source:
+      package_name: dagster_batch_enrichment
+    build:
+      directory: ./hooli_batch_enrichment
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+  - location_name: snowflake_insights
+    code_source:
+      python_file: definitions.py
+    build:
+      directory: ./hooli_snowflake_insights
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+  
+  - location_name: demo_assets
+    code_source:
+      package_name: hooli_demo_assets
+    build:
+      directory: ./hooli-demo-assets
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

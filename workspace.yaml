@@ -1,6 +1,6 @@
 load_from:
   - python_module:
-      module_name: hooli_data_science
+      module_name: hooli_data_eng
 # Example of deploying multiple code locations locally
 #  - python_module:
 #      module_name: hooli_demo_assets

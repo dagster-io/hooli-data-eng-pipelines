@@ -47,7 +47,7 @@ jobs:
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          deployment: 'data-science-prod'
+          deployment: 'data-eng-prod'
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -79,30 +79,103 @@ jobs:
         run: |
           pip install pyopenssl --upgrade;
           pip install click --upgrade;
-          pip install dbt-core dbt-duckdb dbt-snowflake;
+          pip install dbt-core dbt-duckdb dbt-snowflake; 
           make deps
           make manifest
 
       # Copy production manifest.json to S3 on merge
-      # - name: Upload dbt manifest to S3
-      #   if: steps.prerun.outputs.result != 'skip' && github.event_name != 'pull_request'
-      #   run: |
-      #     aws s3 cp ./dbt_project/target/manifest.json s3://hooli-demo/dbt_slim_ci/manifest.json
+      - name: Upload dbt manifest to S3
+        if: steps.prerun.outputs.result != 'skip' && github.event_name != 'pull_request'
+        run: |
+          aws s3 cp ./dbt_project/target/manifest.json s3://hooli-demo/dbt_slim_ci/manifest.json
 
-      # - name: Build and upload Docker image for data-eng-pipeline
-      #   if: steps.prerun.outputs.result != 'skip'
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: .
-      #     push: true
-      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
+      - name: Build and upload Docker image for data-eng-pipeline
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
 
-      # - name: Update build session with image tag for data-eng-pipeline
-      #   id: ci-set-build-output-data-eng-pipeline
-      #   if: steps.prerun.outputs.result != 'skip'
-      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
-      #   with:
-      #     command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+      - name: Update build session with image tag for data-eng-pipeline
+        id: ci-set-build-output-data-eng-pipeline
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+
+      # Build 'basics' code location
+      - name: Build and upload Docker image for basics
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_basics
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
+
+      - name: Update build session with image tag for basics
+        id: ci-set-build-output-basics
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
+
+      # Build 'batch enrichment' code location
+      - name: Build and upload Docker image for batch enrichment
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_batch_enrichment
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
+
+      - name: Update build session with image tag for batch enrichment
+        id: ci-set-build-output-batch-enrichment
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
+
+      # Build 'snowflake_insights' code location
+      - name: Build and upload Docker image for snowflake insights
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_snowflake_insights
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
+
+      - name: Update build session with image tag for snowflake insights
+        id: ci-set-build-output-snowflake-insights
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
+
+      # Build 'demo_assets' code location
+      - name: Build and upload Docker image for demo_assets
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli-demo-assets
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-demo-assets
+
+      - name: Update build session with image tag for demo_assets
+        id: ci-set-build-output-demo-assets
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.27
+        with:
+          command: "ci set-build-output --location-name=demo_assets --image-tag=$IMAGE_TAG-demo-assets"
+
+      # Build pipes example container
+      - name: Build and upload Docker image for pipes example
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./hooli_data_eng/utils/example_container
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
       # Deploy
       - name: Deploy to Dagster Cloud
