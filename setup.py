@@ -2,10 +2,10 @@ from setuptools import find_packages, setup
 
 if __name__ == "__main__":
     setup(
-        name="hooli_data_eng",
-        python_requires='<3.12',
-        packages=find_packages(exclude=["hooli_data_eng_tests"]),
-        package_data={"hooli_data_eng": ["dbt_project/*"]},
+        name="hooli_data_science",
+        python_requires="<3.12",
+        packages=find_packages(exclude=["hooli_data_science_tests"]),
+        package_data={"hooli_data_science": ["dbt_project/*"]},
         install_requires=[
             "dagster",
             "dagster-dbt",
