@@ -23,14 +23,14 @@ models:
     +post-hook:
     - "{{ dagster.log_column_level_metadata() }}"
     ANALYTICS:
-      +group: marketing-group
+      +group: Programmers
     CLEANED:
-      +group: core-data-eng
+      +group: Programmers
       +tags: "all_cleanred_models"
     FORECASTING:
-      +group: data-science
+      +group: Stakeholders
     MARKETING:
-      +group: marketing-group
+      +group: Executives
 
 query-comment:
   comment: "snowflake_dagster_dbt_v1_opaque_id[[[{{ node.unique_id }}:{{ invocation_id }}]]]"

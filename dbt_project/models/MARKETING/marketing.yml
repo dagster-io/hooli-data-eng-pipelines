@@ -1,5 +1,5 @@
 groups:
-  - name: marketing-group
+  - name: Executives
     owner:
       # 'name' or 'email' is required; additional properties allowed
       email: gavin.belson@hooli.com
