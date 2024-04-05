@@ -1,6 +1,6 @@
 packages:
-  # - package: calogica/dbt_expectations
-  #   version: 0.10.3
+  - package: calogica/dbt_expectations
+    version: 0.10.3
   - git: "https://github.com/dagster-io/dagster.git"
     subdirectory: "python_modules/libraries/dagster-dbt/dbt_packages/dagster"
     revision: "1.7.0" # replace with the version of `dagster` you are using.
