@@ -36,7 +36,8 @@ def _daily_partition_seq(start, end):
     compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
-    backfill_policy=BackfillPolicy.single_run()
+    backfill_policy=BackfillPolicy.single_run(),
+    tags={"core_kpis":""}
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
