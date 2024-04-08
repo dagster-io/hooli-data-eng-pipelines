@@ -25,7 +25,7 @@ from dagster_dbt import (
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster._utils import file_relative_path
-
+from hooli_data_eng.resources import get_env
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
@@ -45,7 +45,7 @@ dbt_artifacts = DbtArtifacts(
     prepare_command=["--quiet",
                      "parse",
                      "--target",
-                     "BRANCH",
+                     get_env(),
                      "--profiles-dir",
                      DBT_PROFILES_DIR],
 )
