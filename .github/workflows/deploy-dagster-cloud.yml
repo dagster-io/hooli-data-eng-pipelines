@@ -66,28 +66,14 @@ jobs:
         if: ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Copy the production manifest.json to local directory - Raise error if not retrieved
-      - name: Download dbt manifest from S3
-        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        continue-on-error: true
-        run: |
-          output=$(aws s3 cp s3://hooli-demo/dbt_slim_ci/manifest.json ./dbt_project/target/slim_ci/manifest.json 2>&1) || echo "Error: $output"
-
-      # Build 'data-eng-pipeline' code location
-      - name: Build dbt manifest for data-eng-pipeline
+      - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
         run: |
           pip install pyopenssl --upgrade;
           pip install click --upgrade;
-          pip install dbt-core dbt-duckdb dbt-snowflake; 
-          make deps
-          make manifest
-
-      # Copy production manifest.json to S3 on merge
-      - name: Upload dbt manifest to S3
-        if: steps.prerun.outputs.result != 'skip' && github.event_name != 'pull_request'
-        run: |
-          aws s3 cp ./dbt_project/target/manifest.json s3://hooli-demo/dbt_slim_ci/manifest.json
+          pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake;
+          dagster-dbt project prepare-for-deployment --file hooli_data_eng/project.py
+          dagster-cloud ci dagster-dbt manage-state --file hooli_data_eng/project.py
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
