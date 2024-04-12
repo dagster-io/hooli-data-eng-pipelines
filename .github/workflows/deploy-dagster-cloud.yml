@@ -72,6 +72,7 @@ jobs:
           pip install pyopenssl --upgrade;
           pip install click --upgrade;
           pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake;
+          make deps
           dagster-dbt project prepare-for-deployment --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt manage-state --file hooli_data_eng/project.py
 
