@@ -9,9 +9,13 @@ from dagster import (
     AssetCheckResult,
     asset_check,
     FreshnessPolicy,
+    define_asset_job, 
+    ScheduleDefinition,
+    AssetSelection
 )
 import pandas as pd
 import datetime
+from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 
 from hooli_data_eng.assets.dbt_assets import allow_outdated_parents_policy
 
@@ -35,20 +39,6 @@ def avg_orders(
     )
 
 
-avg_orders_freshness_check = build_last_update_freshness_checks(
-    assets=[avg_orders],
-    lower_bound_delta=datetime.timedelta(
-        hours=24
-    ),  # expect new data at least once a day
-)
-
-from dagster import build_sensor_for_freshness_checks
-
-avg_orders_freshness_checks_sensor = build_sensor_for_freshness_checks(
-    freshness_checks=[avg_orders_freshness_check]
-)
-
-
 @asset_check(description="check that avg orders are expected", asset=avg_orders)
 def check_avg_orders(context, avg_orders: pd.DataFrame):
     avg = avg_orders["avg_order"][0]
@@ -60,7 +50,6 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
 
 @asset(
     key_prefix="MARKETING",
-    freshness_policy=FreshnessPolicy(maximum_lag_minutes=24 * 60),
     compute_kind="snowflake",
     owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
@@ -92,3 +81,30 @@ def key_product_deepdive(context, sku_stats):
         {"sku_preview": MetadataValue.md(sku.head().to_markdown())}
     )
     return sku
+
+
+min_order_freshness_check = build_last_update_freshness_checks(
+    assets=[min_order],
+    lower_bound_delta=datetime.timedelta(
+        hours=24
+    ),  # expect new data at least once a day
+)
+
+avg_orders_freshness_check = build_anomaly_detection_freshness_checks(
+    assets=[avg_orders], 
+    params=None
+)
+
+min_order_freshness_check_sensor = build_sensor_for_freshness_checks(
+    freshness_checks=[min_order_freshness_check], 
+    minimum_interval_seconds=10*60
+)
+
+avg_orders_freshness_check_schedule = ScheduleDefinition(
+    name="check_avg_orders_freshness_schdule",
+    cron_schedule="*/10 * * * *",
+    job=define_asset_job(
+        "check_avg_orders_freshness_job",
+        selection=AssetSelection.checks(avg_orders_freshness_check)
+    )
+)
