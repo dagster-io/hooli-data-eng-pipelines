@@ -73,7 +73,7 @@ jobs:
           pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade --upgrade-strategy eager;
           make deps
           dagster-dbt project prepare-for-deployment --file hooli_data_eng/project.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py
+          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
