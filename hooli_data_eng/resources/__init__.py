@@ -10,6 +10,11 @@ from dagster_pyspark import pyspark_resource
 from dagster_snowflake_pandas import SnowflakePandasIOManager
 from dagstermill import ConfigurableLocalOutputNotebookIOManager
 
+from hooli_data_eng.project import (
+    dbt_project,
+    get_env,
+    DBT_PROJECT_DIR,
+)
 from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.resources.databricks import db_step_launcher
 
@@ -37,14 +42,6 @@ from unittest import mock
 # and S3 resources
 
 
-def get_env():
-    if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
-        return "BRANCH"
-    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
-        return "PROD"
-    return "LOCAL"
-
-
 client = mock.MagicMock()
 
 if get_env() == "PROD":
@@ -58,9 +55,6 @@ if get_env() == "PROD":
 # specifies what databases to targets, and locally will
 # execute against a DuckDB
 
-DBT_PROJECT_DIR = file_relative_path(__file__, "../../dbt_project")
-DBT_PROFILES_DIR = file_relative_path(__file__, "../../dbt_project/config")
-
 # Similar to having different dbt targets, here we create the resource
 # configuration by environment
 
@@ -73,12 +67,8 @@ resource_def = {
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI.configure_at_launch(),
         "s3": ResourceDefinition.none_resource(),
-        "dbt": DbtCliClientResource(
-            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
-        ),
-        "dbt2": DbtCliResource(
-            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="LOCAL"
-        ),
+        "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="LOCAL"),
+        "dbt2": DbtCliResource(project_dir=dbt_project, target="LOCAL"),
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
@@ -102,12 +92,8 @@ resource_def = {
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI.configure_at_launch(),
-        "dbt": DbtCliClientResource(
-            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
-        ),
-        "dbt2": DbtCliResource(
-            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="BRANCH"
-        ),
+        "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="BRANCH"),
+        "dbt2": DbtCliResource(project_dir=dbt_project, target="BRANCH"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(
@@ -131,12 +117,8 @@ resource_def = {
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI.configure_at_launch(),
-        "dbt": DbtCliClientResource(
-            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
-        ),
-        "dbt2": DbtCliResource(
-            project_dir=DBT_PROJECT_DIR, profiles_dir=DBT_PROFILES_DIR, target="PROD"
-        ),
+        "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="PROD"),
+        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, target="PROD"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),
