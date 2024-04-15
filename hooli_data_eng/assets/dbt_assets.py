@@ -1,6 +1,5 @@
 import json
 import textwrap
-from pathlib import Path
 from typing import Any, Mapping
 from dagster import (
     AutoMaterializePolicy,
@@ -21,7 +20,6 @@ from dagster_dbt import (
     DagsterDbtTranslatorSettings,
 )
 from dagster_dbt.asset_decorator import dbt_assets
-from dagster._utils import file_relative_path
 from hooli_data_eng.resources import dbt_project
 
 # many dbt assets use an incremental approach to avoid
@@ -34,10 +32,6 @@ weekly_partitions = WeeklyPartitionsDefinition(start_date="2023-05-25")
 
 DBT_MANIFEST = dbt_project.manifest_path
 
-# this manifest represents the last successful dbt deployment and will be compared against the current deployment
-SLIM_CI_MANIFEST = Path(
-    file_relative_path(__file__, "../../dbt_project/target/slim_ci/")
-)
 
 allow_outdated_parents_policy = AutoMaterializePolicy.eager().without_rules(
     AutoMaterializeRule.skip_on_parent_outdated()
@@ -187,7 +181,9 @@ def dbt_slim_ci(dbt2: DbtCliResource):
         "build",
         "--select",
         "state:modified+",
-        *dbt2.get_defer_args(),
+        "--defer",
+        "--state",
+        dbt2.state_path,
     ]
 
     yield from dbt2.cli(
