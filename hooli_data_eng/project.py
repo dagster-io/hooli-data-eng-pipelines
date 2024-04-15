@@ -1,6 +1,6 @@
 import os
 from dagster_dbt import DbtProject
-from dagster._utils import file_relative_path
+from pathlib import Path
 
 
 def get_env():
@@ -11,10 +11,11 @@ def get_env():
     return "LOCAL"
 
 
-DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_project")
+dbt_project_path = Path(__file__).parent.parent.joinpath("dbt_project")
+DBT_PROJECT_DIR = os.fspath(dbt_project_path)
 
 dbt_project = DbtProject(
-    project_dir=DBT_PROJECT_DIR,
+    project_dir=dbt_project_path,
     state_path="target/slim_ci",
     target=get_env(),
 )
