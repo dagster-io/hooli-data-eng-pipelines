@@ -33,5 +33,6 @@ if __name__ == "__main__":
             "html5lib",
             "scikit-learn",
         ],
-        extras_require={"dev": ["dagit", "pytest"]},
+        extras_require={"dev": ["dagster-webserver", "pytest"],
+                        "sling": ["dagster-embedded-elt"]},
     )
