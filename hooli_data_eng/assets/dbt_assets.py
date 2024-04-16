@@ -1,4 +1,5 @@
 import json
+import random
 import textwrap
 from typing import Any, Mapping
 from dagster import (
@@ -120,6 +121,8 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
     for result in run_results_json["results"]:
+        # Inject a random number for rows_affected
+        result['adapter_response']['rows_affected'] = random.randint(0, 1000)
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
 
@@ -170,6 +173,8 @@ def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
     for result in run_results_json["results"]:
+        # Inject a random number for rows_affected
+        result['adapter_response']['rows_affected'] = random.randint(0, 1000)
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
 
