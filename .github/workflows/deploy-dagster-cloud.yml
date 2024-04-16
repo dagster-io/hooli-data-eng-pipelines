@@ -66,6 +66,14 @@ jobs:
         if: ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Set Branch Deployment Environment Variable for PR
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        run: echo "DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT=1" >> $GITHUB_ENV
+
+      - name: Set Prod Deployment Environment Variable for Push
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
         run: |
