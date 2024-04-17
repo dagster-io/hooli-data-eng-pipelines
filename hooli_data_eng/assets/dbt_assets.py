@@ -10,6 +10,10 @@ from dagster import (
     DailyPartitionsDefinition,
     job,
     op,
+    AssetExecutionContext,
+    AssetObservation,
+    AssetCheckResult,
+    Output,
     OpExecutionContext,
     WeeklyPartitionsDefinition,
 )
@@ -116,7 +120,41 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
 
     # Emits an AssetObservation for each asset materialization, which is used to
     # identify the Snowflake credit consumption
-    yield from dbt_with_snowflake_insights(context, dbt_cli_task)
+    #yield from dbt_with_snowflake_insights(context, dbt_cli_task)
+    for dbt_event in dbt_cli_task.stream_raw_events():
+        # raw_event_data = dbt_event.raw_event
+        # context.log.info(f"raw_event_data: {raw_event_data}")
+        # num_test_failures = dbt_event.raw_event.get('data',{}).get('num_failures', 0)
+        for dagster_event in dbt_event.to_default_asset_events(
+            manifest=dbt_cli_task.manifest,
+            dagster_dbt_translator=dbt_cli_task.dagster_dbt_translator,
+            context=dbt_cli_task.context,
+            target_path=dbt_cli_task.target_path,
+        ):
+            # context.log.info(f"dbt_event: {dbt_event}")
+            if isinstance(dagster_event, Output):
+                context.log.info(f'output_name: {dagster_event.output_name}')
+                metadata = {
+                    "rows_affected": random.randint(0, 1000),
+                }
+                context.add_output_metadata(
+                    metadata=metadata,
+                    output_name=dagster_event.output_name,
+                )
+            if isinstance(dagster_event, AssetCheckResult):
+                num_failures = dbt_event.raw_event["data"]['num_failures']
+                context.log.info(f"number_test_failures: {num_failures}")
+                context.log.info(f"dagster_event: {dagster_event}")
+                metadata = {
+                    "Number Test Failures": num_failures,
+                }
+                context.log_event(
+                AssetObservation(
+                    asset_key=dagster_event.asset_key,
+                    metadata=metadata,
+                )
+                )
+            yield dagster_event
 
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
