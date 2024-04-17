@@ -156,11 +156,9 @@ def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 @dbt_assets(
     manifest=DBT_MANIFEST,
     select="company_perf sku_stats company_stats locations_cleaned",
-    partitions_def=weekly_partitions,
     dagster_dbt_translator=CustomDagsterDbtTranslatorForViews(
         DagsterDbtTranslatorSettings(enable_asset_checks=True)
     ),
-    backfill_policy=BackfillPolicy.single_run(),
 )
 def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     # Invoke dbt CLI
