@@ -3,7 +3,12 @@ version: 2
 models:
   - name: orders_cleaned
     config:
-      alias: orders_something_else
+      meta:
+        dagster:
+            owners: ["nelson.bighetti@hooli.com", "team:data@hooli.com"]
+    # group: marketing-group
+    # config:
+    #   alias: orders_something_else
     description: "Cleaned version of raw orders data"
     columns:
       - name: user_id
@@ -34,7 +39,10 @@ models:
                 alias: testing_alias
 
   - name: users_cleaned
+    # group: core-data-eng
     description: "Raw users data with test accounts removed"
+    config:
+      tags: "core_kpis"
     columns:
       - name: "user_id"
         description: "Platform id of the user."

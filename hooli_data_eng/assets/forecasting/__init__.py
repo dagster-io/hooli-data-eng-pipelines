@@ -91,7 +91,8 @@ def order_forecast_model(
     key_prefix=["forecasting"],
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01"),
-)
+    tags={"core_kpis":""}
+    )
 def model_stats_by_month(
     context,
     weekly_order_summary: pd.DataFrame,

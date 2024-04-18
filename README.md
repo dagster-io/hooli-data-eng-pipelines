@@ -9,6 +9,7 @@ You can clone and run this example locally:
 ```
 git clone https://github.com/dagster-io/hooli-data-eng-pipelines
 pip install -e ".[dev]"
+make deps
 make manifest
 dagster dev
 ```
@@ -28,6 +29,14 @@ To understand the structure, start with the file `hooli_data_eng/definitions.py`
 - *Declarative Scheduling* is used to keep certain marketing and analytics assets up to date based on a stakeholder SLA using freshness policies and auto materialization policies. Examples include `hooli_data_eng/assets/marketing/__init__.py` and `dbt_project/models/ANALYTICS/weekly_order_summary.sql`. 
 - *Retries* are enabled for both runs and assets, making the pipeline robust to occassional flakiness. See `hooli_data_eng/definitions.py` for examples of retries on jobs, and `hooli_data_eng/assets/marketing/__init__.py` for an example of a more complex retry policy on an asset including backoff and jitter. Flakiness is generated in `hooli_data_eng/resources/api.py`.
 - *Alerts* are enabled through Dagster Clould alert policies based on job tags. A custom alert is also specified to notify when assets with SLAs are later than expected. See `hooli_data_eng/assets/delayed_asset_alerts.py`. 
+
+## Assets spanning Multiple Code Locations
+
+- to run the `locations` dataset, uncomment out line 5-7 in [workspaces.yml](workspaces.yml)
+- you will also need to install the packages in the "sling" extra (e.g. `pip install -e ".[dev,sling]")`)
+- You'll need to obtain the credentials for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+- then run `dagster dev` and both `hooli_demo_assets` and `hooli_data_eng` code locations will load
+- NOTE: if you are running Sling locally, there is currently an error message if you already have a duckdb database set up the first time you run the Sling integration. You'll need to delete it and have the `location` asset be the the first thing you materialize.
 
 ## Deployment Architecture 
 

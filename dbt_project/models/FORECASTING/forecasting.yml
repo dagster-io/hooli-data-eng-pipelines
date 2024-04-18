@@ -1,0 +1,5 @@
+groups:
+  - name: Stakeholders
+    owner:
+      # 'name' or 'email' is required; additional properties allowed
+      email: nelson.bighetti@hooli.com
