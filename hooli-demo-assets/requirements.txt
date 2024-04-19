@@ -166,7 +166,7 @@ six==1.16.0
     #   python-dateutil
 sling==1.2.5
     # via dagster-embedded-elt
-sling-linux-arm64==1.2.5
+sling-linux-amd64==1.2.5
     # via sling
 smmap==5.0.1
     # via gitdb
