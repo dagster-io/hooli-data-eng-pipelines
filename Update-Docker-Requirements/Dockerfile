@@ -1,4 +1,4 @@
-FROM amd64/python:3.11-buster
+FROM amd64/python:3.10-buster
 
 WORKDIR /opt/dagster/app
 
