@@ -1,7 +1,8 @@
-FROM python:3.8-slim
+FROM python:3.11-slim
 
 WORKDIR /opt/dagster/app
 
 ADD . .
 
-RUN pip install -r requirements.txt
+RUN python -m pip install -U uv
+RUN uv pip sync requirements.txt --system
