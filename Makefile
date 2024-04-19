@@ -6,7 +6,7 @@ clean:
 	rm -rf ~/.dagster_home; mkdir ~/.dagster_home; cp dagster.yaml ~/.dagster_home/dagster.yaml
 
 run_docker_update:
-	docker build - < Update-Docker-Requirements/Dockerfile -t update-docker-python-dependencies && docker run --rm  -v $(pwd):/app -w /app -it update-docker-python-dependencies /bin/bash "make update_python_packages"
+	docker build - < Update-Docker-Requirements/Dockerfile -t update-docker-python-dependencies && docker run --rm  -v ./:/app -w /app update-docker-python-dependencies /bin/bash
 
 update_python_packages:
 	uv pip compile --upgrade --output-file=hooli_basics/requirements.txt hooli_basics/requirements.in --system;
