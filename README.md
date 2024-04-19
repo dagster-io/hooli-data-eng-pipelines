@@ -46,3 +46,7 @@ This repository uses Dagster Cloud Hybrid architecture with GitHub Actions to pr
 - The open PR in this repository shows how Dagster supports full integration testing with a *branch deployment*, in this case the PR is code for a second "competing" model. This change also highlights how you can test dependency changes. This cxapability is also implemented in the GitHub Action in this repo.
 
 *Dev Notes in the Repo Wiki*
+
+## Updating Python Packages
+
+We use a combination of `requirements.in` and `setup.py` to track necessary python pacakges. To bump package versions, run `make update_python_packages` and then commit the updated `requirements.txt` files. This allows us to control when we upgrade Dagster versions, but tries to mimimize the friction involved with doing so.
