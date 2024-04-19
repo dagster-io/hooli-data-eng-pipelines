@@ -49,4 +49,4 @@ This repository uses Dagster Cloud Hybrid architecture with GitHub Actions to pr
 
 ## Updating Python Packages
 
-We use a combination of `requirements.in` and `setup.py` to track necessary python pacakges. To bump package versions, run `make update_python_packages` and then commit the updated `requirements.txt` files. This allows us to control when we upgrade Dagster versions, but tries to mimimize the friction involved with doing so.
+We use a combination of `requirements.in` and `setup.py` to track necessary python pacakges. To bump package versions, run `make run_docker_update` and then commit the updated `requirements.txt` files. This allows us to control when we upgrade Dagster versions, but tries to mimimize the friction involved with doing so. You will need Docker set up on your computer to run it.
