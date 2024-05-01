@@ -3,6 +3,7 @@ from dagster import (
     Definitions,
     load_assets_from_modules,
     load_assets_from_package_module,
+    build_column_schema_change_checks,
     multiprocess_executor,
 )
 
@@ -42,6 +43,7 @@ raw_data_assets = load_assets_from_package_module(
 
 dbt_assets = load_assets_from_modules([dbt_assets])
 
+dbt_asset_checks = build_column_schema_change_checks(assets=[*dbt_assets])
 
 # Our final set of assets represent Python code that
 # should run after dbt. These assets are defined in
@@ -63,7 +65,7 @@ defs = Definitions(
         {"max_concurrent": 3}
     ),  
     assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
-    asset_checks=[*raw_data_schema_checks, check_users, check_avg_orders, avg_orders_freshness_check, min_order_freshness_check],
+    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, avg_orders_freshness_check, min_order_freshness_check],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
     sensors=[
