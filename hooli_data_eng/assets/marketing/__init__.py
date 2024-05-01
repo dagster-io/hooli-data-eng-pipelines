@@ -8,6 +8,7 @@ from dagster import (
     AssetExecutionContext,
     AssetCheckResult,
     asset_check,
+    AssetKey,
     FreshnessPolicy,
     define_asset_job, 
     ScheduleDefinition,
@@ -84,7 +85,9 @@ def key_product_deepdive(context, sku_stats):
 
 
 min_order_freshness_check = build_last_update_freshness_checks(
-    assets=[min_order],
+    assets=[min_order, 
+            AssetKey(["RAW_DATA", "orders"]),
+            AssetKey(["RAW_DATA", "users"])],
     lower_bound_delta=datetime.timedelta(
         hours=24
     ),  # expect new data at least once a day
