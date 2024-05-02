@@ -1,4 +1,10 @@
-from dagster import AutoMaterializePolicy, AssetExecutionContext, DataVersion, asset, observable_source_asset
+from dagster import (
+     AutoMaterializePolicy, AssetExecutionContext, DataVersion, asset, observable_source_asset, SourceAsset,
+ MaterializeResult, 
+ TableColumnDep,
+ AssetKey,
+ TableColumnLineage,
+)
 from dagster._utils import file_relative_path
 import os
 import pandas as pd
@@ -17,6 +23,39 @@ USERS_CSV_PATH = Path(os.getcwd(), 'my_observable_asset.csv')
 def source_file():
     return DataVersion(str(os.path.getmtime(USERS_CSV_PATH)) )
 
+
+# Define the source asset
+my_source_asset = SourceAsset(key="my_source_asset")
+
+# Define the dependent asset
+@asset(
+    deps=["my_source_asset"],
+)
+def dependent_asset() -> MaterializeResult:
+    return MaterializeResult(
+        metadata={
+            "dagster/column_lineage": TableColumnLineage(
+                deps_by_column={
+                    "new_column_foo": [
+                        TableColumnDep(
+                            asset_key=AssetKey("my_source_asset"),
+                            column_name="column_bar",
+                        ),
+                        TableColumnDep(
+                            asset_key=AssetKey("my_source_asset"),
+                            column_name="column_baz",
+                        ),
+                    ],
+                    "new_column_qux": [
+                        TableColumnDep(
+                            asset_key=AssetKey("my_source_asset"),
+                            column_name="column_quuz",
+                        ),
+                    ],
+                }
+            )
+        }
+    )
 
 @asset(
     deps=["observable_source_asset_key"],
