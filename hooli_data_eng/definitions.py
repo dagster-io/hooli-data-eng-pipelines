@@ -64,8 +64,8 @@ defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
-    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
-    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, avg_orders_freshness_check, min_order_freshness_check],
+    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets], #
+    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
     sensors=[

@@ -87,7 +87,8 @@ def key_product_deepdive(context, sku_stats):
 min_order_freshness_check = build_last_update_freshness_checks(
     assets=[min_order, 
             AssetKey(["RAW_DATA", "orders"]),
-            AssetKey(["RAW_DATA", "users"])],
+            AssetKey(["RAW_DATA", "users"])
+            ],
     lower_bound_delta=datetime.timedelta(
         hours=24
     ),  # expect new data at least once a day
@@ -99,7 +100,7 @@ avg_orders_freshness_check = build_anomaly_detection_freshness_checks(
 )
 
 min_order_freshness_check_sensor = build_sensor_for_freshness_checks(
-    freshness_checks=[min_order_freshness_check], 
+    freshness_checks=min_order_freshness_check, 
     minimum_interval_seconds=10*60
 )
 
