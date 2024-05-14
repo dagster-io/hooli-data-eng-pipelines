@@ -3,13 +3,14 @@ from dagster import (
     Definitions,
     load_assets_from_modules,
     load_assets_from_package_module,
+    build_column_schema_change_checks,
     multiprocess_executor,
 )
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
-from hooli_data_eng.assets.raw_data import check_users
+from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
 from hooli_data_eng.jobs import analytics_job, predict_job
 from hooli_data_eng.resources import get_env, resource_def
 from hooli_data_eng.schedules import analytics_schedule
@@ -42,6 +43,8 @@ raw_data_assets = load_assets_from_package_module(
 
 dbt_assets = load_assets_from_modules([dbt_assets])
 
+dbt_asset_checks = build_column_schema_change_checks(assets=[*dbt_assets])
+
 # Our final set of assets represent Python code that
 # should run after dbt. These assets are defined in
 # assets/forecasting/__init__.py
@@ -61,8 +64,8 @@ defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
-    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
-    asset_checks=[check_users, check_avg_orders, avg_orders_freshness_check, min_order_freshness_check],
+    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets], #
+    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
     sensors=[

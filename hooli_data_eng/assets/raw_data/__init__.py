@@ -6,6 +6,7 @@ from dagster import (
     AssetCheckSeverity,
     AssetCheckResult,
     AssetKey,
+    build_column_schema_change_checks,
     BackfillPolicy,
     Backoff,
     DailyPartitionsDefinition,
@@ -98,6 +99,11 @@ def orders(context, api: RawDataAPI) -> pd.DataFrame:
     all_orders_df = pd.concat(all_orders)
     all_orders_df['dt'] = pd.to_datetime(all_orders_df['dt'], unit = "ms")
     return all_orders_df
+
+raw_data_schema_checks = build_column_schema_change_checks(assets=[
+    AssetKey(["RAW_DATA", "orders"]),
+    AssetKey(["RAW_DATA", "users"]),
+])
 
 
 from dagster_dbt import dbt_assets

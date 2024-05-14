@@ -78,7 +78,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         run: |
           pip install pip --upgrade;
-          pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade --upgrade-strategy eager;
+          pip install dagster-dbt dagster-cloud dbt-core~=1.7.0 dbt-duckdb~=1.7.5 dbt-snowflake~=1.7.3 --upgrade --upgrade-strategy eager;
           make deps
           dagster-dbt project prepare-for-deployment --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
