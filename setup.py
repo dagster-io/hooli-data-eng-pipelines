@@ -20,7 +20,7 @@ if __name__ == "__main__":
             "dagster-duckdb-pandas",
             "dagster-snowflake",
             "dagster-snowflake-pandas",
-            "dagster-cloud",
+            "dagster-cloud[insights]",
             "dagster-pyspark",
             "dagster-databricks",
             "dagster-k8s",

@@ -5,7 +5,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "dagster",
-        "dagster-cloud",
+        "dagster-cloud[insights]",
         "dagster-embedded-elt",
     ],
     extras_require={"dev": ["dagit", "pytest"]},
