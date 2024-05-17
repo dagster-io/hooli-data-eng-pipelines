@@ -172,5 +172,5 @@ cython_debug/
 tmp*/
 
 # dbt
-dbt_project/example.duckdb
+dbt_project/example.duckdb*
 dbt_project/logs
