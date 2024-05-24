@@ -67,6 +67,7 @@ def create_sling_resource(env: str):
            name="DUCKDB",
            type="duckdb",
            instance=f"{DUCKDB_PATH}",
+           database="example",
            schema="RAW_DATA",
        ))
    elif env == 'BRANCH':
