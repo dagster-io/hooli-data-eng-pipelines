@@ -115,7 +115,11 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
 
     # Emits an AssetObservation for each asset materialization, which is used to
     # identify the Snowflake credit consumption
-    yield from dbt_with_snowflake_insights(context, dbt_cli_task)
+    yield from dbt_with_snowflake_insights(
+        context=context,
+        dbt_cli_invocation=dbt_cli_task,
+        dagster_events=dbt_cli_task.stream().fetch_row_counts(),
+        )
 
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
@@ -163,7 +167,11 @@ def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 
     # Emits an AssetObservation for each asset materialization, which is used to
     # identify the Snowflake credit consumption
-    yield from dbt_with_snowflake_insights(context, dbt_cli_task)
+    yield from dbt_with_snowflake_insights(
+        context=context,
+        dbt_cli_invocation=dbt_cli_task,
+        dagster_events=dbt_cli_task.stream().fetch_row_counts(),
+        )
 
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
@@ -190,7 +198,7 @@ def dbt_slim_ci(dbt2: DbtCliResource):
         dagster_dbt_translator=CustomDagsterDbtTranslator(
             DagsterDbtTranslatorSettings(enable_asset_checks=True)
         ),
-    ).stream()
+    ).stream().fetch_row_counts()
 
 
 # This job will be triggered by Pull Request and should only run new or changed dbt models
