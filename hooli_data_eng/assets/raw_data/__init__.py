@@ -84,7 +84,8 @@ def check_users(context, users: pd.DataFrame):
         backoff=Backoff.LINEAR,
         jitter=Jitter.FULL
     ),
-    backfill_policy=BackfillPolicy.single_run()
+    backfill_policy=BackfillPolicy.single_run(),
+    code_version="1"
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""

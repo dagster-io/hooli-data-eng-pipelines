@@ -4,4 +4,5 @@ WORKDIR /opt/dagster/app
 
 ADD . .
 
-RUN pip install -r requirements.txt
+RUN python -m pip install -U uv
+RUN uv pip install --system -r requirements.txt
