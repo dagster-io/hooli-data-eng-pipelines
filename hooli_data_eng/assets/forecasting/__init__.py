@@ -1,5 +1,4 @@
 from typing import Any, Tuple
-from dagster_k8s import PipesK8sClient
 
 import numpy as np
 import pandas as pd
@@ -15,11 +14,19 @@ from dagster import (
     AssetExecutionContext,
     MaterializeResult,
 )
+from dagster_k8s import PipesK8sClient
 from dagstermill import define_dagstermill_asset
+from dagster._core.definitions.tags import StorageKindTagSet
 from dagster._utils import file_relative_path
 from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
 from pydantic import Field
+
+from hooli_data_eng.utils.config_utils import get_storage_kind
+
+
+# dynamically determine storage_kind based on environment
+storage_kind = get_storage_kind()
 
 
 def model_func(x, a, b):
@@ -57,6 +64,7 @@ class modelHyperParams(Config):
     ins={"weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     compute_kind="scikitlearn",
     io_manager_key="model_io_manager",
+    tags={**StorageKindTagSet(storage_kind="s3")},
 )
 def order_forecast_model(
     context, weekly_order_summary: pd.DataFrame, config: modelHyperParams
@@ -91,8 +99,9 @@ def order_forecast_model(
     key_prefix=["forecasting"],
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01"),
-    tags={"core_kpis":""}
-    )
+    tags={"core_kpis":"",
+          **StorageKindTagSet(storage_kind=storage_kind)},
+)
 def model_stats_by_month(
     context,
     weekly_order_summary: pd.DataFrame,
@@ -130,6 +139,7 @@ def model_stats_by_month(
     },
     compute_kind="pandas",
     key_prefix=["FORECASTING"],
+    tags={**StorageKindTagSet(storage_kind=storage_kind)},
 )
 def predicted_orders(
     weekly_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
