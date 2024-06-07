@@ -58,7 +58,7 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
 
 @asset(
     key_prefix="MARKETING",
-    compute_kind="snowflake",
+    compute_kind="pandas",
     owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
     tags={**StorageKindTagSet(storage_kind=storage_kind)},
