@@ -61,6 +61,7 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     compute_kind="snowflake",
     owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
+    tags={**StorageKindTagSet(storage_kind=storage_kind)},
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""

@@ -167,6 +167,7 @@ def predicted_orders(
     key_prefix=["FORECASTING"],
     required_resource_keys={"step_launcher", "pyspark"},
     metadata={"resource_constrained_at": 50},
+    tags={**StorageKindTagSet(storage_kind="databricks")},
 )
 def big_orders(context, predicted_orders: pd.DataFrame):
     """Days where predicted orders surpass our current carrying capacity"""
@@ -195,6 +196,7 @@ model_nb = define_dagstermill_asset(
 @asset(
     deps=[predicted_orders],
     compute_kind="databricks",
+    tags={**StorageKindTagSet(storage_kind="databricks")},
 )
 def databricks_asset(
     context: AssetExecutionContext,
