@@ -17,7 +17,7 @@ from hooli_data_eng.schedules import analytics_schedule
 from hooli_data_eng.sensors import orders_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
 from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
-from hooli_data_eng.assets.dbt_assets import weekly_freshness_chedk
+from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
 
 # ---------------------------------------------------
 # Assets
@@ -66,14 +66,15 @@ defs = Definitions(
         {"max_concurrent": 3}
     ),  
     assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets], #
-    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_chedk],
+    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
     sensors=[
        orders_sensor,   
        watch_s3_sensor,
 #       asset_delay_alert_sensor,
-       min_order_freshness_check_sensor
+       min_order_freshness_check_sensor,
+       weekly_freshness_check_sensor
     ],
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
 )

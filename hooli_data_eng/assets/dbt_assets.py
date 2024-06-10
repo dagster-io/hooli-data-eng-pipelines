@@ -22,6 +22,7 @@ from dagster_dbt import (
 from dagster_dbt.asset_decorator import dbt_assets
 from hooli_data_eng.resources import dbt_project
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
+from dagster import  build_sensor_for_freshness_checks
 
 
 # many dbt assets use an incremental approach to avoid
@@ -155,7 +156,11 @@ def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     yield from _process_partitioned_dbt_assets(context=context, dbt=dbt2)
 
-weekly_freshness_chedk = build_freshness_checks_from_dbt_assets(dbt_assets=[weekly_dbt_assets])
+weekly_freshness_check = build_freshness_checks_from_dbt_assets(dbt_assets=[weekly_dbt_assets])
+weekly_freshness_check_sensor=build_sensor_for_freshness_checks(
+    freshness_checks=weekly_freshness_check,
+    name="weekly_freshness_check_sensor"
+)
 
 @dbt_assets(
     manifest=DBT_MANIFEST,
