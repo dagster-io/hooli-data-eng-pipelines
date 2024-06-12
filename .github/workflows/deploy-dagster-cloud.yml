@@ -68,7 +68,8 @@ jobs:
       - name: Login to ECR
         if: ${{ steps.prerun.outputs.result != 'skip' }}
         uses: aws-actions/amazon-ecr-login@v2
-        with: mask-password: 'true'
+        with:
+          mask-password: 'true'
 
       - name: Set Branch Deployment Environment Variable for PR
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
