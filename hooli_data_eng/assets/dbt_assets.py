@@ -118,7 +118,7 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
     yield from dbt_with_snowflake_insights(
         context=context,
         dbt_cli_invocation=dbt_cli_task,
-        dagster_events=dbt_cli_task.stream().fetch_row_counts(),
+        dagster_events=dbt_cli_task.stream().fetch_row_counts().fetch_column_metadata(),
         )
 
     # fetch run_results.json to log compiled SQL
@@ -170,7 +170,7 @@ def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     yield from dbt_with_snowflake_insights(
         context=context,
         dbt_cli_invocation=dbt_cli_task,
-        dagster_events=dbt_cli_task.stream().fetch_row_counts(),
+        dagster_events=dbt_cli_task.stream().fetch_row_counts().fetch_column_metadata(),
         )
 
     # fetch run_results.json to log compiled SQL
@@ -198,7 +198,7 @@ def dbt_slim_ci(dbt2: DbtCliResource):
         dagster_dbt_translator=CustomDagsterDbtTranslator(
             DagsterDbtTranslatorSettings(enable_asset_checks=True)
         ),
-    ).stream().fetch_row_counts()
+    ).stream().fetch_row_counts().fetch_column_metadata()
 
 
 # This job will be triggered by Pull Request and should only run new or changed dbt models

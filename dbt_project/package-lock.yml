@@ -1,9 +1,6 @@
 packages:
-- package: calogica/dbt_expectations
-  version: 0.10.3
-- git: https://github.com/dagster-io/dagster.git
-  revision: b75059b249d1388f99bd49b1b46f9c99686a3a6f
-  subdirectory: python_modules/libraries/dagster-dbt/dbt_packages/dagster
-- package: calogica/dbt_date
-  version: 0.10.1
-sha1_hash: 0da1ef521792fc305eb81faabcffbc88ce85ec0e
+  - package: calogica/dbt_expectations
+    version: 0.10.3
+  - package: calogica/dbt_date
+    version: 0.10.1
+sha1_hash: 2b8813dfd9af9ee344f8e5be772f7afd614e1770
