@@ -108,7 +108,7 @@ jobs:
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./hooli_basics
           push: true
@@ -126,7 +126,7 @@ jobs:
       # Build 'batch enrichment' code location
       - name: Build and upload Docker image for batch enrichment
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./hooli_batch_enrichment
           push: true
@@ -142,7 +142,7 @@ jobs:
       # Build 'snowflake_insights' code location
       - name: Build and upload Docker image for snowflake insights
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./hooli_snowflake_insights
           push: true
@@ -160,7 +160,7 @@ jobs:
       # Build 'demo_assets' code location
       - name: Build and upload Docker image for demo_assets
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./hooli-demo-assets
           push: true
@@ -178,7 +178,7 @@ jobs:
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./hooli_data_eng/utils/example_container
           push: true
