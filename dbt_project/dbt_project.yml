@@ -20,8 +20,6 @@ clean-targets:
 models:
   dbt_project:
     +materialized: table
-    +post-hook:
-    - "{{ dagster.log_column_level_metadata() }}"
     ANALYTICS:
       +group: Programmers
     CLEANED:
