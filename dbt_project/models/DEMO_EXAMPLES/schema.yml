@@ -1,0 +1,5 @@
+groups:
+  - name: Sales
+    owner:
+      # 'name' or 'email' is required; additional properties allowed
+      email: izzy@hooli.com

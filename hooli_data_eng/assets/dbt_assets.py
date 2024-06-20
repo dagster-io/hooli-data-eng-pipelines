@@ -110,11 +110,11 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         if dbt_resource_props["name"] in ["company_perf"]:
             return AutomationCondition.any_downstream_conditions()
 
-    def get_owners(self, dbt_resource_props: Mapping[str, Any]):
-        return [
-            dbt_resource_props["group"]["owner"]["email"],
-            f"team:{dbt_resource_props['group']['name']}",
-        ]
+    #def get_owners(self, dbt_resource_props: Mapping[str, Any]):
+    #    return [
+    #        dbt_resource_props["group"]["owner"]["email"],
+    #        f"team:{dbt_resource_props['group']['name']}",
+    #    ]
 
 
 def _process_partitioned_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
@@ -211,6 +211,15 @@ def regular_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     for result in run_results_json["results"]:
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
+
+@dbt_assets(manifest=DBT_MANIFEST,
+            select="DEMO_EXAMPLES",
+            dagster_dbt_translator=CustomDagsterDbtTranslator(
+               settings=DagsterDbtTranslatorSettings(enable_asset_checks=True)
+            ),
+)
+def jaffle_shop_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
+   yield from dbt2.cli(["build"], context=context).stream()
 
 
 # This op will be used to run slim CI
