@@ -7,7 +7,7 @@ from dagster import (
     multiprocess_executor,
 )
 
-from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
+from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets, asset_group1, asset_group2
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
@@ -44,6 +44,9 @@ raw_data_assets = load_assets_from_package_module(
 
 dbt_assets = load_assets_from_modules([dbt_assets])
 
+asset_group1 = load_assets_from_modules([asset_group1], group_name="GROUP1")
+asset_group2 = load_assets_from_modules([asset_group2], group_name="GROUP2")
+
 dbt_asset_checks = build_column_schema_change_checks(assets=[*dbt_assets])
 
 # Our final set of assets represent Python code that
@@ -54,6 +57,7 @@ forecasting_assets = load_assets_from_package_module(
 )
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
+
 
 # ---------------------------------------------------
 # Definitions
