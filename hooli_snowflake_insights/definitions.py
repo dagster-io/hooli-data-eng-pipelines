@@ -51,7 +51,7 @@ def test_execute_queries_with_get_connection(context: AssetExecutionContext, sno
         "select 1",
         "select 2"
     ]
-    execute_snowflake_queries(snowflake_insights, queries)
+    execute_snowflake_queries(context, snowflake_insights, queries)
 
 @asset
 def test_execute_queries(snowflake_insights: SnowflakeResource):
