@@ -37,12 +37,12 @@ resource_def = {
 
 
 @asset
-def test_execute_queries(snowflake: SnowflakeResource):
+def test_execute_queries(snowflake_insights: SnowflakeResource):
     queries = [
         "select 1",
         "select 2"
     ]
-    snowflake.execute_queries(sql_queries=queries, fetch_results=False)
+    snowflake_insights.execute_queries(sql_queries=queries, fetch_results=False)
 
 # Creates an asset (poll_snowflake_query_history_hour) and sets its schedule
 snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
