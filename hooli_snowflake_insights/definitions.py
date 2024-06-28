@@ -1,6 +1,6 @@
 import os
 
-from dagster import Definitions, EnvVar, ResourceDefinition
+from dagster import Definitions, EnvVar, ResourceDefinition,asset
 from dagster_cloud.dagster_insights import (
     create_snowflake_insights_asset_and_schedule,
 )
@@ -35,6 +35,15 @@ resource_def = {
     },
 }
 
+
+@asset
+def test_execute_queries(snowflake: SnowflakeResource):
+    queries = [
+        "select 1",
+        "select 2"
+    ]
+    snowflake.execute_queries(sql_queries=queries, fetch_results=False)
+
 # Creates an asset (poll_snowflake_query_history_hour) and sets its schedule
 snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
     "2023-10-29-00:00",
@@ -43,7 +52,7 @@ snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
 )
 
 defs = Definitions(
-    assets=[*snowflake_insights_definitions.assets,],
+    assets=[*snowflake_insights_definitions.assets,test_execute_queries],
     schedules=[snowflake_insights_definitions.schedule,],
     resources=resource_def[get_env()],
 )
