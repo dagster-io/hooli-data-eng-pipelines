@@ -55,6 +55,7 @@ forecasting_assets = load_assets_from_package_module(
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
 
+
 # ---------------------------------------------------
 # Definitions
 
