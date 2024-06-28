@@ -69,7 +69,7 @@ snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
 )
 
 defs = Definitions(
-    assets=[*snowflake_insights_definitions.assets,test_execute_queries],
+    assets=[*snowflake_insights_definitions.assets,test_execute_queries, test_execute_queries_with_get_connection],
     schedules=[snowflake_insights_definitions.schedule,],
     resources=resource_def[get_env()],
 )
