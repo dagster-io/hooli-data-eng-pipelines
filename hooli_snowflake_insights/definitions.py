@@ -1,6 +1,6 @@
 import os
 
-from dagster import Definitions, EnvVar, ResourceDefinition,asset, AssetExectionContext
+from dagster import Definitions, EnvVar, ResourceDefinition,asset, AssetExecutionContext
 from dagster_cloud.dagster_insights import (
     create_snowflake_insights_asset_and_schedule,
 )
@@ -46,7 +46,7 @@ def execute_snowflake_queries(context, snowflake: SnowflakeResource, queries: li
 
 
 @asset
-def test_execute_queries_with_get_connection(context: AssetExectionContext, snowflake_insights: SnowflakeResource):
+def test_execute_queries_with_get_connection(context: AssetExecutionContext, snowflake_insights: SnowflakeResource):
     queries = [
         "select 1",
         "select 2"
