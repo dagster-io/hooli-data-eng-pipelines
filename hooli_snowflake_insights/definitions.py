@@ -5,6 +5,7 @@ from dagster._core.definitions.metadata import with_source_code_references
 from dagster_cloud.dagster_insights import (
     create_snowflake_insights_asset_and_schedule,
 )
+from dagster_cloud.metadata.source_code import link_to_git_if_cloud
 from dagster_snowflake import SnowflakeResource
 
 # Used to derive environment (LOCAL, BRANCH, PROD)
@@ -44,7 +45,9 @@ snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
 )
 
 defs = Definitions(
-    assets=with_source_code_references([*snowflake_insights_definitions.assets,]),
+    assets=link_to_git_if_cloud(
+        with_source_code_references([*snowflake_insights_definitions.assets,])
+    ),
     schedules=[snowflake_insights_definitions.schedule,],
     resources=resource_def[get_env()],
 )

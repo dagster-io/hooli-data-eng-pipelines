@@ -67,7 +67,7 @@ defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
-    assets=link_to_git_if_cloud( ###TODO add asset_defs per docs—ask Ben)
+    assets=link_to_git_if_cloud(
         with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets])
     ),
     asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],

@@ -1,5 +1,6 @@
 from dagster import asset, asset_check, AssetCheckResult, Definitions
 from dagster._core.definitions.metadata import with_source_code_references
+from dagster_cloud.metadata.source_code import link_to_git_if_cloud
 from pandas import DataFrame, read_html, get_dummies, to_numeric
 from sklearn.linear_model import LinearRegression as Regression
 
@@ -29,7 +30,9 @@ def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataF
     return result
 
 defs = Definitions(
-    assets=with_source_code_references([country_stats, continent_stats, change_model]), 
+    assets=link_to_git_if_cloud(
+        with_source_code_references([country_stats, continent_stats, change_model])
+        ), 
     asset_checks=[check_country_stats]
 )
 

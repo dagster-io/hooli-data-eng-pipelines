@@ -3,6 +3,7 @@ from dagster._core.definitions.metadata import with_source_code_references
 from dagster_batch_enrichment.api import EnrichmentAPI
 from dagster_batch_enrichment.warehouse import MyWarehouse
 from dagster_batch_enrichment.assets import raw_data, enriched_data
+from dagster_cloud.metadata.source_code import link_to_git_if_cloud
 
 
 # define a job and schedule to run the pipeline
@@ -20,7 +21,9 @@ run_assets_30min = ScheduleDefinition(
 )
 
 defs = Definitions(
-    assets=with_source_code_references([raw_data, enriched_data]),
+    assets=link_to_git_if_cloud(
+        with_source_code_references([raw_data, enriched_data])
+    ),
     schedules=[run_assets_30min],
     jobs=[run_assets_job],
     resources={
