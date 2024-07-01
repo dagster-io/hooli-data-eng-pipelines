@@ -1,6 +1,7 @@
 import os
 
 from dagster import Definitions, EnvVar, ResourceDefinition
+from dagster._core.definitions.metadata import with_source_code_references
 from dagster_cloud.dagster_insights import (
     create_snowflake_insights_asset_and_schedule,
 )
@@ -43,7 +44,7 @@ snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
 )
 
 defs = Definitions(
-    assets=[*snowflake_insights_definitions.assets,],
+    assets=with_source_code_references([*snowflake_insights_definitions.assets,]),
     schedules=[snowflake_insights_definitions.schedule,],
     resources=resource_def[get_env()],
 )
