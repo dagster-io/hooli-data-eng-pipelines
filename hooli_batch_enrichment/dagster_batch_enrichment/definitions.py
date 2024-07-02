@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from dagster import Definitions, define_asset_job, ScheduleDefinition, AssetSelection
 from dagster._core.definitions.metadata import with_source_code_references
 from dagster_batch_enrichment.api import EnrichmentAPI
@@ -22,7 +24,8 @@ run_assets_30min = ScheduleDefinition(
 
 defs = Definitions(
     assets=link_to_git_if_cloud(
-        with_source_code_references([raw_data, enriched_data])
+        with_source_code_references([raw_data, enriched_data]),
+        repository_root_absolute_path=Path(__file__).parent.parent.parent,
     ),
     schedules=[run_assets_30min],
     jobs=[run_assets_job],

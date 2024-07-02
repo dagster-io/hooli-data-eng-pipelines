@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from dagster import asset, asset_check, AssetCheckResult, Definitions
 from dagster._core.definitions.metadata import with_source_code_references
 from dagster_cloud.metadata.source_code import link_to_git_if_cloud
@@ -31,8 +33,9 @@ def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataF
 
 defs = Definitions(
     assets=link_to_git_if_cloud(
-        with_source_code_references([country_stats, continent_stats, change_model])
-        ), 
+        with_source_code_references([country_stats, continent_stats, change_model]),
+        repository_root_absolute_path=Path(__file__).parent.parent,
+    ), 
     asset_checks=[check_country_stats]
 )
 
