@@ -15,7 +15,7 @@ from hooli_demo_assets.schedules import daily_sling_assets
 defs = Definitions(
    assets=link_to_git_if_cloud(
        with_source_code_references([my_sling_assets]),
-       repository_root_absolute_path=Path(__file__).parent.parent.parent,
+       repository_root_absolute_path=Path(__file__).parent.parent,
    ),
    schedules=[daily_sling_assets],
    jobs=[daily_sling_job],

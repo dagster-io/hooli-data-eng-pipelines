@@ -70,7 +70,7 @@ defs = Definitions(
     ),  
     assets=link_to_git_if_cloud(
         with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
-        repository_root_absolute_path=Path(__file__).parent.parent,
+        repository_root_absolute_path=Path(__file__).parent,
     ),
     asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
     resources=resource_def[get_env()],

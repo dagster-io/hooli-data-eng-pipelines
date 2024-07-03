@@ -48,7 +48,7 @@ snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
 defs = Definitions(
     assets=link_to_git_if_cloud(
         with_source_code_references([*snowflake_insights_definitions.assets,]),
-        repository_root_absolute_path=Path(__file__).parent.parent,
+        repository_root_absolute_path=Path(__file__).parent,
     ),
     schedules=[snowflake_insights_definitions.schedule,],
     resources=resource_def[get_env()],

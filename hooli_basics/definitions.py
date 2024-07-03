@@ -34,7 +34,7 @@ def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataF
 defs = Definitions(
     assets=link_to_git_if_cloud(
         with_source_code_references([country_stats, continent_stats, change_model]),
-        repository_root_absolute_path=Path(__file__).parent.parent,
+        repository_root_absolute_path=Path(__file__).parent,
     ), 
     asset_checks=[check_country_stats]
 )
