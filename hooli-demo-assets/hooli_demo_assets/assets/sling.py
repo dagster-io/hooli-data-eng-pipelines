@@ -1,12 +1,25 @@
-from dagster import AssetSpec
-from dagster_embedded_elt.sling import build_sling_asset, SlingMode
-
-
-raw_location = build_sling_asset(
-    asset_spec=AssetSpec(key=["locations"]),
-    source_stream="s3://hooli-demo/embedded-elt/",
-    target_object= "RAW_DATA.LOCATIONS",
-    mode=SlingMode.FULL_REFRESH,
-    source_options={"format": "csv"},
-    sling_resource_key="s3_to_snowflake_resource"
+from dagster_embedded_elt.sling import (
+   sling_assets,
+   SlingResource,
 )
+from dagster_embedded_elt.sling.dagster_sling_translator import DagsterSlingTranslator
+
+from hooli_demo_assets.resources import replication_config
+
+
+class CustomSlingTranslator(DagsterSlingTranslator):
+   def __init__(self, target_prefix="RAW_DATA"):
+        super().__init__(target_prefix=target_prefix)
+        
+   def get_group_name(self, stream_definition):
+       return "RAW_DATA"
+
+
+@sling_assets(
+   replication_config=replication_config,
+   dagster_sling_translator=CustomSlingTranslator(),
+)
+def my_sling_assets(context, sling: SlingResource):
+   yield from sling.replicate(context=context)
+   for row in sling.stream_raw_logs():
+       context.log.info(row)

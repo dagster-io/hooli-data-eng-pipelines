@@ -1,5 +1,5 @@
 dagster
-dagster-cloud
+dagster-cloud[insights]
 dagster-dbt
 dagster-snowflake
 gql

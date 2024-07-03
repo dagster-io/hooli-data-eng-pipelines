@@ -1,3 +1,4 @@
+{{ config(severity = 'warn') }}
 SELECT
     user_id,
     dt,

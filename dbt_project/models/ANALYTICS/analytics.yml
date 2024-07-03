@@ -1,0 +1,8 @@
+models:
+  - name: weekly_order_summary
+    meta:
+      dagster:
+        freshness_check:
+          deadline_cron: "0 9 * * MON"
+          lower_bound_delta_seconds: 1980
+          severity: "WARN"

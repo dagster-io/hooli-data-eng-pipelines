@@ -1,3 +1,4 @@
+{{config(tags="my_test_tag")}}
 select
         user_id,
         quantity,

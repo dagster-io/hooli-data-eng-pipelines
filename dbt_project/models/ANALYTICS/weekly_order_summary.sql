@@ -1,7 +1,7 @@
 
 {{
         config(
-                dagster_freshness_policy={"cron_schedule": "0 9 * * MON", "maximum_lag_minutes": (24+9)*60}
+                tags=["core_kpis"]
         )
 }}
 

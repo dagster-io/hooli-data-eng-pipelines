@@ -8,15 +8,22 @@ from dagster import (
     AssetKey,
     BackfillPolicy,
     Backoff,
+    build_column_schema_change_checks,
+    Backoff,
     DailyPartitionsDefinition,
     Jitter,
     MetadataValue,
     RetryPolicy,
 )
+from dagster._core.definitions.tags import StorageKindTagSet
 import pandas as pd
 
-
 from hooli_data_eng.resources.api import RawDataAPI
+from hooli_data_eng.utils.config_utils import get_storage_kind
+
+
+# dynamically determine storage_kind based on environment
+storage_kind = get_storage_kind()
 
 
 daily_partitions = DailyPartitionsDefinition(
@@ -36,7 +43,9 @@ def _daily_partition_seq(start, end):
     compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
-    backfill_policy=BackfillPolicy.single_run()
+    backfill_policy=BackfillPolicy.single_run(),
+    tags={"core_kpis":"",
+          **StorageKindTagSet(storage_kind=storage_kind)},
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
@@ -84,6 +93,7 @@ def check_users(context, users: pd.DataFrame):
     ),
     backfill_policy=BackfillPolicy.single_run(),
     code_version="1"
+    tags={**StorageKindTagSet(storage_kind=storage_kind)},
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
@@ -99,5 +109,7 @@ def orders(context, api: RawDataAPI) -> pd.DataFrame:
     all_orders_df['dt'] = pd.to_datetime(all_orders_df['dt'], unit = "ms")
     return all_orders_df
 
-
-from dagster_dbt import dbt_assets
+raw_data_schema_checks = build_column_schema_change_checks(assets=[
+    AssetKey(["RAW_DATA", "orders"]),
+    AssetKey(["RAW_DATA", "users"]),
+])

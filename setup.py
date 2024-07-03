@@ -20,7 +20,7 @@ if __name__ == "__main__":
             "dagster-duckdb-pandas",
             "dagster-snowflake",
             "dagster-snowflake-pandas",
-            "dagster-cloud",
+            "dagster-cloud[insights]",
             "dagster-pyspark",
             "dagster-databricks",
             "dagster-k8s",
@@ -33,5 +33,6 @@ if __name__ == "__main__":
             "html5lib",
             "scikit-learn",
         ],
-        extras_require={"dev": ["dagit", "pytest"]},
+        extras_require={"dev": ["dagster-webserver", "pytest"],
+                        "sling": ["dagster-embedded-elt"]},
     )

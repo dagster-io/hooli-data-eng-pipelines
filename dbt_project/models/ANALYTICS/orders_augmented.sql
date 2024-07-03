@@ -1,3 +1,6 @@
+{{
+        config(tags=["core_kpis"])
+}}
 select
         o.*,
         u.company,
