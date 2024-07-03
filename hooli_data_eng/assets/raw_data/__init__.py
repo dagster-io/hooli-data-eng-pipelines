@@ -92,7 +92,7 @@ def check_users(context, users: pd.DataFrame):
         jitter=Jitter.FULL
     ),
     backfill_policy=BackfillPolicy.single_run(),
-    code_version="1"
+    code_version="1",
     tags={**StorageKindTagSet(storage_kind=storage_kind)},
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
