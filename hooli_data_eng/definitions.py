@@ -14,7 +14,7 @@ from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
 from hooli_data_eng.jobs import analytics_job, predict_job
 from hooli_data_eng.resources import get_env, resource_def
 from hooli_data_eng.schedules import analytics_schedule
-from hooli_data_eng.sensors import orders_sensor
+from hooli_data_eng.sensors import orders_sensor, my_dbt_code_version_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
 from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
 from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
@@ -74,6 +74,7 @@ defs = Definitions(
        watch_s3_sensor,
 #       asset_delay_alert_sensor,
        min_order_freshness_check_sensor,
+       my_dbt_code_version_sensor,
        weekly_freshness_check_sensor
     ],
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
