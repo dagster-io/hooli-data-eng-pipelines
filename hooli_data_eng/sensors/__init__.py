@@ -12,7 +12,7 @@ from hooli_data_eng.jobs import predict_job
 
 
 from hooli_data_eng.assets.dbt_assets import views_dbt_assets
-from hooli_data_eng.utils import get_current_dbt_code_version
+from hooli_data_eng.utils.dbt_code_version import get_current_dbt_code_version
 
 # This sensor listens for changes to the orders_augmented asset which
 # represents a dbt model. When the table managed by dbt is updated,
