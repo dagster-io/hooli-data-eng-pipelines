@@ -21,14 +21,14 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   dagster-cloud-deploy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Pre-run checks
         id: prerun
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.43
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         if: steps.prerun.outputs.result != 'skip'
         with:
           ref: ${{ github.head_ref }}
@@ -36,14 +36,14 @@ jobs:
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.43
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
@@ -54,11 +54,8 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         run: echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v2
         if: steps.prerun.outputs.result != 'skip'
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -67,9 +64,7 @@ jobs:
 
       - name: Login to ECR
         if: ${{ steps.prerun.outputs.result != 'skip' }}
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Set Branch Deployment Environment Variable for PR
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
@@ -90,43 +85,39 @@ jobs:
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output-data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: ./hooli_basics
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Update build session with image tag for basics
         id: ci-set-build-output-basics
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
 
       # Build 'batch enrichment' code location
       - name: Build and upload Docker image for batch enrichment
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: ./hooli_batch_enrichment
           push: true
@@ -135,62 +126,56 @@ jobs:
       - name: Update build session with image tag for batch enrichment
         id: ci-set-build-output-batch-enrichment
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci set-build-output --location-name=batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
 
       # Build 'snowflake_insights' code location
       - name: Build and upload Docker image for snowflake insights
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: ./hooli_snowflake_insights
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Update build session with image tag for snowflake insights
         id: ci-set-build-output-snowflake-insights
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci set-build-output --location-name=snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
 
       # Build 'demo_assets' code location
       - name: Build and upload Docker image for demo_assets
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: ./hooli-demo-assets
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-demo-assets
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Update build session with image tag for demo_assets
         id: ci-set-build-output-demo-assets
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci set-build-output --location-name=demo_assets --image-tag=$IMAGE_TAG-demo-assets"
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
         if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: ./hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       # Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci deploy"
 
@@ -198,14 +183,14 @@ jobs:
       - name: Get branch deployment
         id: get-branch-deployment
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1.43
         with:
           organization_id: 'hooli'
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1.43
         with:
           location_name: data-eng-pipeline
           deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
@@ -216,13 +201,13 @@ jobs:
       - name: Update PR comment for branch deployments
         id: ci-notify
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
 
       - name: Generate summary
         id: ci-summary
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.43
         with:
           command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
