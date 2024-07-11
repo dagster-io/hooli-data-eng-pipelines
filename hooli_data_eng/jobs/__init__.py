@@ -1,4 +1,6 @@
-from dagster import AssetSelection, define_asset_job
+from dagster import AssetSelection, define_asset_job, RunConfig
+from dagster_dbt import build_dbt_asset_selection
+from hooli_data_eng.assets.dbt_assets import views_dbt_assets
 
 # With assets defined we have everything to run Dagster
 # ourselves if we wanted to manually create assets.
@@ -15,6 +17,14 @@ analytics_job = define_asset_job(
     tags={"dagster/max_retries": "1"},
     # config = {"execution": {"config": {"multiprocess": {"max_concurrent": 1}}}}
 )
+
+dbt_views_job = define_asset_job(
+    name="dbt_views",
+    selection=build_dbt_asset_selection(
+        [views_dbt_assets],
+    ),
+)
+
 
 # This job selects the predicted_orders asset defined in
 # assets/forecasting/__init__.py

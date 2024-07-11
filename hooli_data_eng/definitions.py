@@ -11,13 +11,15 @@ from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
+from hooli_data_eng.assets.dlt_assets import dagster_github_assets
 from hooli_data_eng.jobs import analytics_job, predict_job
 from hooli_data_eng.resources import get_env, resource_def
-from hooli_data_eng.schedules import analytics_schedule
+from hooli_data_eng.schedules import analytics_schedule, logs_then_skips
 from hooli_data_eng.sensors import orders_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
 from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
 from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
+from hooli_data_eng.resources.dlt_resource import dlt_resource
 
 # ---------------------------------------------------
 # Assets
@@ -65,10 +67,10 @@ defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
-    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets], #
+    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets, dagster_github_assets], #
     asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
     resources=resource_def[get_env()],
-    schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
+    schedules=[analytics_schedule, avg_orders_freshness_check_schedule,logs_then_skips],
     sensors=[
        orders_sensor,   
        watch_s3_sensor,

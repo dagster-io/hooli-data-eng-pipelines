@@ -5,6 +5,7 @@ from dagster._utils import file_relative_path
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
 from dagster_dbt import DbtCliClientResource, DbtCliResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
+from hooli_data_eng.resources.dlt_resource import dlt_resource
 from dagster_k8s import PipesK8sClient
 from dagster_pyspark import pyspark_resource
 from dagster_snowflake_pandas import SnowflakePandasIOManager
@@ -69,6 +70,7 @@ resource_def = {
         "s3": ResourceDefinition.none_resource(),
         "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="LOCAL"),
         "dbt2": DbtCliResource(project_dir=dbt_project, target="LOCAL"),
+        "dlt": dlt_resource,
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),

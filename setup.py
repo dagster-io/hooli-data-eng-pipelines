@@ -32,6 +32,8 @@ if __name__ == "__main__":
             "requests_toolbelt",
             "html5lib",
             "scikit-learn",
+            "dagster-embedded-elt",
+            "dlt[duckdb,postgres]",
         ],
         extras_require={"dev": ["dagster-webserver", "pytest"],
                         "sling": ["dagster-embedded-elt"]},
