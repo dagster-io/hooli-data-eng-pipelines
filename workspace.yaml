@@ -5,3 +5,7 @@ load_from:
 #  - python_module:
 #      module_name: hooli_demo_assets
 #      working_directory: hooli-demo-assets/
+#  - python_file: hooli_basics/definitions.py
+#  - python_module:
+#      module_name: dagster_batch_enrichment
+#      working_directory: hooli_batch_enrichment/
