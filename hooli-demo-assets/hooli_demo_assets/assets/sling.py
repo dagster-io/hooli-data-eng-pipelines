@@ -1,3 +1,4 @@
+from dagster._core.definitions.tags import StorageKindTagSet
 from dagster_embedded_elt.sling import (
    sling_assets,
    SlingResource,
@@ -13,6 +14,9 @@ class CustomSlingTranslator(DagsterSlingTranslator):
         
    def get_group_name(self, stream_definition):
        return "RAW_DATA"
+   
+   def get_tags(self, stream_definition):
+            return {**StorageKindTagSet(storage_kind="S3")}
 
 
 @sling_assets(

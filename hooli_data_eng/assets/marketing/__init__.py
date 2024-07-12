@@ -20,7 +20,7 @@ from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_ch
 import pandas as pd
 
 from hooli_data_eng.assets.dbt_assets import allow_outdated_parents_policy
-from hooli_data_eng.utils.config_utils import get_storage_kind
+from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
 
 
 # dynamically determine storage_kind based on environment
