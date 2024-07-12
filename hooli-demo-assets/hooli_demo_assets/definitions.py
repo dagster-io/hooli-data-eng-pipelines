@@ -19,7 +19,7 @@ defs = Definitions(
        with_source_code_references([my_sling_assets]),
        file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli-data-eng-pipelines/hooli-demo-assets/hooli_demo_assets/definitions.py",
+            file_anchor_path_in_repository="hooli-demo-assets/hooli_demo_assets/definitions.py",
         ),
    ),
    schedules=[daily_sling_assets],

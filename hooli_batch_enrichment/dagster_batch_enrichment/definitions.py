@@ -33,7 +33,7 @@ defs = Definitions(
         with_source_code_references([raw_data, enriched_data]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli-data-eng-pipelines/hooli_batch_enrichment/dagster_batch_enrichment/definitions.py",
+            file_anchor_path_in_repository="hooli_batch_enrichment/dagster_batch_enrichment/definitions.py",
         ),
     ),
     schedules=[run_assets_30min],

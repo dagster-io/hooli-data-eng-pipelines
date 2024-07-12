@@ -42,7 +42,7 @@ defs = Definitions(
         with_source_code_references([country_stats, continent_stats, change_model]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli-data-eng-pipelines/hooli_basics/definitions.py",
+            file_anchor_path_in_repository="hooli_basics/definitions.py",
         ),
     ), 
     asset_checks=[check_country_stats]
