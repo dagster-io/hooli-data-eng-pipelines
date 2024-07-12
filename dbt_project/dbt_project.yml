@@ -24,7 +24,7 @@ models:
       +group: Programmers
     CLEANED:
       +group: Programmers
-      +tags: "all_cleanred_models"
+      +tags: "all_cleaned_models"
     FORECASTING:
       +group: Stakeholders
     MARKETING:
