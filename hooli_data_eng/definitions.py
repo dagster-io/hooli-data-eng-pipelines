@@ -1,3 +1,4 @@
+from pathlib import Path
 
 from dagster import (
     Definitions,
@@ -5,7 +6,9 @@ from dagster import (
     load_assets_from_package_module,
     build_column_schema_change_checks,
     multiprocess_executor,
+    with_source_code_references,
 )
+from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
@@ -65,7 +68,9 @@ defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
-    assets=[*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets], #
+    assets=link_code_references_to_git_if_cloud(
+        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
+    ),
     asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
