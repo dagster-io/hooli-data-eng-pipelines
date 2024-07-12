@@ -19,3 +19,4 @@ dbt_project = DbtProject(
     state_path="target/slim_ci",
     target=get_env(),
 )
+dbt_project.prepare_if_dev()
