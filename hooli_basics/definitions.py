@@ -1,8 +1,14 @@
 from pathlib import Path
 
-from dagster import asset, asset_check, AssetCheckResult, Definitions
-from dagster._core.definitions.metadata import with_source_code_references
-from dagster_cloud.metadata.source_code import link_to_git_if_cloud
+from dagster import (
+    AnchorBasedFilePathMapping,
+    asset,
+    asset_check,
+    AssetCheckResult,
+    Definitions,
+    with_source_code_references,
+)
+from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 from pandas import DataFrame, read_html, get_dummies, to_numeric
 from sklearn.linear_model import LinearRegression as Regression
 
@@ -32,9 +38,12 @@ def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataF
     return result
 
 defs = Definitions(
-    assets=link_to_git_if_cloud(
+    assets=link_code_references_to_git_if_cloud(
         with_source_code_references([country_stats, continent_stats, change_model]),
-        repository_root_absolute_path=Path(__file__).parent,
+        file_path_mapping=AnchorBasedFilePathMapping(
+            local_file_anchor=Path(__file__),
+            file_anchor_path_in_repository="hooli-data-eng-pipelines/hooli_basics/definitions.py",
+        ),
     ), 
     asset_checks=[check_country_stats]
 )

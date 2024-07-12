@@ -1,11 +1,17 @@
 from pathlib import Path
 
-from dagster import Definitions, define_asset_job, ScheduleDefinition, AssetSelection
-from dagster._core.definitions.metadata import with_source_code_references
+from dagster import (
+    AnchorBasedFilePathMapping,
+    AssetSelection,
+    define_asset_job,
+    Definitions,
+    ScheduleDefinition,
+    with_source_code_references,
+)
 from dagster_batch_enrichment.api import EnrichmentAPI
 from dagster_batch_enrichment.warehouse import MyWarehouse
 from dagster_batch_enrichment.assets import raw_data, enriched_data
-from dagster_cloud.metadata.source_code import link_to_git_if_cloud
+from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 
 
 # define a job and schedule to run the pipeline
@@ -23,9 +29,12 @@ run_assets_30min = ScheduleDefinition(
 )
 
 defs = Definitions(
-    assets=link_to_git_if_cloud(
+    assets=link_code_references_to_git_if_cloud(
         with_source_code_references([raw_data, enriched_data]),
-        repository_root_absolute_path=Path(__file__).parent.parent,
+        file_path_mapping=AnchorBasedFilePathMapping(
+            local_file_anchor=Path(__file__),
+            file_anchor_path_in_repository="hooli-data-eng-pipelines/hooli_batch_enrichment/dagster_batch_enrichment/definitions.py",
+        ),
     ),
     schedules=[run_assets_30min],
     jobs=[run_assets_job],
