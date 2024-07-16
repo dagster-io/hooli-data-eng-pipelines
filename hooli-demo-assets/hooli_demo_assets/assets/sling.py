@@ -11,12 +11,17 @@ from hooli_demo_assets.resources import replication_config
 class CustomSlingTranslator(DagsterSlingTranslator):
    def __init__(self, target_prefix="RAW_DATA"):
         super().__init__(target_prefix=target_prefix)
+        self.replication_config = replication_config
         
    def get_group_name(self, stream_definition):
        return "RAW_DATA"
    
    def get_tags(self, stream_definition):
-            return {**StorageKindTagSet(storage_kind="S3")}
+       # derive storage_kind from the target set in the replication_config
+       storage_kind = self.replication_config.get("target", "DUCKDB")   
+       if storage_kind.startswith("SNOWFLAKE"):
+            storage_kind = "SNOWFLAKE"
+       return {**StorageKindTagSet(storage_kind=storage_kind)}
 
 
 @sling_assets(
