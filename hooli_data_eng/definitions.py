@@ -69,7 +69,9 @@ defs = Definitions(
         {"max_concurrent": 3}
     ),  
     assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
+        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets],
+                                    file_anchor_path_in_repository="hooli_data_eng/definitions.py",
+                                    local_file_anchor=Path(__file__),
     ),
     asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
     resources=resource_def[get_env()],
