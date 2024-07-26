@@ -1,0 +1,7 @@
+[runtime]
+log_level="INFO"
+
+[sources.github_from_openapi]
+# Base URL for the API
+base_url = "https://api.github.com"
+
