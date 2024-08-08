@@ -27,9 +27,19 @@ To see this in action checkout [this video](https://www.youtube.com/watch?v=qiOy
 
 ## Main Features
 
-TBD.
+The majority of features are implemented in the hooli_data_eng project and include:
+- partitioned assets, incl daily to weekly to unpartitioned mappings, and dynamic partitions
+- dbt assets incl metadata such as column lineage
+- parameterized assets
+- resources that vary between dev, branch, and prod deployments
+- pipes integrations with K8s and Databricks
+- asset checks, incl dbt tests and freshness checks
 
-## Assets spanning Multiple Code Locations
+The hooli-demo-assets project includes an example of doing elt with Sling, specifically loading data from s3 to snowflake. 
+
+The hooli_batch_enrichment project shows an example of a graph backed asset that uses dynamic outputs to achieve a map-reduce pattern.
+
+## Dev notes on running the Sling example
 
 - to run the `locations` dataset, uncomment out line 5-7 in [workspaces.yml](workspaces.yml)
 - you will also need to install the packages in the "sling" extra (e.g. `pip install -e ".[dev,sling]")`)
@@ -42,6 +52,6 @@ TBD.
 This repository uses Dagster Cloud Hybrid architecture with GitHub Actions to provide CI/CD.
 - The main branch is deployed to Dagster Cloud using the workflow in `.github/workflows/`. Each commit a new Docker image is built and pushed to our container registry. These images are deployed into an EKS cluster by our running Dagster Agent which also syncronizes changes with Dagster Cloud.
 
-- The open PR in this repository shows how Dagster supports full integration testing with a *branch deployment*, in this case the PR is code for a second "competing" model. This change also highlights how you can test dependency changes. This cxapability is also implemented in the GitHub Action in this repo.
+- The open PR in this repository shows how Dagster supports full integration testing with a *branch deployment*, in this case the PR is code for a new dbt model.
 
-*Dev Notes in the Repo Wiki*
+*Additional Dev Notes in the Repo Wiki*
