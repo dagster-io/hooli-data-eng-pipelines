@@ -11,7 +11,10 @@ from dagster_batch_enrichment.api import EnrichmentAPI
 
 
 class experimentConfig(Config):
-    experiment_name: str
+    experiment_name: str = Field(
+        default="default_config", 
+        description="A name to give to this run's configuration set"
+    )
 
 @asset(
     compute_kind="Kubernetes",

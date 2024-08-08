@@ -209,7 +209,6 @@ def dbt_slim_ci(dbt2: DbtCliResource):
     yield from dbt2.cli(
         args=dbt_command,
         manifest=DBT_MANIFEST,
-        project=dbt_project,
         dagster_dbt_translator=CustomDagsterDbtTranslator(
             DagsterDbtTranslatorSettings(enable_asset_checks=True,
                                          enable_code_references=True,)
