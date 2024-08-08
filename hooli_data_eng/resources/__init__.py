@@ -3,7 +3,7 @@ import os
 from dagster import EnvVar, FilesystemIOManager, ResourceDefinition
 from dagster._utils import file_relative_path
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
-from dagster_dbt import DbtCliClientResource, DbtCliResource
+from dagster_dbt import DbtCliResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_k8s import PipesK8sClient
 from dagster_pyspark import pyspark_resource
