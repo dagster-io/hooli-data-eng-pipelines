@@ -26,7 +26,7 @@ from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_fres
 # Assets
 
 example_assets = load_assets_from_package_module(
-   example_assets, group_name="EXAMPLE_ASSETS"
+   example_assets,
 )
 
 # Dagster assets specify what outputs we care about and

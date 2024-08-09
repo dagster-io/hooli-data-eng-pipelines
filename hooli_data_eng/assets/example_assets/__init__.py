@@ -1,7 +1,7 @@
 import os
 
 
-from dagster import asset, AssetSelection, define_asset_job, Definitions, graph_asset, In, Nothing, op, RetryPolicy
+from dagster import asset, AssetSelection, define_asset_job, Definitions, graph_asset, In, Nothing, op, RetryPolicy, graph_multi_asset, AssetOut, Output
 from dagster_aws.s3 import S3Resource
 
 
