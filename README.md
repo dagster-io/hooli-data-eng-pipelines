@@ -35,9 +35,22 @@ The majority of features are implemented in the hooli_data_eng project and inclu
 - pipes integrations with K8s and Databricks
 - asset checks, incl dbt tests and freshness checks
 
-The hooli-demo-assets project includes an example of doing elt with Sling, specifically loading data from s3 to snowflake. 
+Specifically, the project showcases a hypothetical use case where raw data is ingested from an API, transformed through dbt, and then used by marketing and ML teams. A few assets are worth highlighting: 
 
-The hooli_batch_enrichment project shows an example of a graph backed asset that uses dynamic outputs to achieve a map-reduce pattern.
+- `raw_data/orders` is a daily partitioned asset that uses the `api` resource to load fake data from an API into a warehouse. This load relies on an IO manager. The API resource accepts a configuration to determine if the fake data load should sometimes fail - this configuration can be over-ridden using the Dagster launchpad, eg in the case of a backfill. Speaking of backfills, this asset has a single run backfill policy meaning it is designed to update a single partition during regular runs, or multiple partitions at once during a backfill. This asset is scheduled to run daily thanks to the `refresh_analytics_model_job`.
+- `cleaned/orders_cleaned` is a dbt model that sits downstream of the `raw_data/orders` asset. It shows how a dbt asset can depend on an upstream non-dbt asset. This asset also highlights how Dagster partitions can map to dbt models using dbt vars. The asset includes a variety of options that make it valuable to viewers in Dagster's asset catalog including a description, column schema and column lineage, row counts, an owner, and links to the source code. Finally, this asset shows how dbt tests can be represented as asset checks.
+- `analytics/weekly_order_summary` is another dbt model. This dbt model is partitioned by week and is setup to run automatically using declarative automation. This asset showcases two key things: dagster can automatically resolve partition mappings (daily assets that roll up into weekly assets) and can handle scheduling without creating an uber dag or conflicting cron schedules.
+- `order_forecast_model` is an asset that fits a model based on the data that has been transformed by dbt. This model is designed to be run sparringly (only for model retraining) and so is not scheduled, but is instead run through the Dagster+ UI. The asset accepts model configuration.
+- `predicted_orders` is an asset that depends on the trained model, but should be run whenever the upstream dbt model is ready. This run sequence is accomplished using a dagster asset sensor (although declarative automation could work as an alternate approach).
+- `databricks_asset` and `k8s_pod_asset` are both examples of Dagster pipes, where external processes are managed and tracked without requiring migrating the business logic into Dagster.
+- `model_stats_by_month` is an example of a partitioned asset that tracks meaningful numeric metadata (in this case a model metric showing how good the trained model is behaving over time).
+- `model_nb` shows how the dagstermill package can be used to schedule Jupyter notebooks, with an emphasis on using upstream assets within the body of the notebook while in production, but substituting those for temporary inputs during regular notebook execution.
+- `avg_orders` and `min_order` are two fake marketing KPIs that are used to highlight the various approaches to monitoring asset freshness while using declarative automation. `avg_orders` relies on anomaly detection freshness checks and an eager automation condition while `min_orders` relies on a scheduled freshness check and is not automated (so will almost always fail its freshness check).
+- `key_product_deepdive` is a fictional asset that represents some sort of dynamically created view. It is used to show how dynamic partition work and can be created from the Dagster+ UI. 
+
+- The hooli-demo-assets project includes an example of doing elt with Sling, specifically loading data from s3 to snowflake. 
+
+- The hooli_batch_enrichment project shows an example of a graph backed asset that uses dynamic outputs to achieve a map-reduce pattern.
 
 ## Dev notes on running the Sling example
 
