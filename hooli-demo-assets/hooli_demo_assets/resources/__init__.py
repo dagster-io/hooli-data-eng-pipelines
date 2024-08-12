@@ -9,13 +9,11 @@ from dagster_embedded_elt.sling import (
 
 
 def get_env():
-    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
-        return "PROD"
-    if os.getenv("DAGSTER_IS_DEV_CLI"):
-        return "LOCAL"
-    # default to BRANCH so we use that in github CI
-    return "BRANCH"
-
+   if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
+       return "BRANCH"
+   if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
+       return "PROD"
+   return "LOCAL"
 
 # Path for duckdb connection - needed for local dev
 current_file_path = Path(__file__)

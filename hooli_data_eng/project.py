@@ -4,11 +4,12 @@ from pathlib import Path
 
 
 def get_env():
-    if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
-        return "BRANCH"
     if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
         return "PROD"
-    return "LOCAL"
+    if os.getenv("DAGSTER_IS_DEV_CLI"):
+        return "LOCAL"
+    # default to BRANCH so we use that in github CI
+    return "BRANCH"
 
 
 dbt_project_path = Path(__file__).parent.parent.joinpath("dbt_project")
