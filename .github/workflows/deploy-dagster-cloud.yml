@@ -71,6 +71,10 @@ jobs:
         with:
           mask-password: 'true'
 
+      - name: Set Prod Deployment Environment Variable for Push
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
         run: |
