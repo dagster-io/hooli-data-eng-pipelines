@@ -118,6 +118,6 @@ avg_orders_freshness_check_schedule = ScheduleDefinition(
     cron_schedule="*/10 * * * *",
     job=define_asset_job(
         "check_avg_orders_freshness_job",
-        selection=AssetSelection.checks(avg_orders_freshness_check)
+        selection=AssetSelection.checks(*avg_orders_freshness_check)
     )
 )
