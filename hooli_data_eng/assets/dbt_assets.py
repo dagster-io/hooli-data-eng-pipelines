@@ -200,7 +200,7 @@ def dbt_slim_ci(dbt2: DbtCliResource):
     dbt_command = [
         "build",
         "--select",
-        "state:modified+",
+        "state:modified.body+",
         "--defer",
         "--state",
         dbt2.state_path,
