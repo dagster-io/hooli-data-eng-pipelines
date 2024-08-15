@@ -107,9 +107,7 @@ class CustomDagsterDbtTranslatorForViews(CustomDagsterDbtTranslator):
 
 def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliResource):
     # map partition key range to dbt vars
-    first_partition, last_partition = context.asset_partitions_time_window_for_output(
-        list(context.selected_output_names)[0]
-    )
+    first_partition, last_partition = context.partition_time_window
     dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
     dbt_args = ["build", "--vars", json.dumps(dbt_vars)]
 
