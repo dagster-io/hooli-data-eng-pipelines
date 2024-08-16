@@ -174,3 +174,5 @@ tmp*/
 # dbt
 dbt_project/example.duckdb*
 dbt_project/logs
+
+.DS_Store
