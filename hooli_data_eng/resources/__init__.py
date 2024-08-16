@@ -41,7 +41,7 @@ from unittest import mock
 # and S3 resources
 client = mock.MagicMock()
 
-if get_env() == "PROD":
+if get_env() in ["PROD", "LOCAL"]:
     # Databricks Client
     client = WorkspaceClient(
         host=os.environ["DATABRICKS_HOST"],
@@ -69,7 +69,10 @@ resource_def = {
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
-        "pipes_databricks_client": ResourceDefinition.none_resource(),
+        "email": LocalEmailAlert(
+            smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
+        ),
+        "pipes_databricks_client": PipesDatabricksClient(client),
         "pipes_k8s_client": ResourceDefinition.none_resource(),
     },
     "BRANCH": {
