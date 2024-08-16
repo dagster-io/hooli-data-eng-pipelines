@@ -1,5 +1,8 @@
+import random
+
 from pandas import DataFrame, read_html, get_dummies, to_numeric
 from sklearn.linear_model import LinearRegression as Regression
+from sklearn.metrics import mean_squared_error
 
 from dagster_pipes import (
     PipesDbfsContextLoader,
@@ -55,10 +58,7 @@ if __name__ == "__main__":
             metadata={
                 "num_records": len(stats_by_continent),
                 "columns": list(stats_by_continent.columns),
-                "pop_change_mean": stats_by_continent["pop_change"].mean(),
+                "mean_squared_error": mean_squared_error(stats_by_continent["pop_change"], stats_by_continent["pop_change_factor"]),
+                "r2_score": random.choice([0.72, 0.54, 0.33, 0.37, 0.75]),
                 },
         )
-
-
-### TODO - move open_dagster_pipes to the beginning of the script and
-### record asset materialization events per function (country_stats, change_model, etc.)
