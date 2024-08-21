@@ -2,14 +2,13 @@ import json
 import textwrap
 from typing import Any, Mapping
 from dagster import (
-    AutoMaterializePolicy,
-    AutoMaterializeRule,
+    AutomationCondition,
     AssetKey,
     BackfillPolicy,
     DailyPartitionsDefinition,
     job,
     op,
-    OpExecutionContext,
+    AssetExecutionContext,
     WeeklyPartitionsDefinition,
 )
 from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
@@ -22,7 +21,7 @@ from dagster_dbt import (
 from dagster_dbt.asset_decorator import dbt_assets
 from hooli_data_eng.resources import dbt_project
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
-from dagster import  build_sensor_for_freshness_checks
+from dagster import build_sensor_for_freshness_checks
 
 
 # many dbt assets use an incremental approach to avoid
@@ -36,13 +35,24 @@ weekly_partitions = WeeklyPartitionsDefinition(start_date="2023-05-25")
 DBT_MANIFEST = dbt_project.manifest_path
 
 
-allow_outdated_parents_policy = AutoMaterializePolicy.eager().without_rules(
-    AutoMaterializeRule.skip_on_parent_outdated()
+allow_outdated_parents_policy = AutomationCondition.eager().as_auto_materialize_policy()
+
+
+became_missing_or_any_parents_updated = (
+    AutomationCondition.missing().newly_true().with_label("became missing")
+    | AutomationCondition.any_deps_match(
+        AutomationCondition.newly_updated() | AutomationCondition.will_be_requested()
+    ).with_label("any parents updated")
 )
 
-allow_outdated_and_missing_parents_policy = AutoMaterializePolicy.eager().without_rules(
-    AutoMaterializeRule.skip_on_parent_outdated(),
-    AutoMaterializeRule.skip_on_parent_missing(),  # non-partitioned assets should run even if some upstream partitions are missing
+allow_outdated_and_missing_parents_condition = (
+    AutomationCondition.in_latest_time_window()
+    & became_missing_or_any_parents_updated.since(
+        AutomationCondition.newly_requested() | AutomationCondition.newly_updated()
+    )
+    & ~AutomationCondition.in_progress()
+).with_label(
+    "update non-partitioned asset while allowing some missing or outdated parent partitions"
 )
 
 
@@ -90,8 +100,15 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 
         return {**default_metadata, **metadata}
 
-    def get_auto_materialize_policy(self, dbt_resource_props: Mapping[str, Any]):
-        return allow_outdated_parents_policy
+    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
+        if dbt_resource_props["name"] in ["company_stats", "locations_cleaned", "weekly_order_summary", "order_stats"]:
+           return allow_outdated_and_missing_parents_condition
+
+        if  dbt_resource_props["name"] in ["sku_stats"]:
+            return AutomationCondition.on_cron('0 0 1 * *')
+        
+        if dbt_resource_props["name"] in ["company_perf"]:
+            return AutomationCondition.any_downstream_conditions()
 
     def get_owners(self, dbt_resource_props: Mapping[str, Any]):
         return [
@@ -100,12 +117,7 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         ]
 
 
-class CustomDagsterDbtTranslatorForViews(CustomDagsterDbtTranslator):
-    def get_auto_materialize_policy(self, dbt_resource_props: Mapping[str, Any]):
-        return allow_outdated_and_missing_parents_policy
-
-
-def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliResource):
+def _process_partitioned_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # map partition key range to dbt vars
     first_partition, last_partition = context.partition_time_window
     dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
@@ -120,7 +132,7 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
         context=context,
         dbt_cli_invocation=dbt_cli_task,
         dagster_events=dbt_cli_task.stream().fetch_row_counts().fetch_column_metadata(),
-        )
+    )
 
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
@@ -135,13 +147,15 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
     select="orders_cleaned users_cleaned orders_augmented",
     partitions_def=daily_partitions,
     dagster_dbt_translator=CustomDagsterDbtTranslator(
-        settings=DagsterDbtTranslatorSettings(enable_asset_checks=True,
-                                              enable_code_references=True,)
+        settings=DagsterDbtTranslatorSettings(
+            enable_asset_checks=True,
+            enable_code_references=True,
+        )
     ),
     backfill_policy=BackfillPolicy.single_run(),
 )
-def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
-    yield from _process_partitioned_dbt_assets(context=context, dbt=dbt2)
+def daily_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+    yield from _process_partitioned_dbt_assets(context=context, dbt=dbt)
 
 
 @dbt_assets(
@@ -150,32 +164,39 @@ def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
     select="weekly_order_summary order_stats",
     partitions_def=weekly_partitions,
     dagster_dbt_translator=CustomDagsterDbtTranslator(
-        DagsterDbtTranslatorSettings(enable_asset_checks=True,
-                                     enable_code_references=True,)
+        DagsterDbtTranslatorSettings(
+            enable_asset_checks=True,
+            enable_code_references=True,
+        )
     ),
     backfill_policy=BackfillPolicy.single_run(),
 )
-def weekly_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
-    yield from _process_partitioned_dbt_assets(context=context, dbt=dbt2)
+def weekly_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+    yield from _process_partitioned_dbt_assets(context=context, dbt=dbt)
 
-weekly_freshness_check = build_freshness_checks_from_dbt_assets(dbt_assets=[weekly_dbt_assets])
-weekly_freshness_check_sensor=build_sensor_for_freshness_checks(
-    freshness_checks=weekly_freshness_check,
-    name="weekly_freshness_check_sensor"
+
+weekly_freshness_check = build_freshness_checks_from_dbt_assets(
+    dbt_assets=[weekly_dbt_assets]
 )
+weekly_freshness_check_sensor = build_sensor_for_freshness_checks(
+    freshness_checks=weekly_freshness_check, name="weekly_freshness_check_sensor"
+)
+
 
 @dbt_assets(
     manifest=DBT_MANIFEST,
     project=dbt_project,
-    select="company_perf sku_stats company_stats locations_cleaned",
-    dagster_dbt_translator=CustomDagsterDbtTranslatorForViews(
-        DagsterDbtTranslatorSettings(enable_asset_checks=True,
-                                     enable_code_references=True,)
+    select="company_stats locations_cleaned sku_stats company_perf",
+    dagster_dbt_translator=CustomDagsterDbtTranslator(
+        DagsterDbtTranslatorSettings(
+            enable_asset_checks=True,
+            enable_code_references=True,
+        )
     ),
 )
-def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
+def regular_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # Invoke dbt CLI
-    dbt_cli_task = dbt2.cli(["build"], context=context)
+    dbt_cli_task = dbt.cli(["build"], context=context)
 
     # Emits an AssetObservation for each asset materialization, which is used to
     # identify the Snowflake credit consumption
@@ -183,7 +204,7 @@ def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
         context=context,
         dbt_cli_invocation=dbt_cli_task,
         dagster_events=dbt_cli_task.stream().fetch_row_counts().fetch_column_metadata(),
-        )
+    )
 
     # fetch run_results.json to log compiled SQL
     run_results_json = dbt_cli_task.get_artifact("run_results.json")
@@ -204,14 +225,21 @@ def dbt_slim_ci(dbt2: DbtCliResource):
         dbt2.state_path,
     ]
 
-    yield from dbt2.cli(
-        args=dbt_command,
-        manifest=DBT_MANIFEST,
-        dagster_dbt_translator=CustomDagsterDbtTranslator(
-            DagsterDbtTranslatorSettings(enable_asset_checks=True,
-                                         enable_code_references=True,)
-        ),
-    ).stream().fetch_row_counts().fetch_column_metadata()
+    yield from (
+        dbt2.cli(
+            args=dbt_command,
+            manifest=DBT_MANIFEST,
+            dagster_dbt_translator=CustomDagsterDbtTranslator(
+                DagsterDbtTranslatorSettings(
+                    enable_asset_checks=True,
+                    enable_code_references=True,
+                )
+            ),
+        )
+        .stream()
+        .fetch_row_counts()
+        .fetch_column_metadata()
+    )
 
 
 # This job will be triggered by Pull Request and should only run new or changed dbt models

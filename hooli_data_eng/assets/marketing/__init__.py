@@ -1,6 +1,7 @@
 import datetime
 
 from dagster import (
+    AutomationCondition,
     asset,
     build_last_update_freshness_checks,
     build_sensor_for_freshness_checks,
@@ -18,8 +19,6 @@ from dagster import (
 from dagster._core.definitions.tags import StorageKindTagSet
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 import pandas as pd
-
-from hooli_data_eng.assets.dbt_assets import allow_outdated_parents_policy
 from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
 
 
@@ -31,7 +30,7 @@ storage_kind = get_storage_kind()
 # dbt and create summaries using pandas
 @asset(
     key_prefix="MARKETING",
-    auto_materialize_policy=allow_outdated_parents_policy,
+    automation_condition=AutomationCondition.on_cron('0 0 1-31/2 * *'),
     compute_kind="pandas",
     owners=["team:programmers", "lopp@dagsterlabs.com"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
