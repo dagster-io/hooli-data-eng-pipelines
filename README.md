@@ -56,7 +56,6 @@ Specifically, the project showcases a hypothetical use case where raw data is in
 
 - to run the `locations` dataset, uncomment out line 5-7 in [workspaces.yml](workspaces.yml)
 - you will also need to install the packages in the "sling" extra (e.g. `pip install -e ".[dev,sling]")`)
-- You'll need to obtain the credentials for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 - then run `dagster dev` and both `hooli_demo_assets` and `hooli_data_eng` code locations will load
 - NOTE: if you are running Sling locally, there is currently an error message if you already have a duckdb database set up the first time you run the Sling integration. You'll need to delete it and have the `location` asset be the the first thing you materialize.
 
