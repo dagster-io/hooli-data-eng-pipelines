@@ -11,7 +11,7 @@ from datetime import datetime
 from hooli_data_eng.jobs import predict_job
 
 
-from hooli_data_eng.assets.dbt_assets import dbt_eager_assets
+from hooli_data_eng.assets.dbt_assets import regular_dbt_assets
 from hooli_data_eng.utils.dbt_code_version import get_current_dbt_code_version
 
 # This sensor listens for changes to the orders_augmented asset which
@@ -24,12 +24,12 @@ def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 
 
 
-@sensor(asset_selection=AssetSelection.assets(dbt_eager_assets))
+@sensor(asset_selection=AssetSelection.assets(regular_dbt_assets))
 def dbt_code_version_sensor(context: SensorEvaluationContext):
     
-    context.log.info(f"Checking code versions for assets: {dbt_eager_assets.keys}")
+    context.log.info(f"Checking code versions for assets: {regular_dbt_assets.keys}")
     assets_to_materialize = []
-    for asset_key in dbt_eager_assets.keys:
+    for asset_key in regular_dbt_assets.keys:
         latest_materialization = context.instance.get_latest_materialization_event(asset_key)
         if latest_materialization:
             latest_code_version = latest_materialization.asset_materialization.tags.get("dagster/code_version")

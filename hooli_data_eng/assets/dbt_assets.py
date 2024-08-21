@@ -100,28 +100,21 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 
         return {**default_metadata, **metadata}
 
-    def get_auto_materialize_policy(self, dbt_resource_props: Mapping[str, Any]):
-        return allow_outdated_parents_policy
+    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
+        if dbt_resource_props["name"] in ["company_stats", "locations_cleaned", "weekly_order_summary", "order_stats"]:
+           return allow_outdated_and_missing_parents_condition
+
+        if  dbt_resource_props["name"] in ["sku_stats"]:
+            return AutomationCondition.on_cron('0 0 1 * *')
+        
+        if dbt_resource_props["name"] in ["company_perf"]:
+            return AutomationCondition.any_downstream_conditions()
 
     def get_owners(self, dbt_resource_props: Mapping[str, Any]):
         return [
             dbt_resource_props["group"]["owner"]["email"],
             f"team:{dbt_resource_props['group']['name']}",
         ]
-
-
-class CustomDagsterDbtTranslatorForEager(CustomDagsterDbtTranslator):
-    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
-        return allow_outdated_and_missing_parents_condition
-
-
-class CustomDagsterDbtTranslatorForDeferred(CustomDagsterDbtTranslator):
-    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
-        return AutomationCondition.any_downstream_conditions()
-
-class CustomDagsterDbtTranslatorForMonthly(CustomDagsterDbtTranslator):
-    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
-        return AutomationCondition.on_cron('0 0 1 * *')
 
 
 def _process_partitioned_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
@@ -190,7 +183,18 @@ weekly_freshness_check_sensor = build_sensor_for_freshness_checks(
 )
 
 
-def _process_dbt_non_partitioned_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+@dbt_assets(
+    manifest=DBT_MANIFEST,
+    project=dbt_project,
+    select="company_stats locations_cleaned sku_stats company_perf",
+    dagster_dbt_translator=CustomDagsterDbtTranslator(
+        DagsterDbtTranslatorSettings(
+            enable_asset_checks=True,
+            enable_code_references=True,
+        )
+    ),
+)
+def regular_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # Invoke dbt CLI
     dbt_cli_task = dbt.cli(["build"], context=context)
 
@@ -208,48 +212,6 @@ def _process_dbt_non_partitioned_assets(context: AssetExecutionContext, dbt: Dbt
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
 
-@dbt_assets(
-    manifest=DBT_MANIFEST,
-    project=dbt_project,
-    select="company_stats locations_cleaned",
-    dagster_dbt_translator=CustomDagsterDbtTranslatorForEager(
-        DagsterDbtTranslatorSettings(
-            enable_asset_checks=True,
-            enable_code_references=True,
-        )
-    ),
-)
-def dbt_eager_assets(context: AssetExecutionContext, dbt: DbtCliResource):
-    yield from _process_dbt_non_partitioned_assets(context, dbt)
-
-@dbt_assets(
-    manifest=DBT_MANIFEST,
-    project=dbt_project,
-    select="sku_stats",
-    dagster_dbt_translator=CustomDagsterDbtTranslatorForMonthly(
-        DagsterDbtTranslatorSettings(
-            enable_asset_checks=True,
-            enable_code_references=True,
-        )
-    ),
-)
-def dbt_monthly_assets(context: AssetExecutionContext, dbt: DbtCliResource):
-    yield from _process_dbt_non_partitioned_assets(context, dbt)
-
-
-@dbt_assets(
-    manifest=DBT_MANIFEST,
-    project=dbt_project,
-    select="company_perf",
-    dagster_dbt_translator=CustomDagsterDbtTranslatorForDeferred(
-        DagsterDbtTranslatorSettings(
-            enable_asset_checks=True,
-            enable_code_references=True,
-        )
-    ),
-)
-def dbt_deferred_assets(context: AssetExecutionContext, dbt: DbtCliResource):
-    yield from _process_dbt_non_partitioned_assets(context, dbt)
 
 # This op will be used to run slim CI
 @op(out={})
