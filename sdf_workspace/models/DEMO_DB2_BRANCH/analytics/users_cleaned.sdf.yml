@@ -1,0 +1,12 @@
+table:
+  name: users_cleaned
+  description: Raw users data with test accounts removed
+  materialization: table
+  columns:
+  - name: company
+    description: The name of the company that this user belongs to.
+  - name: created_at
+    description: When the user account was crated
+  - name: user_id
+    description: Platform id of the user.
+  

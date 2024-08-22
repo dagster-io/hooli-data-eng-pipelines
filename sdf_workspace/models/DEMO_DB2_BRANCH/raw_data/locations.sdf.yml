@@ -1,0 +1,6 @@
+table:
+  name: locations
+  meta:
+    dagster-asset-key: "locations" #["RAW_DATA", "locations"]
+
+    # error: SDF1015: models/DEMO_DB2_BRANCH/raw_data/locations.sdf.yml: (5) table.meta.dagster-asset-key: invalid type: sequence, expected a string at line 4 column 24
