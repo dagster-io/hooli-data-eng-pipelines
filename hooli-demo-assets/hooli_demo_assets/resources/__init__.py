@@ -7,7 +7,6 @@ from dagster_embedded_elt.sling import (
    SlingConnectionResource,
 )
 
-
 def get_env():
    if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
        return "BRANCH"
@@ -15,24 +14,18 @@ def get_env():
        return "PROD"
    return "LOCAL"
 
-# Path for duckdb connection - needed for local dev
+# Paths for local dev
 current_file_path = Path(__file__)
-parent_dir_path = current_file_path.parent.parent.parent.parent
-DUCKDB_PATH = parent_dir_path / "dbt_project" / "example.duckdb"
+hooli_demo_root = current_file_path.parent.parent.parent
+project_root = hooli_demo_root.parent
+DUCKDB_PATH = project_root / "dbt_project" / "example.duckdb"
+LOCATIONS_CSV_PATH = f"file://{hooli_demo_root}/locations.csv"
 
 
-# Alternatively a replication.yaml file can be used
-def create_replication_config(env: str):
-   # Determine the target database dynamically based on the environment
-   target_database = {
-       'LOCAL': 'DUCKDB',
-       'BRANCH': 'SNOWFLAKE_BRANCH',
-       'PROD': 'SNOWFLAKE_PROD'
-   }.get(env, 'DUCKDB')  # Default to DUCKDB if no environment matches
-
+if get_env() == "LOCAL":
    replication_config = {
-       "source": "S3",
-       "target": target_database,
+       "source": "LOCAL",
+       "target": "DUCKDB",
        "defaults": {
            "mode": "full-refresh",
            "object": "{stream_file_folder}.{stream_file_name}",
@@ -41,59 +34,66 @@ def create_replication_config(env: str):
            }
        },
        "streams": {
-           "s3://hooli-demo/embedded-elt/locations.csv": {
+           LOCATIONS_CSV_PATH: {
                "object": "locations"
            }
        }
    }
-   return replication_config
 
+   sling_resource = SlingResource(
+       connections=[
+            SlingConnectionResource(
+                name="Local",
+                type="local",
+                url=LOCATIONS_CSV_PATH,
+            ),
+            SlingConnectionResource(
+                name="DUCKDB",
+                type="duckdb",
+                instance=f"{DUCKDB_PATH}",
+                database="example",
+                schema="raw_data",
+            ),
+        ]
+   )
 
-def create_sling_resource(env: str):
-   # Dynamically generate connection based on enviornment
-   connections = [
-       SlingConnectionResource(
-           name="S3",
-           type="s3",
-           bucket=EnvVar("AWS_S3_BUCKET"),
-           region=EnvVar("AWS_REGION"),
-           access_key_id=EnvVar("AWS_ACCESS_KEY_ID"),
-           secret_access_key=EnvVar("AWS_SECRET_ACCESS_KEY"),
-       )
-   ]
-   if env == 'LOCAL':
-       connections.append(SlingConnectionResource(
-           name="DUCKDB",
-           type="duckdb",
-           instance=f"{DUCKDB_PATH}",
-           database="example",
-           schema="raw_data",
-       ))
-   elif env == 'BRANCH':
-       connections.append(SlingConnectionResource(
-           name="SNOWFLAKE_BRANCH",
-           type="snowflake",
-           host=EnvVar("SNOWFLAKE_HOST"),
-           user=EnvVar("SNOWFLAKE_USER"),
-           password=EnvVar("SNOWFLAKE_PASSWORD"),
-           role=EnvVar("SNOWFLAKE_ROLE"),
-           database="DEMO_DB2_BRANCH",
-           schema="RAW_DATA",
-       ))
-   elif env == 'PROD':
-       connections.append(SlingConnectionResource(
-           name="SNOWFLAKE_PROD",
-           type="snowflake",
-           host=EnvVar("SNOWFLAKE_HOST"),
-           user=EnvVar("SNOWFLAKE_USER"),
-           password=EnvVar("SNOWFLAKE_PASSWORD"),
-           role=EnvVar("SNOWFLAKE_ROLE"),
-           database="DEMO_DB2",
-           schema="RAW_DATA",
-       ))
-   return SlingResource(connections=connections)
+if get_env() != "LOCAL":
+    replication_config = {
+        "source": "S3",
+        "target": "SNOWFLAKE_PROD" if get_env() == "PROD" else "SNOWFLAKE_BRANCH",
+        "defaults": {
+            "mode": "full-refresh",
+            "object": "{stream_file_folder}.{stream_file_name}",
+            "source_options": {
+                "format": "csv"
+            }
+        },
+        "streams": {
+            "s3://hooli-demo/embedded-elt/locations.csv": {
+                "object": "locations"
+            }
+        }
+    }
 
-
-env = get_env()
-replication_config = create_replication_config(env)
-sling_resource = create_sling_resource(env)
+    sling_resource = SlingResource(
+        connections=[
+        SlingConnectionResource(
+            name="S3",
+            type="s3",
+            bucket=EnvVar("AWS_S3_BUCKET"),
+            region=EnvVar("AWS_REGION"),
+            access_key_id=EnvVar("AWS_ACCESS_KEY_ID"),
+            secret_access_key=EnvVar("AWS_SECRET_ACCESS_KEY"),
+        ),
+        SlingConnectionResource(
+            name="SNOWFLAKE_PROD" if get_env() == "PROD" else "SNOWFLAKE_BRANCH",
+            type="snowflake",
+            host=EnvVar("SNOWFLAKE_HOST"),
+            user=EnvVar("SNOWFLAKE_USER"),
+            password=EnvVar("SNOWFLAKE_PASSWORD"),
+            role=EnvVar("SNOWFLAKE_ROLE"),
+            database="DEMO_DB2" if get_env() == "PROD" else "DEMO_DB2_BRANCH",
+            schema="RAW_DATA",
+        )
+        ]
+    )

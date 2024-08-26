@@ -15,4 +15,3 @@ from dagster import (
 # @asset_sensor(asset_key=AssetKey(["ANALYTICS", "orders_augmented"]), job=predict_job)
 # def orders_sensor(context: SensorEvaluationContext, asset_event: EventLogEntry):
 #     yield RunRequest(run_key=context.cursor)
-
