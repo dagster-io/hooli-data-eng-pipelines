@@ -5,14 +5,16 @@ import pandas as pd
 from scipy import optimize
 
 from dagster import (
-    AssetIn,
     asset,
+    AssetKey,
+    AssetIn,
     MonthlyPartitionsDefinition,
     Output,
     Field,
     Config,
     AssetExecutionContext,
     MaterializeResult,
+    SourceAsset,
 )
 from dagster_k8s import PipesK8sClient
 from dagstermill import define_dagstermill_asset

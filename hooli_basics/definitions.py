@@ -19,7 +19,15 @@ from sklearn.linear_model import LinearRegression as Regression
 )
 def country_stats() -> DataFrame:
     df = read_html("https://tinyurl.com/mry64ebh", flavor='html5lib')[0]
-    df.columns = ["country", "continent", "region", "pop_2022", "pop_2023", "pop_change"]
+    df.columns = ["country", "Population (1 July 2022)", "Population (1 July 2023)", "Change", "UN Continental Region[1]", "UN Statistical Subregion[1]"]
+    df = df.drop(columns=["Change"])
+    df = df.rename(columns={
+        "UN Continental Region[1]": "continent",
+        "UN Statistical Subregion[1]": "region",
+        "Population (1 July 2022)": "pop_2022",
+        "Population (1 July 2023)": "pop_2023",
+        }
+    )
     df["pop_change"] = ((to_numeric(df["pop_2023"]) / to_numeric(df["pop_2022"])) - 1)*100
     return df
 
@@ -27,7 +35,7 @@ def country_stats() -> DataFrame:
        asset=country_stats 
 )
 def check_country_stats(country_stats):
-    return AssetCheckResult(success=True)
+    return AssetCheckResult(passed=True)
 
 @asset(
     compute_kind="Kubernetes",
