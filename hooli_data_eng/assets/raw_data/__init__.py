@@ -62,24 +62,24 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
 
     return pd.concat(all_users)
 
-@asset_check(
-        asset=AssetKey(["RAW_DATA", "users"]),
-        description="check that users are from expected companies",
-)
-def check_users(context, users: pd.DataFrame):
-    observed_companies = set(pd.unique(users['company']))
-    expected_companies = {"ShopMart", "SportTime", "FamilyLtd", "DiscountStore"}
+# @asset_check(
+#         asset=AssetKey(["RAW_DATA", "users"]),
+#         description="check that users are from expected companies",
+# )
+# def check_users(context, users: pd.DataFrame):
+#     observed_companies = set(pd.unique(users['company']))
+#     expected_companies = {"ShopMart", "SportTime", "FamilyLtd", "DiscountStore"}
 
-    return AssetCheckResult(
-        passed=  (set(observed_companies) == expected_companies),
-        metadata={"result": MetadataValue.md(
-            f"""
-                Observed the following unexpected companies: 
-                {list(observed_companies - expected_companies)}
-            """
-        )},
-        severity=AssetCheckSeverity.WARN
-    )
+#     return AssetCheckResult(
+#         passed=  (set(observed_companies) == expected_companies),
+#         metadata={"result": MetadataValue.md(
+#             f"""
+#                 Observed the following unexpected companies: 
+#                 {list(observed_companies - expected_companies)}
+#             """
+#         )},
+#         severity=AssetCheckSeverity.WARN
+#     )
 
 @asset(
     compute_kind="api",
@@ -108,7 +108,7 @@ def orders(context, api: RawDataAPI) -> pd.DataFrame:
     all_orders_df['dt'] = pd.to_datetime(all_orders_df['dt'], unit = "ms")
     return all_orders_df
 
-raw_data_schema_checks = build_column_schema_change_checks(assets=[
-    AssetKey(["RAW_DATA", "orders"]),
-    AssetKey(["RAW_DATA", "users"]),
-])
+# raw_data_schema_checks = build_column_schema_change_checks(assets=[
+#     AssetKey(["RAW_DATA", "orders"]),
+#     AssetKey(["RAW_DATA", "users"]),
+# ])

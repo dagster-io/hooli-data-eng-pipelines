@@ -11,16 +11,16 @@ from dagster import (
 )
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 
-from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
-from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
-from hooli_data_eng.assets.marketing import check_avg_orders
-from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
-from hooli_data_eng.jobs import analytics_job, predict_job
+from hooli_data_eng.assets import raw_data, sdf_assets
+from hooli_data_eng.assets.sdf_assets import sdf_slim_ci_job
+# from hooli_data_eng.assets.marketing import check_avg_orders
+# from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
+from hooli_data_eng.jobs import analytics_job
 from hooli_data_eng.resources import get_env, resource_def
 from hooli_data_eng.schedules import analytics_schedule
-from hooli_data_eng.sensors import orders_sensor, dbt_code_version_sensor
+#from hooli_data_eng.sensors import orders_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
-from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
+# from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
 from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
 
 # ---------------------------------------------------
@@ -35,7 +35,7 @@ from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_fres
 # These raw datasets will be used by dbt as dbt sources
 # which can be found in dbt_project/models/sources.yml
 raw_data_assets = load_assets_from_package_module(
-    raw_data, group_name="RAW_DATA", key_prefix=["RAW_DATA"]
+    raw_data#, group_name="RAW_DATA", key_prefix=["RAW_DATA"] 
 )
 
 # Our second set of assets represent dbt models
@@ -46,18 +46,19 @@ raw_data_assets = load_assets_from_package_module(
 # specifies what databases to targets, and locally will
 # execute against a DuckDB
 
-dbt_assets = load_assets_from_modules([dbt_assets])
+# dbt_assets = load_assets_from_modules([dbt_assets])
+sdf_assets = load_assets_from_modules([sdf_assets])
 
-dbt_asset_checks = build_column_schema_change_checks(assets=[*dbt_assets])
+sdf_schema_change_checks = build_column_schema_change_checks(assets=[*sdf_assets])
 
 # Our final set of assets represent Python code that
 # should run after dbt. These assets are defined in
 # assets/forecasting/__init__.py
-forecasting_assets = load_assets_from_package_module(
-    forecasting, group_name="FORECASTING"
-)
+# forecasting_assets = load_assets_from_package_module(
+#     forecasting, group_name="ANALYTICS"
+# )
 
-marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
+# marketing_assets = load_assets_from_package_module(marketing, group_name="ANALYTICS")
 
 # ---------------------------------------------------
 # Definitions
@@ -70,22 +71,22 @@ defs = Definitions(
         {"max_concurrent": 3}
     ),  
     assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
+        with_source_code_references([*sdf_assets, *raw_data_assets]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
             file_anchor_path_in_repository="hooli_data_eng/definitions.py"
         )
     ),
-    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
+    #asset_checks=[*raw_data_schema_checks, *sdf_schema_change_checks, check_users, *weekly_freshness_check], #check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check,],
+    asset_checks=[*sdf_schema_change_checks, *weekly_freshness_check], #check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check,],
     resources=resource_def[get_env()],
-    schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
+    schedules=[analytics_schedule], #avg_orders_freshness_check_schedule],
     sensors=[
-       orders_sensor,   
+       #orders_sensor,   
        watch_s3_sensor,
 #       asset_delay_alert_sensor,
-       min_order_freshness_check_sensor,
-       dbt_code_version_sensor,
+      # min_order_freshness_check_sensor,
        weekly_freshness_check_sensor
     ],
-    jobs=[analytics_job, predict_job, dbt_slim_ci_job],
+    jobs=[analytics_job, sdf_slim_ci_job],
 )

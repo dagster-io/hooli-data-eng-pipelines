@@ -14,7 +14,7 @@ import os
 # This op/job combo represent an imperative task
 # that runs when the sensor triggers
 # To target asset updates instead, use:
-# my_job = define_asset_job("predict_job",  selection=AssetSelection.keys(["FORECASTING","predicted_orders"]))
+# my_job = define_asset_job("predict_job",  selection=AssetSelection.keys(["ANALYTICS","predicted_orders"]))
 
 
 @op

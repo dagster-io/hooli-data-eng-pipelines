@@ -1,0 +1,5 @@
+table:
+  name: company_perf
+  description: ''
+  materialization: table
+  

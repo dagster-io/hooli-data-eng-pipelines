@@ -1,0 +1,5 @@
+table:
+  name: weekly_order_summary
+  description: ''
+  materialization: table
+  

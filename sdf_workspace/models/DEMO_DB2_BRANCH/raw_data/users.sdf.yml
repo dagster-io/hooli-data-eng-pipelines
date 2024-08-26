@@ -1,0 +1,4 @@
+table:
+  name: users
+  meta:
+    dagster-asset-key: users

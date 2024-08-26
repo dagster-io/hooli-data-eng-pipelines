@@ -1,0 +1,18 @@
+workspace:
+  edition: '1.3'
+  name: dbt_project
+  includes:
+  - path: models
+    index: catalog-schema-table-name
+  integrations:
+  - type: database
+    provider: snowflake
+    sources:
+      - pattern: demo_db2_branch.*.*
+    targets:
+      - pattern: "w_target.*.*"
+  defaults:
+    environment: dbg
+    dialect: snowflake
+    catalog: DEMO_DB2_BRANCH
+    schema: analytics

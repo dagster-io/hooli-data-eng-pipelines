@@ -1,0 +1,5 @@
+table:
+  name: orders_augmented
+  description: ''
+  materialization: table
+  

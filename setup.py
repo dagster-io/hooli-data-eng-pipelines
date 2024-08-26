@@ -13,6 +13,7 @@ if __name__ == "__main__":
             "scipy",
             "dbt-core",
             "dbt-duckdb",
+            "dagster-sdf",
             "dbt-snowflake",
             "dagster-duckdb",
             "dagster-aws",

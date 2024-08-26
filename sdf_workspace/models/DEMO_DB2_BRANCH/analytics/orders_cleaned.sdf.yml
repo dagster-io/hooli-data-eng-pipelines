@@ -1,0 +1,18 @@
+table:
+  name: orders_cleaned
+  description: Cleaned version of raw orders data
+  materialization: table
+  columns:
+  - name: user_id
+    description: Platform id of the user that placed this order.
+  - name: dt
+    description: The UTC time when this order was placed.
+  - name: order_total
+    description: The total purchase price for this order
+  - name: quantity
+    description: The quantity of items purchased in this order.
+  - name: purchase_price
+    description: The price of this item at the time the user placed the order.
+  - name: sku
+    description: The identifier of the item purched in this order.
+  

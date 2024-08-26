@@ -1,0 +1,5 @@
+table:
+  name: order_stats
+  description: ''
+  materialization: table
+  
