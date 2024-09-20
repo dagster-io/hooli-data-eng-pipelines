@@ -29,6 +29,6 @@ class CustomSlingTranslator(DagsterSlingTranslator):
    dagster_sling_translator=CustomSlingTranslator(),
 )
 def my_sling_assets(context, sling: SlingResource):
-   yield from sling.replicate(context=context)
+   yield from sling.replicate(context=context).fetch_column_metadata()
    for row in sling.stream_raw_logs():
        context.log.info(row)
