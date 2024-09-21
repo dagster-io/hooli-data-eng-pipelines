@@ -14,7 +14,10 @@ class CustomSlingTranslator(DagsterSlingTranslator):
         self.replication_config = replication_config
         
    def get_group_name(self, stream_definition):
-       return "RAW_DATA"
+      for key, value in stream_definition['config'].items():
+         if value == 'locations':
+            group_name = 'RAW_DATA'
+      return group_name
    
    def get_tags(self, stream_definition):
        # derive storage_kind from the target set in the replication_config
