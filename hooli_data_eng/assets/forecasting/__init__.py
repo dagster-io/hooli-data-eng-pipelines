@@ -6,7 +6,6 @@ from scipy import optimize
 
 from dagster import (
     asset,
-    AssetKey,
     AssetIn,
     MonthlyPartitionsDefinition,
     Output,
@@ -14,7 +13,6 @@ from dagster import (
     Config,
     AssetExecutionContext,
     MaterializeResult,
-    SourceAsset,
 )
 from dagster_k8s import PipesK8sClient
 from dagstermill import define_dagstermill_asset
@@ -64,9 +62,11 @@ class modelHyperParams(Config):
 
 @asset(
     ins={"weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
-    compute_kind="scikitlearn",
     io_manager_key="model_io_manager",
-    tags={**build_kind_tag("s3")},
+    tags={
+        **build_kind_tag("scikitlearn"),
+        **build_kind_tag("s3"),
+        },
 )
 def order_forecast_model(
     context, weekly_order_summary: pd.DataFrame, config: modelHyperParams
@@ -97,12 +97,14 @@ def order_forecast_model(
         "weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
-    compute_kind="scikitlearn",
     key_prefix=["forecasting"],
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01"),
-    tags={"core_kpis":"",
-          **build_kind_tag(storage_kind)},
+    tags={
+        "core_kpis":"",
+        **build_kind_tag("scikitlearn"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def model_stats_by_month(
     context,
@@ -139,9 +141,11 @@ def model_stats_by_month(
         "weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"]),
         "order_forecast_model": AssetIn(),
     },
-    compute_kind="pandas",
     key_prefix=["FORECASTING"],
-    tags={**build_kind_tag(storage_kind)},
+    tags={
+        **build_kind_tag("pandas"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def predicted_orders(
     weekly_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
@@ -165,11 +169,13 @@ def predicted_orders(
 # for building a databricks cluster
 @asset(
     ins={"predicted_orders": AssetIn(key_prefix=["FORECASTING"])},
-    compute_kind="pyspark",
     key_prefix=["FORECASTING"],
     required_resource_keys={"step_launcher", "pyspark"},
     metadata={"resource_constrained_at": 50},
-    tags={**build_kind_tag("databricks")},
+    tags={
+        **build_kind_tag("pyspark"),
+        **build_kind_tag("databricks"),
+        },
 )
 def big_orders(context, predicted_orders: pd.DataFrame):
     """Days where predicted orders surpass our current carrying capacity"""
@@ -198,8 +204,10 @@ model_nb = define_dagstermill_asset(
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @asset(
     deps=[predicted_orders],
-    compute_kind="databricks",
-    tags={**build_kind_tag("databricks")},
+    tags={
+        **build_kind_tag("pyspark"),
+        **build_kind_tag("databricks"),
+        },
 )
 def databricks_asset(
     context: AssetExecutionContext,
@@ -247,8 +255,10 @@ def databricks_asset(
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @asset(
     deps=[predicted_orders],
-    compute_kind="kubernetes",
-    tags={**build_kind_tag("S3")},
+    tags={
+        **build_kind_tag("kubernetes"),
+        **build_kind_tag("S3"),
+        },
 )
 def k8s_pod_asset(
     context: AssetExecutionContext,

@@ -31,10 +31,12 @@ storage_kind = get_storage_kind()
 @asset(
     key_prefix="MARKETING",
     automation_condition=AutomationCondition.on_cron('0 0 1-31/2 * *'),
-    compute_kind="pandas",
     owners=["team:programmers", "lopp@dagsterlabs.com"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={**build_kind_tag(storage_kind)},
+    tags={
+        **build_kind_tag("pandas"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def avg_orders(
     context: AssetExecutionContext, company_perf: pd.DataFrame
@@ -57,10 +59,12 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
 
 @asset(
     key_prefix="MARKETING",
-    compute_kind="pandas",
     owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={**build_kind_tag(storage_kind)},
+    tags={
+        **build_kind_tag("pandas"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""
@@ -77,10 +81,12 @@ product_skus = DynamicPartitionsDefinition(name="product_skus")
 @asset(
     partitions_def=product_skus,
     io_manager_key="model_io_manager",
-    compute_kind="hex",
     key_prefix="MARKETING",
     ins={"sku_stats": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={**build_kind_tag("s3")},
+    tags={
+        **build_kind_tag("hex"),
+        **build_kind_tag("s3"),
+        },
 )
 def key_product_deepdive(context, sku_stats):
     """Creates a file for a BI tool based on the current quarters top product, represented as a dynamic partition"""

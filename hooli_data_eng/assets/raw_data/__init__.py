@@ -40,12 +40,13 @@ def _daily_partition_seq(start, end):
 
 
 @asset(
-    compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
     backfill_policy=BackfillPolicy.single_run(),
     tags={"core_kpis":"",
-          **build_kind_tag(storage_kind)},
+          **build_kind_tag("api"),
+          **build_kind_tag(storage_kind),
+          },
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
@@ -82,7 +83,6 @@ def check_users(context, users: pd.DataFrame):
     )
 
 @asset(
-    compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=RetryPolicy(
@@ -92,7 +92,10 @@ def check_users(context, users: pd.DataFrame):
         jitter=Jitter.FULL
     ),
     backfill_policy=BackfillPolicy.single_run(),
-    tags={**build_kind_tag(storage_kind)},
+    tags={
+        **build_kind_tag("api"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
