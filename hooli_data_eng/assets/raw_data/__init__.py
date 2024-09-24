@@ -15,7 +15,7 @@ from dagster import (
     MetadataValue,
     RetryPolicy,
 )
-from dagster._core.definitions.tags import StorageKindTagSet
+from dagster._core.definitions.tags import build_kind_tag
 import pandas as pd
 
 from hooli_data_eng.resources.api import RawDataAPI
@@ -45,7 +45,7 @@ def _daily_partition_seq(start, end):
     metadata={"partition_expr": "created_at"},
     backfill_policy=BackfillPolicy.single_run(),
     tags={"core_kpis":"",
-          **StorageKindTagSet(storage_kind=storage_kind)},
+          **build_kind_tag(storage_kind)},
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
@@ -92,7 +92,7 @@ def check_users(context, users: pd.DataFrame):
         jitter=Jitter.FULL
     ),
     backfill_policy=BackfillPolicy.single_run(),
-    tags={**StorageKindTagSet(storage_kind=storage_kind)},
+    tags={**build_kind_tag(storage_kind)},
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
