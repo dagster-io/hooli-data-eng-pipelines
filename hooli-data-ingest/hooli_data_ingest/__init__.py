@@ -1,1 +1,1 @@
-from hooli_demo_assets.definitions import defs as defs
+from hooli_data_ingest.definitions import defs as defs

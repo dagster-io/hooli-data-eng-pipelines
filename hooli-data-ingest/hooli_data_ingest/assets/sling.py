@@ -5,7 +5,7 @@ from dagster_embedded_elt.sling import (
 )
 from dagster_embedded_elt.sling.dagster_sling_translator import DagsterSlingTranslator
 
-from hooli_demo_assets.resources import replication_config
+from hooli_data_ingest.resources import replication_config
 
 
 class CustomSlingTranslator(DagsterSlingTranslator):
