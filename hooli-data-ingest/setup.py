@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="hooli_demo_assets",
+    name="hooli_data_ingest",
     packages=find_packages(),
     install_requires=[
         "dagster",
