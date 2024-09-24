@@ -1,0 +1,5 @@
+type: dbt_select_job
+name: cleaned_assets
+select: "orders_cleaned users_cleaned locations_cleaned"
+exclude: "orders_augmented"
+cron: 0 8 * * *

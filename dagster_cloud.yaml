@@ -40,3 +40,10 @@ locations:
     build:
       directory: ./hooli-demo-assets
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
+  - location_name: blueprints
+    code_source:
+      package_name: custom_blueprints
+    build:
+      directory: ./blueprints
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
