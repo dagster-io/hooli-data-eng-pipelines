@@ -1,11 +1,11 @@
-from dagster._core.definitions.tags import StorageKindTagSet
+from dagster._core.definitions.tags import build_kind_tag
 from dagster_embedded_elt.sling import (
    sling_assets,
    SlingResource,
 )
 from dagster_embedded_elt.sling.dagster_sling_translator import DagsterSlingTranslator
 
-from hooli_demo_assets.resources import replication_config
+from hooli_data_ingest.resources import replication_config
 
 
 class CustomSlingTranslator(DagsterSlingTranslator):
@@ -21,7 +21,7 @@ class CustomSlingTranslator(DagsterSlingTranslator):
        storage_kind = self.replication_config.get("target", "DUCKDB")   
        if storage_kind.startswith("SNOWFLAKE"):
             storage_kind = "SNOWFLAKE"
-       return {**StorageKindTagSet(storage_kind=storage_kind)}
+       return {**build_kind_tag(storage_kind)}
 
 
 @sling_assets(
