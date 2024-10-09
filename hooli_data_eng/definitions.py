@@ -9,9 +9,11 @@ from dagster import (
     multiprocess_executor,
     with_source_code_references,
     EnvVar,
+    AssetSpec
 )
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
-from dagster_powerbi import PowerBIServicePrincipal, PowerBIWorkspace
+from dagster_powerbi import PowerBIServicePrincipal, PowerBIWorkspace, DagsterPowerBITranslator
+from dagster_powerbi.translator import PowerBIContentData
 
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
@@ -62,6 +64,20 @@ forecasting_assets = load_assets_from_package_module(
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
 
+class MyCustomPowerBITranslator(DagsterPowerBITranslator):
+    def get_report_spec(self, data: PowerBIContentData) -> AssetSpec:
+        return super().get_report_spec(data)._replace(group_name="FORECASTING")
+
+    def get_semantic_model_spec(self, data: PowerBIContentData) -> AssetSpec:
+        return super().get_semantic_model_spec(data)._replace(group_name="FORECASTING")
+
+    def get_dashboard_spec(self, data: PowerBIContentData) -> AssetSpec:
+        return super().get_dashboard_spec(data)._replace(group_name="FORECASTING")
+    
+    def get_data_source_spec(self, data: PowerBIContentData) -> AssetSpec:
+        return super().get_data_source_spec(data)._replace(group_name="FORECASTING")
+
+
 # Connect using a service principal
 powerbi_assets = PowerBIWorkspace(
     credentials=PowerBIServicePrincipal(
@@ -105,4 +121,4 @@ static_defs = Definitions(
 )
 
 
-defs = Definitions.merge(static_defs, powerbi_assets.build_defs(enable_refresh_semantic_models=True))
+defs = Definitions.merge(static_defs, powerbi_assets.build_defs(dagster_powerbi_translator=MyCustomPowerBITranslator, enable_refresh_semantic_models=True))
