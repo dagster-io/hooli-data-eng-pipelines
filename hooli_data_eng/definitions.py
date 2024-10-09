@@ -8,8 +8,11 @@ from dagster import (
     build_column_schema_change_checks,
     multiprocess_executor,
     with_source_code_references,
+    EnvVar,
 )
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
+from dagster_powerbi import PowerBIServicePrincipal, PowerBIWorkspace
+
 
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
@@ -59,13 +62,24 @@ forecasting_assets = load_assets_from_package_module(
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
 
+# Connect using a service principal
+powerbi_assets = PowerBIWorkspace(
+    credentials=PowerBIServicePrincipal(
+        client_id=EnvVar("AZURE_POWERBI_CLIENT_ID").get_value(),
+        client_secret=EnvVar("AZURE_POWERBI_CLIENT_SECRET_ID").get_value(),
+        tenant_id=EnvVar("AZURE_POWERBI_TENANT_ID").get_value(),
+    ),
+    workspace_id=EnvVar("AZURE_POWERBI_WORKSPACE_ID").get_value(),
+)
+
+
 # ---------------------------------------------------
 # Definitions
 
 # Definitions are the collection of assets, jobs, schedules, resources, and sensors
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
-defs = Definitions(
+static_defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
@@ -89,3 +103,6 @@ defs = Definitions(
     ],
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
 )
+
+
+defs = Definitions.merge(static_defs, powerbi_assets.build_defs(enable_refresh_semantic_models=True))
