@@ -15,11 +15,11 @@ from dagster import (
     MetadataValue,
     RetryPolicy,
 )
-from dagster._core.definitions.tags import StorageKindTagSet
+from dagster._core.definitions.tags import build_kind_tag
 import pandas as pd
 
 from hooli_data_eng.resources.api import RawDataAPI
-from hooli_data_eng.utils.config_utils import get_storage_kind
+from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
 
 
 # dynamically determine storage_kind based on environment
@@ -40,12 +40,13 @@ def _daily_partition_seq(start, end):
 
 
 @asset(
-    compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
     backfill_policy=BackfillPolicy.single_run(),
     tags={"core_kpis":"",
-          **StorageKindTagSet(storage_kind=storage_kind)},
+          **build_kind_tag("api"),
+          **build_kind_tag(storage_kind),
+          },
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
@@ -82,7 +83,6 @@ def check_users(context, users: pd.DataFrame):
     )
 
 @asset(
-    compute_kind="api",
     partitions_def=daily_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=RetryPolicy(
@@ -92,7 +92,10 @@ def check_users(context, users: pd.DataFrame):
         jitter=Jitter.FULL
     ),
     backfill_policy=BackfillPolicy.single_run(),
-    tags={**StorageKindTagSet(storage_kind=storage_kind)},
+    tags={
+        **build_kind_tag("api"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""

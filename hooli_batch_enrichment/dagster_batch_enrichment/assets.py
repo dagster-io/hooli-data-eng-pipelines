@@ -1,19 +1,31 @@
-from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy, Config
-from dagster_batch_enrichment.warehouse import MyWarehouse
-from dagster_batch_enrichment.api import EnrichmentAPI
-import numpy as np
-from pydantic import Field
-import pandas as pd
 import json
 
-class experimentConfig(Config):
-    experiment_name: str
+from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy, Config
+from dagster._core.definitions.tags import build_kind_tag
+import pandas as pd
+from pydantic import Field
+import numpy as np
 
-@asset
+from dagster_batch_enrichment.warehouse import MyWarehouse
+from dagster_batch_enrichment.api import EnrichmentAPI
+
+
+class experimentConfig(Config):
+    experiment_name: str = Field(
+        default="default_config", 
+        description="A name to give to this run's configuration set"
+    )
+
+@asset(
+    tags={
+        **build_kind_tag("Kubernetes"),
+        **build_kind_tag("S3"),
+        },
+)
 def raw_data(
     context: OpExecutionContext, 
     warehouse: MyWarehouse,
-    config: experimentConfig
+    config: experimentConfig,
 ):
     """ Placeholder for querying a real data source"""
     orders_to_process = warehouse.get_raw_data()
@@ -80,7 +92,12 @@ def concat_chunk_list(chunks) -> pd.DataFrame:
     return pd.concat(chunks)
 
 
-@graph_asset
+@graph_asset(
+    tags={
+        **build_kind_tag("Kubernetes"),
+        **build_kind_tag("S3"),
+        },
+)
 def enriched_data(raw_data) -> pd.DataFrame:
     """Full enrichment process"""
     chunks = split_rows(raw_data)

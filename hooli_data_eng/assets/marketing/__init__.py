@@ -1,6 +1,7 @@
 import datetime
 
 from dagster import (
+    AutomationCondition,
     asset,
     build_last_update_freshness_checks,
     build_sensor_for_freshness_checks,
@@ -15,12 +16,10 @@ from dagster import (
     ScheduleDefinition,
     AssetSelection
 )
-from dagster._core.definitions.tags import StorageKindTagSet
+from dagster._core.definitions.tags import build_kind_tag
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 import pandas as pd
-
-from hooli_data_eng.assets.dbt_assets import allow_outdated_parents_policy
-from hooli_data_eng.utils.config_utils import get_storage_kind
+from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
 
 
 # dynamically determine storage_kind based on environment
@@ -31,11 +30,13 @@ storage_kind = get_storage_kind()
 # dbt and create summaries using pandas
 @asset(
     key_prefix="MARKETING",
-    auto_materialize_policy=allow_outdated_parents_policy,
-    compute_kind="pandas",
+    automation_condition=AutomationCondition.on_cron('0 0 1-31/2 * *'),
     owners=["team:programmers", "lopp@dagsterlabs.com"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={**StorageKindTagSet(storage_kind=storage_kind)},
+    tags={
+        **build_kind_tag("pandas"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def avg_orders(
     context: AssetExecutionContext, company_perf: pd.DataFrame
@@ -58,10 +59,12 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
 
 @asset(
     key_prefix="MARKETING",
-    compute_kind="pandas",
     owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={**StorageKindTagSet(storage_kind=storage_kind)},
+    tags={
+        **build_kind_tag("pandas"),
+        **build_kind_tag(storage_kind),
+        },
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""
@@ -78,10 +81,12 @@ product_skus = DynamicPartitionsDefinition(name="product_skus")
 @asset(
     partitions_def=product_skus,
     io_manager_key="model_io_manager",
-    compute_kind="hex",
     key_prefix="MARKETING",
     ins={"sku_stats": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={**StorageKindTagSet(storage_kind="s3")},
+    tags={
+        **build_kind_tag("hex"),
+        **build_kind_tag("s3"),
+        },
 )
 def key_product_deepdive(context, sku_stats):
     """Creates a file for a BI tool based on the current quarters top product, represented as a dynamic partition"""
@@ -118,6 +123,6 @@ avg_orders_freshness_check_schedule = ScheduleDefinition(
     cron_schedule="*/10 * * * *",
     job=define_asset_job(
         "check_avg_orders_freshness_job",
-        selection=AssetSelection.checks(avg_orders_freshness_check)
+        selection=AssetSelection.checks(*avg_orders_freshness_check)
     )
 )

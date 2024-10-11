@@ -176,3 +176,5 @@ dbt_project/example.duckdb*
 dbt_project/logs
 /dagster-data
 /dlt_sources/.dlt
+
+.DS_Store
