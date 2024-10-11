@@ -22,7 +22,7 @@ from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
 from pydantic import Field
 
-from hooli_data_eng.utils.kind_helpers import get_storage_kind
+from hooli_data_eng.utils.kind_helpers import get_kind
 
 
 # dynamically determine storage_kind based on environment

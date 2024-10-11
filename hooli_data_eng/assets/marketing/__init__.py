@@ -20,7 +20,7 @@ from dagster._core.definitions.tags import build_kind_tag
 from dagster_snowflake import SnowflakeResource
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 import pandas as pd
-from hooli_data_eng.utils.kind_helpers import get_storage_kind
+from hooli_data_eng.utils.kind_helpers import get_kind
 
 
 # dynamically determine storage_kind based on environment
