@@ -14,16 +14,17 @@ from dagster import (
     AssetKey,
     define_asset_job, 
     ScheduleDefinition,
-    AssetSelection
-)
+    AssetSelection,
+    EnvVar,)
 from dagster._core.definitions.tags import build_kind_tag
+from dagster_snowflake import SnowflakeResource
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 import pandas as pd
-from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
+from hooli_data_eng.utils.kind_helpers import get_storage_kind
 
 
 # dynamically determine storage_kind based on environment
-storage_kind = get_storage_kind()
+storage_kind = get_kind()
 
 
 # These assets take data from a SQL table managed by
