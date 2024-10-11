@@ -17,7 +17,7 @@ class experimentConfig(Config):
     )
 
 @asset(
-    kinds={"Kubernetes", "S3"}
+    kinds={"Kubernetes", "S3"},
 )
 def raw_data(
     context: OpExecutionContext, 
@@ -90,7 +90,10 @@ def concat_chunk_list(chunks) -> pd.DataFrame:
 
 
 @graph_asset(
-    kinds={"Kubernetes", "S3"}
+    tags={
+        **build_kind_tag("Kubernetes"),
+        **build_kind_tag("S3"),
+        },
 )
 def enriched_data(raw_data) -> pd.DataFrame:
     """Full enrichment process"""
