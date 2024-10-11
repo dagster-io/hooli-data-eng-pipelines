@@ -16,7 +16,6 @@ from dagster import (
     ScheduleDefinition,
     AssetSelection,
     EnvVar,)
-from dagster._core.definitions.tags import build_kind_tag
 from dagster_snowflake import SnowflakeResource
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 import pandas as pd
@@ -34,10 +33,7 @@ storage_kind = get_kind()
     automation_condition=AutomationCondition.on_cron('0 0 1-31/2 * *'),
     owners=["team:programmers", "lopp@dagsterlabs.com"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={
-        **build_kind_tag("pandas"),
-        **build_kind_tag(storage_kind),
-        },
+    kinds={"pandas", storage_kind},
 )
 def avg_orders(
     context: AssetExecutionContext, company_perf: pd.DataFrame
@@ -62,10 +58,7 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     key_prefix="MARKETING",
     owners=["team:programmers"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={
-        **build_kind_tag("pandas"),
-        **build_kind_tag(storage_kind),
-        },
+    kinds={"pandas", storage_kind},
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""
@@ -84,10 +77,7 @@ product_skus = DynamicPartitionsDefinition(name="product_skus")
     io_manager_key="model_io_manager",
     key_prefix="MARKETING",
     ins={"sku_stats": AssetIn(key_prefix=["ANALYTICS"])},
-    tags={
-        **build_kind_tag("hex"),
-        **build_kind_tag("s3"),
-        },
+    kinds={"hex", "s3"},
 )
 def key_product_deepdive(context, sku_stats):
     """Creates a file for a BI tool based on the current quarters top product, represented as a dynamic partition"""

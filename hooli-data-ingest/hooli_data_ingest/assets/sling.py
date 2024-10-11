@@ -18,10 +18,10 @@ class CustomSlingTranslator(DagsterSlingTranslator):
    
    def get_tags(self, stream_definition):
        # derive storage_kind from the target set in the replication_config
-       storage_kind = self.replication_config.get("target", "DUCKDB")   
-       if storage_kind.startswith("SNOWFLAKE"):
-            storage_kind = "SNOWFLAKE"
-       return {**build_kind_tag(storage_kind)}
+       kinds = self.replication_config.get("target", "DUCKDB")   
+       if kinds.startswith("SNOWFLAKE"):
+            kinds = "SNOWFLAKE"
+       return {**build_kind_tag(kinds)}
 
 
 @sling_assets(
