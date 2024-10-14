@@ -1,0 +1,1 @@
+select order_date, num_orders from DEMO_DB2_BRANCH.forecasting.predicted_orders

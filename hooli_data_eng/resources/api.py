@@ -18,7 +18,7 @@ from typing import Optional
 
 class RawDataAPI(ConfigurableResource):
     
-    flaky: Optional[bool] = True 
+    flaky: Optional[bool] = False 
 
     @responses.activate
     def get_orders(self, datetime_to_process):

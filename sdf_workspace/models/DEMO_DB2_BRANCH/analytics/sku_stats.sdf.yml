@@ -1,0 +1,5 @@
+table:
+  name: sku_stats
+  description: ''
+  materialization: table
+  

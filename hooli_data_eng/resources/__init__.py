@@ -4,6 +4,7 @@ from dagster import EnvVar, FilesystemIOManager, ResourceDefinition
 from dagster._utils import file_relative_path
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
 from dagster_dbt import DbtCliResource
+from dagster_sdf import SdfCliResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_k8s import PipesK8sClient
 from dagster_pyspark import pyspark_resource
@@ -15,6 +16,7 @@ from hooli_data_eng.project import (
     get_env,
     DBT_PROJECT_DIR,
 )
+from hooli_data_eng.workspace import workspace
 from hooli_data_eng.resources.api import RawDataAPI
 from hooli_data_eng.resources.databricks import db_step_launcher
 
@@ -75,6 +77,7 @@ resource_def = {
         ),
         "pipes_databricks_client": ResourceDefinition.none_resource(),
         "pipes_k8s_client": ResourceDefinition.none_resource(),
+        "sdf": SdfCliResource(workspace_dir=workspace, global_config_flags=["--log-form=nested"])
     },
     "BRANCH": {
         "io_manager": SnowflakePandasIOManager(
@@ -100,6 +103,7 @@ resource_def = {
         "email": ResourceDefinition.none_resource(),
         "pipes_databricks_client": ResourceDefinition.none_resource(),
         "pipes_k8s_client": PipesK8sClient(),
+        "sdf": SdfCliResource(workspace_dir=workspace, global_config_flags=["--log-form=nested"])
     },
     "PROD": {
         "io_manager": SnowflakePandasIOManager(
@@ -129,5 +133,6 @@ resource_def = {
         ),
         "pipes_databricks_client": PipesDatabricksClient(client),
         "pipes_k8s_client": PipesK8sClient(),
+        "sdf": SdfCliResource(workspace_dir=workspace, global_config_flags=["--log-form=nested"])
     },
 }

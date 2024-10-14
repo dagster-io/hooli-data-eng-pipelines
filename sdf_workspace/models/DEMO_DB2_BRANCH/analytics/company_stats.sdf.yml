@@ -1,0 +1,5 @@
+table:
+  name: company_stats
+  description: ''
+  materialization: table
+  

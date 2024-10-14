@@ -1,0 +1,18 @@
+table:
+  name: locations_cleaned
+  description: Locations data with standardized column names
+  materialization: table
+  columns:
+  - name: user_id
+    description: The unique identifier for the user
+  - name: street_address
+    description: The user's street address
+  - name: zip_code
+    description: The user's street address
+  - name: country
+    description: The unique identifier for the user
+  - name: state
+    description: The state portion of the user's address
+  - name: _sling_loaded_at
+    description: The state portion of the user's address
+  
