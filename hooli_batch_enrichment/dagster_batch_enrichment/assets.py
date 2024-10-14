@@ -1,7 +1,7 @@
 import json
 
 from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy, Config
-from dagster._core.definitions.tags import StorageKindTagSet
+from dagster._core.definitions.tags import build_kind_tag
 import pandas as pd
 from pydantic import Field
 import numpy as np
@@ -17,8 +17,10 @@ class experimentConfig(Config):
     )
 
 @asset(
-    compute_kind="Kubernetes",
-    tags={**StorageKindTagSet(storage_kind="S3")},
+    tags={
+        **build_kind_tag("Kubernetes"),
+        **build_kind_tag("S3"),
+        },
 )
 def raw_data(
     context: OpExecutionContext, 
@@ -92,8 +94,9 @@ def concat_chunk_list(chunks) -> pd.DataFrame:
 
 @graph_asset(
     tags={
-        **StorageKindTagSet(storage_kind="S3"),
-    },
+        **build_kind_tag("Kubernetes"),
+        **build_kind_tag("S3"),
+        },
 )
 def enriched_data(raw_data) -> pd.DataFrame:
     """Full enrichment process"""

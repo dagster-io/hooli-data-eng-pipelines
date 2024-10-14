@@ -78,8 +78,8 @@ jobs:
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
         run: |
-          pip install pip --upgrade;
-          pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake grpcio-health-checking==1.64.3 --upgrade --upgrade-strategy eager;
+          python -m pip install pip --upgrade;
+          pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade --upgrade-strategy eager;
           make deps
           dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
@@ -153,23 +153,23 @@ jobs:
         with:
           command: "ci set-build-output --location-name=snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
 
-      # Build 'demo_assets' code location
-      - name: Build and upload Docker image for demo_assets
+      # Build 'hooli_data_ingest' code location
+      - name: Build and upload Docker image for hooli_data_ingest
         if: steps.prerun.outputs.result != 'skip'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-demo-assets
+          context: ./hooli-data-ingest
           push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-demo-assets
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update build session with image tag for demo_assets
-        id: ci-set-build-output-demo-assets
+      - name: Update build session with image tag for hooli_data_ingest
+        id: ci-set-build-output-hooli-data-ingest
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
         with:
-          command: "ci set-build-output --location-name=demo_assets --image-tag=$IMAGE_TAG-demo-assets"
+          command: "ci set-build-output --location-name=hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example

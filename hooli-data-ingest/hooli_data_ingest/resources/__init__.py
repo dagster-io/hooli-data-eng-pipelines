@@ -16,10 +16,10 @@ def get_env():
 
 # Paths for local dev
 current_file_path = Path(__file__)
-hooli_demo_root = current_file_path.parent.parent.parent
-project_root = hooli_demo_root.parent
+hooli_data_ingest_root = current_file_path.parent.parent.parent
+project_root = hooli_data_ingest_root.parent
 DUCKDB_PATH = project_root / "dbt_project" / "example.duckdb"
-LOCATIONS_CSV_PATH = f"file://{hooli_demo_root}/locations.csv"
+LOCATIONS_CSV_PATH = f"file://{hooli_data_ingest_root}/locations.csv"
 
 
 if get_env() == "LOCAL":
