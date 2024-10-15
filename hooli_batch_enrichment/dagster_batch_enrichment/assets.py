@@ -17,10 +17,7 @@ class experimentConfig(Config):
     )
 
 @asset(
-    tags={
-        **build_kind_tag("Kubernetes"),
-        **build_kind_tag("S3"),
-        },
+    kinds={"Kubernetes", "S3"},
 )
 def raw_data(
     context: OpExecutionContext, 

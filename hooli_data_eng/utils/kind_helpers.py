@@ -1,6 +1,6 @@
 import os
 
-def get_storage_kind() -> str:
+def get_kind() -> str:
     """
     Determine the storage kind based on the environment.
 

@@ -14,10 +14,7 @@ from pandas import DataFrame, read_html, get_dummies, to_numeric
 from sklearn.linear_model import LinearRegression as Regression
 
 @asset(
-    tags={
-        **build_kind_tag("Kubernetes"),
-        **build_kind_tag("S3"),
-        },
+    kinds={"Kubernetes", "S3"},
 )
 def country_stats() -> DataFrame:
     df = read_html("https://tinyurl.com/mry64ebh", flavor='html5lib')[0]
@@ -40,10 +37,7 @@ def check_country_stats(country_stats):
     return AssetCheckResult(passed=True)
 
 @asset(
-    tags={
-        **build_kind_tag("Kubernetes"),
-        **build_kind_tag("S3"),
-        },
+    kinds={"Kubernetes", "S3"}
 )
 def change_model(country_stats: DataFrame) -> Regression:
     data = country_stats.dropna(subset=["pop_change"])
@@ -51,10 +45,7 @@ def change_model(country_stats: DataFrame) -> Regression:
     return Regression().fit(dummies, data["pop_change"])
 
 @asset(
-    tags={
-        **build_kind_tag("Kubernetes"),
-        **build_kind_tag("S3"),
-        },
+    kinds={"Kubernetes", "S3"}
 )
 def continent_stats(country_stats: DataFrame, change_model: Regression) -> DataFrame:
     result = country_stats.groupby("continent").sum()
