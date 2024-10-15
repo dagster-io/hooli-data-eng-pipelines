@@ -15,6 +15,7 @@ from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
+from hooli_data_eng.blueprints.blueprints import loader
 from hooli_data_eng.jobs import analytics_job, predict_job
 from hooli_data_eng.resources import get_env, resource_def
 from hooli_data_eng.schedules import analytics_schedule
@@ -65,7 +66,8 @@ marketing_assets = load_assets_from_package_module(marketing, group_name="MARKET
 # Definitions are the collection of assets, jobs, schedules, resources, and sensors
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
-defs = Definitions(
+# Use Definitions.merge to include blueprints definitions
+defs = Definitions.merge(loader.load_defs(), Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
@@ -88,4 +90,5 @@ defs = Definitions(
        weekly_freshness_check_sensor
     ],
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
+    )
 )

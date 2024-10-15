@@ -8,6 +8,7 @@ if __name__ == "__main__":
         install_requires=[
             "dagster",
             "dagster-dbt",
+            "dagster-blueprints",
             "pandas",
             "numpy",
             "scipy",
