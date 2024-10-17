@@ -50,7 +50,7 @@ jobs:
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          deployment: ${{ env.DAGSTER_PROJECT_DIR }}
+          deployment: ${{ env.DEPLOYMENT_ENV }}
 
       - name: Generate docker image tag
         id: generate-image-tag
