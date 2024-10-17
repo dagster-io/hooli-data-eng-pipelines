@@ -12,6 +12,8 @@ def get_env():
        return "BRANCH"
    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
        return "PROD"
+   if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-staging":
+       return "BRANCH"
    return "LOCAL"
 
 # Paths for local dev

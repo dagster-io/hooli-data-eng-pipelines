@@ -4,6 +4,7 @@ on:
     branches:
       - "main"
       - "master"
+      - "test-staging"
   pull_request:  # For branch deployments
      types: [opened, synchronize, reopened, closed]
 
@@ -19,6 +20,8 @@ env:
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
   IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  env:
+  DEPLOYMENT_ENV: ${{ github.ref == 'refs/heads/test-staging' && 'data-eng-staging' || github.ref == 'refs/heads/master' && 'data-eng-prod' || 'unknown' }}
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-20.04
@@ -47,7 +50,7 @@ jobs:
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          deployment: 'data-eng-prod'
+          deployment: ${{ env.DAGSTER_PROJECT_DIR }}
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -73,7 +76,7 @@ jobs:
 
       - name: Set Prod Deployment Environment Variable for Push
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
-        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=${{ env.DEPLOYMENT_ENV }}" >> $GITHUB_ENV
 
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
