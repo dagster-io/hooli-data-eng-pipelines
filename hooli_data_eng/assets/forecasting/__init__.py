@@ -22,11 +22,11 @@ from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
 from pydantic import Field
 
-from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
+from hooli_data_eng.utils.kind_helpers import get_kind
 
 
 # dynamically determine storage_kind based on environment
-storage_kind = get_storage_kind()
+storage_kind = get_kind()
 
 
 def model_func(x, a, b):
@@ -63,10 +63,7 @@ class modelHyperParams(Config):
 @asset(
     ins={"weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     io_manager_key="model_io_manager",
-    tags={
-        **build_kind_tag("scikitlearn"),
-        **build_kind_tag("s3"),
-        },
+    kinds={"scikitlearn", "S3"}
 )
 def order_forecast_model(
     context, weekly_order_summary: pd.DataFrame, config: modelHyperParams
@@ -102,9 +99,8 @@ def order_forecast_model(
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01"),
     tags={
         "core_kpis":"",
-        **build_kind_tag("scikitlearn"),
-        **build_kind_tag(storage_kind),
         },
+    kinds={"scikitlearn", storage_kind}
 )
 def model_stats_by_month(
     context,
@@ -142,10 +138,7 @@ def model_stats_by_month(
         "order_forecast_model": AssetIn(),
     },
     key_prefix=["FORECASTING"],
-    tags={
-        **build_kind_tag("pandas"),
-        **build_kind_tag(storage_kind),
-        },
+    kinds={"pandas", storage_kind}
 )
 def predicted_orders(
     weekly_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
@@ -172,10 +165,7 @@ def predicted_orders(
     key_prefix=["FORECASTING"],
     required_resource_keys={"step_launcher", "pyspark"},
     metadata={"resource_constrained_at": 50},
-    tags={
-        **build_kind_tag("pyspark"),
-        **build_kind_tag("databricks"),
-        },
+    kinds={"pyspark", "databricks"},
 )
 def big_orders(context, predicted_orders: pd.DataFrame):
     """Days where predicted orders surpass our current carrying capacity"""
@@ -204,10 +194,7 @@ model_nb = define_dagstermill_asset(
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @asset(
     deps=[predicted_orders],
-    tags={
-        **build_kind_tag("pyspark"),
-        **build_kind_tag("databricks"),
-        },
+    kinds={"pyspark", "databricks"},
 )
 def databricks_asset(
     context: AssetExecutionContext,
@@ -255,10 +242,7 @@ def databricks_asset(
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @asset(
     deps=[predicted_orders],
-    tags={
-        **build_kind_tag("kubernetes"),
-        **build_kind_tag("S3"),
-        },
+    kinds={"kubernetes", "S3"},
 )
 def k8s_pod_asset(
     context: AssetExecutionContext,
