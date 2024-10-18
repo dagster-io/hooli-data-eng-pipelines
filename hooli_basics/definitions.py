@@ -8,7 +8,6 @@ from dagster import (
     Definitions,
     with_source_code_references,
 )
-from dagster._core.definitions.tags import build_kind_tag
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 from pandas import DataFrame, read_html, get_dummies, to_numeric
 from sklearn.linear_model import LinearRegression as Regression

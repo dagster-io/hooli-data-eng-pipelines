@@ -1,7 +1,6 @@
 import json
 
 from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy, Config
-from dagster._core.definitions.tags import build_kind_tag
 import pandas as pd
 from pydantic import Field
 import numpy as np
@@ -90,10 +89,7 @@ def concat_chunk_list(chunks) -> pd.DataFrame:
 
 
 @graph_asset(
-    tags={
-        **build_kind_tag("Kubernetes"),
-        **build_kind_tag("S3"),
-        },
+    kinds={"Kubernetes", "S3"},
 )
 def enriched_data(raw_data) -> pd.DataFrame:
     """Full enrichment process"""

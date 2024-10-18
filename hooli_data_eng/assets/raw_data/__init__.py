@@ -15,7 +15,6 @@ from dagster import (
     MetadataValue,
     RetryPolicy,
 )
-from dagster._core.definitions.tags import build_kind_tag
 import pandas as pd
 
 from hooli_data_eng.resources.api import RawDataAPI

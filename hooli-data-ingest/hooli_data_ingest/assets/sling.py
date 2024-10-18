@@ -1,4 +1,3 @@
-from dagster._core.definitions.tags import build_kind_tag
 from dagster_embedded_elt.sling import (
    sling_assets,
    SlingResource,
@@ -16,11 +15,11 @@ class CustomSlingTranslator(DagsterSlingTranslator):
    def get_group_name(self, stream_definition):
        return "RAW_DATA"
    
-   def get_kinds(self):
+   def get_kinds(self, stream_definition):
        storage_kind = self.replication_config.get("target", "DUCKDB")   
        if storage_kind.startswith("SNOWFLAKE"):
             storage_kind = "SNOWFLAKE"
-       return storage_kind
+       return {"sling",storage_kind}
        
 
 
