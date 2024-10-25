@@ -15,15 +15,14 @@ from dagster import (
     MetadataValue,
     RetryPolicy,
 )
-from dagster._core.definitions.tags import build_kind_tag
 import pandas as pd
 
 from hooli_data_eng.resources.api import RawDataAPI
-from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
+from hooli_data_eng.utils.kind_helpers import get_kind
 
 
 # dynamically determine storage_kind based on environment
-storage_kind = get_storage_kind()
+storage_kind = get_kind()
 
 
 daily_partitions = DailyPartitionsDefinition(
@@ -43,10 +42,7 @@ def _daily_partition_seq(start, end):
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
     backfill_policy=BackfillPolicy.single_run(),
-    tags={"core_kpis":"",
-          **build_kind_tag("api"),
-          **build_kind_tag(storage_kind),
-          },
+    kinds={"api", storage_kind},
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""
@@ -92,10 +88,7 @@ def check_users(context, users: pd.DataFrame):
         jitter=Jitter.FULL
     ),
     backfill_policy=BackfillPolicy.single_run(),
-    tags={
-        **build_kind_tag("api"),
-        **build_kind_tag(storage_kind),
-        },
+    kinds={"api", storage_kind},
 )
 def orders(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all orders that have been placed"""
