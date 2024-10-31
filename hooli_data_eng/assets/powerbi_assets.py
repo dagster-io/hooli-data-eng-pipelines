@@ -11,21 +11,21 @@ from hooli_data_eng.powerbi_workspace import power_bi_workspace
 
 class MyCustomPowerBITranslator(DagsterPowerBITranslator):
     def get_report_spec(self, data: PowerBIContentData) -> AssetSpec:
-        return super().get_report_spec(data)._replace(group_name="FORECASTING")
+        return super().get_report_spec(data)._replace(group_name="BI")
 
     def get_semantic_model_spec(self, data: PowerBIContentData) -> AssetSpec:       
         spec = super().get_semantic_model_spec(data)
         return replace_attributes(
             spec,
-            group_name="FORECASTING",
+            group_name="BI",
             deps=[AssetKey(path=[dep.asset_key.path[1].upper(), dep.asset_key.path[2]]) for dep in spec.deps],
             tags={"core_kpis":"","dagster-powerbi/asset_type": "semantic_model"})
 
     def get_dashboard_spec(self, data: PowerBIContentData) -> AssetSpec:
-        return super().get_dashboard_spec(data)._replace(group_name="FORECASTING")
+        return super().get_dashboard_spec(data)._replace(group_name="BI")
     
     def get_data_source_spec(self, data: PowerBIContentData) -> AssetSpec:
-        return super().get_data_source_spec(data)._replace(group_name="FORECASTING")
+        return super().get_data_source_spec(data)._replace(group_name="BI")
 
 powerbi_assets = [
     build_semantic_model_refresh_asset_definition(resource_key="power_bi", spec=spec)
