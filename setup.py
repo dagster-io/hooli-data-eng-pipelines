@@ -31,7 +31,7 @@ if __name__ == "__main__":
             "requests_toolbelt",
             "html5lib",
             "scikit-learn",
-            "dagster-powerbi==0.0.11"
+            "dagster-powerbi"
         ],
         extras_require={"dev": ["dagster-webserver", "pytest"],
                         "sling": ["dagster-embedded-elt"]},
