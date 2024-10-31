@@ -90,5 +90,3 @@ defs = Definitions(
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
 )
 
-
-#defs = Definitions.merge(static_defs, powerbi_assets.build_defs(dagster_powerbi_translator=MyCustomPowerBITranslator, enable_refresh_semantic_models=True))
