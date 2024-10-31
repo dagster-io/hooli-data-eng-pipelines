@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from dagster._core.definitions.asset_spec import replace_attributes
 from dagster import (
     AnchorBasedFilePathMapping,
     Definitions,
@@ -9,10 +9,17 @@ from dagster import (
     multiprocess_executor,
     with_source_code_references,
     EnvVar,
-    AssetSpec
+    AssetSpec,
+    AssetKey,
 )
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
-from dagster_powerbi import PowerBIServicePrincipal, PowerBIWorkspace, DagsterPowerBITranslator
+from dagster_powerbi import (
+    PowerBIServicePrincipal,
+    PowerBIToken,
+    load_powerbi_asset_specs,
+    DagsterPowerBITranslator,
+    build_semantic_model_refresh_asset_definition,
+)
 from dagster_powerbi.translator import PowerBIContentData
 
 
@@ -27,7 +34,7 @@ from hooli_data_eng.sensors import orders_sensor, dbt_code_version_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
 from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
 from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
-
+from hooli_data_eng.powerbi_workspace import power_bi_workspace
 # ---------------------------------------------------
 # Assets
 
@@ -68,8 +75,9 @@ class MyCustomPowerBITranslator(DagsterPowerBITranslator):
     def get_report_spec(self, data: PowerBIContentData) -> AssetSpec:
         return super().get_report_spec(data)._replace(group_name="FORECASTING")
 
-    def get_semantic_model_spec(self, data: PowerBIContentData) -> AssetSpec:
-        return super().get_semantic_model_spec(data)._replace(group_name="FORECASTING")
+    def get_semantic_model_spec(self, data: PowerBIContentData) -> AssetSpec:       
+        spec = super().get_semantic_model_spec(data)
+        return replace_attributes(spec, group_name="FORECASTING", deps=[AssetKey(path=[dep.asset_key.path[1].upper(), dep.asset_key.path[2]]) for dep in spec.deps])
 
     def get_dashboard_spec(self, data: PowerBIContentData) -> AssetSpec:
         return super().get_dashboard_spec(data)._replace(group_name="FORECASTING")
@@ -78,16 +86,16 @@ class MyCustomPowerBITranslator(DagsterPowerBITranslator):
         return super().get_data_source_spec(data)._replace(group_name="FORECASTING")
 
 
-# Connect using a service principal
-powerbi_assets = PowerBIWorkspace(
-    credentials=PowerBIServicePrincipal(
-        client_id=EnvVar("AZURE_POWERBI_CLIENT_ID").get_value(),
-        client_secret=EnvVar("AZURE_POWERBI_CLIENT_SECRET_ID").get_value(),
-        tenant_id=EnvVar("AZURE_POWERBI_TENANT_ID").get_value(),
-    ),
-    workspace_id=EnvVar("AZURE_POWERBI_WORKSPACE_ID").get_value(),
+power_bi_specs = load_powerbi_asset_specs(
+    power_bi_workspace, dagster_powerbi_translator=MyCustomPowerBITranslator, use_workspace_scan=True
 )
 
+power_bi_assets = [
+    build_semantic_model_refresh_asset_definition(resource_key="power_bi", spec=spec)
+    if spec.tags.get("dagster-powerbi/asset_type") == "semantic_model"
+    else spec
+    for spec in load_powerbi_asset_specs(power_bi_workspace)
+]
 
 # ---------------------------------------------------
 # Definitions
@@ -95,12 +103,12 @@ powerbi_assets = PowerBIWorkspace(
 # Definitions are the collection of assets, jobs, schedules, resources, and sensors
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
-static_defs = Definitions(
+defs = Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
     assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
+        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets, *power_bi_specs]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
             file_anchor_path_in_repository="hooli_data_eng/definitions.py"
@@ -121,4 +129,4 @@ static_defs = Definitions(
 )
 
 
-defs = Definitions.merge(static_defs, powerbi_assets.build_defs(dagster_powerbi_translator=MyCustomPowerBITranslator, enable_refresh_semantic_models=True))
+#defs = Definitions.merge(static_defs, powerbi_assets.build_defs(dagster_powerbi_translator=MyCustomPowerBITranslator, enable_refresh_semantic_models=True))
