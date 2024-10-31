@@ -94,7 +94,7 @@ power_bi_assets = [
     build_semantic_model_refresh_asset_definition(resource_key="power_bi", spec=spec)
     if spec.tags.get("dagster-powerbi/asset_type") == "semantic_model"
     else spec
-    for spec in load_powerbi_asset_specs(power_bi_workspace)
+    for spec in power_bi_specs
 ]
 
 # ---------------------------------------------------
@@ -108,7 +108,7 @@ defs = Definitions(
         {"max_concurrent": 3}
     ),  
     assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets, *power_bi_specs]),
+        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets, *power_bi_assets]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
             file_anchor_path_in_repository="hooli_data_eng/definitions.py"
