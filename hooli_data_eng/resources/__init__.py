@@ -22,7 +22,6 @@ from hooli_data_eng.resources.databricks import db_step_launcher
 # from hooli_data_eng.resources.warehouse import MySnowflakeIOManager as SnowflakePandasIOManager
 from hooli_data_eng.resources.sensor_file_managers import s3FileSystem, LocalFileSystem
 from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
-from hooli_data_eng.powerbi_workspace import power_bi_workspace
 
 from databricks.sdk import WorkspaceClient
 from dagster_databricks import PipesDatabricksClient
@@ -59,7 +58,6 @@ if get_env() == "PROD":
 
 resource_def = {
     "LOCAL": {
-        "power_bi": power_bi_workspace,
         "io_manager": DuckDBPandasIOManager(
             database=os.path.join(DBT_PROJECT_DIR, "example.duckdb")
         ),
@@ -79,7 +77,6 @@ resource_def = {
         "pipes_k8s_client": ResourceDefinition.none_resource(),
     },
     "BRANCH": {
-        "power_bi": power_bi_workspace,
         "io_manager": SnowflakePandasIOManager(
             database="DEMO_DB2_BRANCH",
             account=EnvVar("SNOWFLAKE_ACCOUNT"),
@@ -105,7 +102,6 @@ resource_def = {
         "pipes_k8s_client": PipesK8sClient(),
     },
     "PROD": {
-        "power_bi": power_bi_workspace,
         "io_manager": SnowflakePandasIOManager(
             database="DEMO_DB2",
             account=EnvVar("SNOWFLAKE_ACCOUNT"),

@@ -40,3 +40,10 @@ locations:
     build:
       directory: ./hooli-data-ingest
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
+  - location_name: hooli_bi
+    code_source:
+      package_name: hooli_bi
+    build:
+      directory: ./hooli-bi
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

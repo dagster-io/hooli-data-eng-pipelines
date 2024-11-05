@@ -6,8 +6,7 @@ from dagster_powerbi import (
     build_semantic_model_refresh_asset_definition,
 )
 from dagster_powerbi.translator import PowerBIContentData
-from hooli_data_eng.powerbi_workspace import power_bi_workspace
-
+from hooli_bi.powerbi_workspace import power_bi_workspace
 
 class MyCustomPowerBITranslator(DagsterPowerBITranslator):
     def get_report_spec(self, data: PowerBIContentData) -> AssetSpec:
