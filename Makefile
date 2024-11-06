@@ -20,6 +20,15 @@ stateful_dev_prod: clean manifest
 dependencies:
 	uv pip install -e ".[dev]"
 
+update_python_packages:
+	uv lock --upgrade;
+	uv lock --upgrade --directory hooli_basics;
+	uv lock --upgrade --directory hooli_batch_enrichment;
+	uv lock --upgrade --directory hooli_snowflake_insights;
+	uv lock --upgrade --directory hooli-data-ingest;
+	uv lock --upgrade --directory hooli-bi;
+
+
 # ensure that DAGSTER_GIT_REPO_DIR is set to the path of the dagster repo
 # see https://www.notion.so/dagster/Local-Dev-Setup-e58aba352f704dcc88a8dc44cb1ce7fc for more details
 # ensure your virtual environment is activated here
