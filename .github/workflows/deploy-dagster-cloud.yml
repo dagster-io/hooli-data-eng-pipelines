@@ -61,6 +61,14 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -96,8 +104,8 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output-data-eng-pipeline
@@ -114,8 +122,8 @@ jobs:
           context: ./hooli_basics
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for basics
         id: ci-set-build-output-basics
@@ -132,6 +140,8 @@ jobs:
           context: ./hooli_batch_enrichment
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for batch enrichment
         id: ci-set-build-output-batch-enrichment
@@ -148,8 +158,8 @@ jobs:
           context: ./hooli_snowflake_insights
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for snowflake insights
         id: ci-set-build-output-snowflake-insights
@@ -166,8 +176,8 @@ jobs:
           context: ./hooli-data-ingest
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for hooli_data_ingest
         id: ci-set-build-output-hooli-data-ingest
@@ -184,8 +194,8 @@ jobs:
           context: ./hooli-bi
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for hooli_bi
         id: ci-set-build-output-hooli-bi
@@ -202,8 +212,8 @@ jobs:
           context: ./hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=buildx
+          cache-to: type=gha,mode=max,scope=buildx
 
       # Deploy
       - name: Deploy to Dagster Cloud
