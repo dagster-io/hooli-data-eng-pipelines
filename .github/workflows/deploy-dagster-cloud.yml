@@ -66,8 +66,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ github.ref_name }}-$(echo ${{ hashFiles('Dockerfile') }})
           restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.ref_name }}-
             ${{ runner.os }}-buildx-
 
       - name: Configure AWS credentials
