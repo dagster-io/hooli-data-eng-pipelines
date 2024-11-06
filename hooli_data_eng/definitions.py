@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from dagster import (
     AnchorBasedFilePathMapping,
     Definitions,
@@ -23,7 +22,6 @@ from hooli_data_eng.sensors import orders_sensor, dbt_code_version_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
 from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
 from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
-
 # ---------------------------------------------------
 # Assets
 
@@ -60,6 +58,7 @@ forecasting_assets = load_assets_from_package_module(
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
 
+
 # ---------------------------------------------------
 # Definitions
 
@@ -72,7 +71,7 @@ defs = Definitions.merge(loader.load_defs(), Definitions(
         {"max_concurrent": 3}
     ),  
     assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
+        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets,]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
             file_anchor_path_in_repository="hooli_data_eng/definitions.py"
@@ -92,3 +91,4 @@ defs = Definitions.merge(loader.load_defs(), Definitions(
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
     )
 )
+

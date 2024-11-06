@@ -171,6 +171,24 @@ jobs:
         with:
           command: "ci set-build-output --location-name=hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
 
+      # Build 'hooli_bi' code location
+      - name: Build and upload Docker image for hooli_bi
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-bi
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update build session with image tag for hooli_bi
+        id: ci-set-build-output-hooli-bi
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.38
+        with:
+          command: "ci set-build-output --location-name=hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
+
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
         if: steps.prerun.outputs.result != 'skip'
