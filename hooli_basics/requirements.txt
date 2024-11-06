@@ -1,6 +1,0 @@
-pandas
-beautifulsoup4
-html5lib
-scikit-learn
-dagster
-dagster-cloud[insights]
