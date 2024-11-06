@@ -19,7 +19,7 @@ env:
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
   IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-jobs:
+jobs: 
   dagster-cloud-deploy:
     runs-on: ubuntu-22.04
     steps:
