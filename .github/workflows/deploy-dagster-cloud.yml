@@ -33,6 +33,11 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
 
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
@@ -78,9 +83,7 @@ jobs:
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
         run: |
-          python -m pip install pip --upgrade;
-          pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade --upgrade-strategy eager;
-          make deps
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
           dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
