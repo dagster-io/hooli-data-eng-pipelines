@@ -83,7 +83,7 @@ jobs:
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip'
         run: |
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade --system;
           dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
