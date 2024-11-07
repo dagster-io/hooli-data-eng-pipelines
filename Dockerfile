@@ -1,5 +1,5 @@
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm
 
 WORKDIR /opt/dagster/app
 
@@ -11,7 +11,8 @@ ENV UV_PROJECT_ENVIRONMENT=/usr/local
 ENV UV_LINK_MODE=copy
 
 
-RUN apt-get update && apt-get install -y git gcc default-jre
+#RUN apt-get update && apt-get install -y git gcc default-jre
+RUN apt-get update && apt-get install -y default-jre
 
 
 # Install the project's dependencies using the lockfile and settings
