@@ -28,4 +28,4 @@ RUN apt-get update && apt-get install -y default-jre
 #     uv sync --frozen --no-dev
 ADD . /opt/dagster/app
 
-RUN uv pip install -e .
+RUN uv pip install -e . --system
