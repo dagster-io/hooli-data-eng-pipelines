@@ -12,8 +12,8 @@ ENV UV_LINK_MODE=copy
 
 
 #RUN apt-get update && apt-get install -y git gcc default-jre
-#RUN apt-get update && apt-get install -y default-jre
-RUN apt-get install -y default-jre
+RUN apt-get update && apt-get install -y default-jre
+#RUN apt-get install -y default-jre
 
 
 # Install the project's dependencies using the lockfile and settings
