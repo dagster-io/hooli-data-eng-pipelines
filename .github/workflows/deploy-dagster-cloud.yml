@@ -103,8 +103,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max 
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
           # cache-from: type=gha,scope=buildx
@@ -125,8 +123,6 @@ jobs:
           context: ./hooli_basics
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
-          cache-from: type=gha,scope=buildx
-          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for basics
         id: ci-set-build-output-basics
@@ -143,8 +139,6 @@ jobs:
           context: ./hooli_batch_enrichment
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
-          cache-from: type=gha,scope=buildx
-          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for batch enrichment
         id: ci-set-build-output-batch-enrichment
@@ -161,8 +155,6 @@ jobs:
           context: ./hooli_snowflake_insights
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
-          cache-from: type=gha,scope=buildx
-          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for snowflake insights
         id: ci-set-build-output-snowflake-insights
@@ -179,8 +171,6 @@ jobs:
           context: ./hooli-data-ingest
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
-          cache-from: type=gha,scope=buildx
-          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for hooli_data_ingest
         id: ci-set-build-output-hooli-data-ingest
@@ -197,8 +187,6 @@ jobs:
           context: ./hooli-bi
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
-          cache-from: type=gha,scope=buildx
-          cache-to: type=gha,mode=max,scope=buildx
 
       - name: Update build session with image tag for hooli_bi
         id: ci-set-build-output-hooli-bi
@@ -215,8 +203,6 @@ jobs:
           context: ./hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
-          cache-from: type=gha,scope=buildx
-          cache-to: type=gha,mode=max,scope=buildx
 
       # Deploy
       - name: Deploy to Dagster Cloud
