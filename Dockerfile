@@ -12,8 +12,10 @@ ENV UV_LINK_MODE=copy
 
 
 #RUN apt-get update && apt-get install -y git gcc default-jre
-RUN apt-get update && apt-get install -y default-jre
-#RUN apt-get install -y default-jre
+RUN apt-get update && \
+    apt-get install -y default-jre && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 
 # Install the project's dependencies using the lockfile and settings
@@ -26,6 +28,6 @@ RUN apt-get update && apt-get install -y default-jre
 # Installing separately from its dependencies allows optimal layer caching
 # RUN --mount=type=cache,target=/root/.cache/uv \
 #     uv sync --frozen --no-dev
-ADD . /opt/dagster/app
+COPY hooli_data_eng hooli_data_eng_tests pyproject.toml /opt/dagster/app/
 
 RUN uv pip install -e . --system
