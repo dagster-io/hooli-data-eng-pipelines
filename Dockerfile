@@ -28,6 +28,7 @@ RUN apt-get update && \
 # Installing separately from its dependencies allows optimal layer caching
 # RUN --mount=type=cache,target=/root/.cache/uv \
 #     uv sync --frozen --no-dev
-COPY hooli_data_eng hooli_data_eng_tests pyproject.toml /opt/dagster/app/
+ADD hooli_data_eng /opt/dagster/app/
+COPY pyproject.toml  /opt/dagster/app/
 
 RUN uv pip install -e . --system
