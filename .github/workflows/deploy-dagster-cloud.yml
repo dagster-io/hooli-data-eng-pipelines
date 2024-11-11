@@ -47,12 +47,12 @@ jobs:
               LOCATIONS=""
               for DIR in $CHANGED_DIRS; do
                 case $DIR in
-                  hooli_data_eng|dbt_project) LOCATIONS="$LOCATIONS data-eng-pipeline";;
-                  hooli_basics) LOCATIONS="$LOCATIONS basics";;
-                  hooli_batch_enrichment) LOCATIONS="$LOCATIONS batch_enrichment";;
-                  hooli_snowflake_insights) LOCATIONS="$LOCATIONS snowflake_insights";;
-                  hooli_data_ingest) LOCATIONS="$LOCATIONS hooli_data_ingest";;
-                  hooli_bi) LOCATIONS="$LOCATIONS hooli_bi";;
+                  hooli_data_eng|dbt_project) LOCATIONS="$LOCATIONS --location-name data-eng-pipeline";;
+                  hooli_basics) LOCATIONS="$LOCATIONS --location-name basics";;
+                  hooli_batch_enrichment) LOCATIONS="$LOCATIONS --location-name batch_enrichment";;
+                  hooli_snowflake_insights) LOCATIONS="$LOCATIONS --location-name snowflake_insights";;
+                  hooli-data-ingest) LOCATIONS="$LOCATIONS --location-name hooli_data_ingest";;
+                  hooli-bi) LOCATIONS="$LOCATIONS --location-name hooli_bi";;
                 esac
               done
               echo "${{ steps.changed-files.outputs.all_changed_files }}"
