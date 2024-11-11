@@ -29,6 +29,8 @@ def country_stats() -> DataFrame:
     df["pop_change"] = ((to_numeric(df["pop_2023"]) / to_numeric(df["pop_2022"])) - 1)*100
     return df
 
+
+
 @asset_check(
        asset=country_stats 
 )
