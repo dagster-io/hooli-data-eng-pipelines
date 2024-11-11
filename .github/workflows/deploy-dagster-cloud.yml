@@ -58,32 +58,49 @@ jobs:
               if echo "$FILTERED_DIRS" | grep -qw "hooli_data_eng|dbt_project"; then
                 echo "Hooli data eng or dbt project directory changed"
                 echo "RUN_DATA_ENG_PIPELINE=true" >> $GITHUB_ENV
-              elif echo "$FILTERED_DIRS" | grep -qw "hooli_basics"; then
+              else 
+                echo "Hooli data eng or dbt project directory not changed"
+                echo "RUN_DATA_ENG_PIPELINE=false" >> $GITHUB_ENV 
+              fi
+              if echo "$FILTERED_DIRS" | grep -qw "hooli_basics"; then
                 echo "hooli_basics directory changed"
                 echo "RUN_HOOLI_BASICS=true" >> $GITHUB_ENV
-              elif echo "$FILTERED_DIRS" | grep -qw "hooli_batch_enrichment"; then 
+              else 
+                echo "hooli_basics directory not changed"
+                echo "RUN_HOOLI_BASICS=false" >> $GITHUB_ENV 
+              fi
+              if echo "$FILTERED_DIRS" | grep -qw "hooli_batch_enrichment"; then 
                 echo "hooli_batch_enrichment project directory  changed"
                 echo "RUN_HOOLI_BATCH_ENRICHMENT=true" >> $GITHUB_ENV
-              elif echo "$FILTERED_DIRS" | grep -qw "hooli_snowflake_insights"; then 
+              else 
+                echo "hooli_batch_enrichment directory not changed"
+                echo "RUN_HOOLI_BATCH_ENRICHMENT=false" >> $GITHUB_ENV 
+              fi
+              if echo "$FILTERED_DIRS" | grep -qw "hooli_snowflake_insights"; then 
                 echo "hooli_snowflake_insights directory  changed"
                 echo "RUN_HOOLI_SNOWFLAKE_INSIGHTS=true" >> $GITHUB_ENV
-              elif echo "$FILTERED_DIRS" | grep -qw "hooli-data-ingest"; then 
+              else 
+                echo "hooli_snowflake_insights directory not changed"
+                echo "RUN_HOOLI_SNOWFLAKE_INSIGHTS=false" >> $GITHUB_ENV 
+              fi
+              if echo "$FILTERED_DIRS" | grep -qw "hooli-data-ingest"; then 
                 echo "hooli-data-ingest directory changed"
                 echo "RUN_HOOLI_DATA_INGEST=true" >> $GITHUB_ENV
-              elif echo "$FILTERED_DIRS" | grep -qw "hooli-bi"; then 
+              else 
+                echo "hooli-data-ingest directory not changed"
+                echo "RUN_HOOLI_DATA_INGEST=false" >> $GITHUB_ENV
+              fi
+              if echo "$FILTERED_DIRS" | grep -qw "hooli-bi"; then 
                 echo "hooli-bi directory changed"
                 echo "RUN_HOOLI_BI=true" >> $GITHUB_ENV
+              else 
+                echo "hooli-bi directory not changed"
+                echo "RUN_HOOLI_BI=false" >> $GITHUB_ENV
               fi
               echo "${{ steps.changed-files.outputs.all_changed_files }}"
               echo $FILTERED_DIRS
               echo $LOCATIONS
               echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
-              echo $RUN_DATA_ENG_PIPELINE
-              echo $RUN_HOOLI_BASICS
-              echo $RUN_HOOLI_BATCH_ENRICHMENT
-              echo $RUN_HOOLI_SNOWFLAKE_INSIGHTS
-              echo $RUN_HOOLI_DATA_INGEST
-              echo $RUN_HOOLI_BI
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v3
