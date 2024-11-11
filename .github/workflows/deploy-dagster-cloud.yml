@@ -89,95 +89,95 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
 
-      - name: Prepare dbt project
-        if: steps.prerun.outputs.result != 'skip'
-        run: |
-          uv venv
-          source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
-          dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
+      # - name: Prepare dbt project
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   run: |
+      #     uv venv
+      #     source .venv/bin/activate
+      #     uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
+      #     dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
+      #     dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
-      - name: Build and upload Docker image for data-eng-pipeline
-        if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
-          # cache-from: type=gha,scope=buildx
-          # cache-to: type=gha,mode=max,scope=buildx
+      # - name: Build and upload Docker image for data-eng-pipeline
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     push: true
+      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
+      #     # cache-from: type=gha,scope=buildx
+      #     # cache-to: type=gha,mode=max,scope=buildx
 
-      - name: Update build session with image tag for data-eng-pipeline
-        id: ci-set-build-output-data-eng-pipeline
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        with:
-          command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+      # - name: Update build session with image tag for data-eng-pipeline
+      #   id: ci-set-build-output-data-eng-pipeline
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+      #   with:
+      #     command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
 
-      # Build 'basics' code location
-      - name: Build and upload Docker image for basics
-        if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli_basics
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
+      # # Build 'basics' code location
+      # - name: Build and upload Docker image for basics
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./hooli_basics
+      #     push: true
+      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
 
-      - name: Update build session with image tag for basics
-        id: ci-set-build-output-basics
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        with:
-          command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
+      # - name: Update build session with image tag for basics
+      #   id: ci-set-build-output-basics
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+      #   with:
+      #     command: "ci set-build-output --location-name=basics --image-tag=$IMAGE_TAG-basics"
 
-      # Build 'batch enrichment' code location
-      - name: Build and upload Docker image for batch enrichment
-        if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli_batch_enrichment
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
+      # # Build 'batch enrichment' code location
+      # - name: Build and upload Docker image for batch enrichment
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./hooli_batch_enrichment
+      #     push: true
+      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
 
-      - name: Update build session with image tag for batch enrichment
-        id: ci-set-build-output-batch-enrichment
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        with:
-          command: "ci set-build-output --location-name=batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
+      # - name: Update build session with image tag for batch enrichment
+      #   id: ci-set-build-output-batch-enrichment
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+      #   with:
+      #     command: "ci set-build-output --location-name=batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
 
-      # Build 'snowflake_insights' code location
-      - name: Build and upload Docker image for snowflake insights
-        if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli_snowflake_insights
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
+      # # Build 'snowflake_insights' code location
+      # - name: Build and upload Docker image for snowflake insights
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./hooli_snowflake_insights
+      #     push: true
+      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
 
-      - name: Update build session with image tag for snowflake insights
-        id: ci-set-build-output-snowflake-insights
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        with:
-          command: "ci set-build-output --location-name=snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
+      # - name: Update build session with image tag for snowflake insights
+      #   id: ci-set-build-output-snowflake-insights
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+      #   with:
+      #     command: "ci set-build-output --location-name=snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
 
-      # Build 'hooli_data_ingest' code location
-      - name: Build and upload Docker image for hooli_data_ingest
-        if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli-data-ingest
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
+      # # Build 'hooli_data_ingest' code location
+      # - name: Build and upload Docker image for hooli_data_ingest
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./hooli-data-ingest
+      #     push: true
+      #     tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
 
-      - name: Update build session with image tag for hooli_data_ingest
-        id: ci-set-build-output-hooli-data-ingest
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        with:
-          command: "ci set-build-output --location-name=hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
+      # - name: Update build session with image tag for hooli_data_ingest
+      #   id: ci-set-build-output-hooli-data-ingest
+      #   if: steps.prerun.outputs.result != 'skip'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+      #   with:
+      #     command: "ci set-build-output --location-name=hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
 
       # Build 'hooli_bi' code location
       - name: Build and upload Docker image for hooli_bi
@@ -221,14 +221,14 @@ jobs:
           organization_id: 'hooli'
 
       # Trigger dbt slim CI job
-      - name: Trigger dbt slim CI
-        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
-        with:
-          location_name: data-eng-pipeline
-          deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
-          job_name: dbt_slim_ci_job
-          organization_id: hooli
+      # - name: Trigger dbt slim CI
+      #   if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+      #   uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+      #   with:
+      #     location_name: data-eng-pipeline
+      #     deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
+      #     job_name: dbt_slim_ci_job
+      #     organization_id: hooli
 
       # Summary and comment updates - note these always() run
       - name: Update PR comment for branch deployments
