@@ -58,7 +58,7 @@ jobs:
         id: generate-image-tag
         if: steps.prerun.outputs.result != 'skip'
         run: | 
-          echo "changed files: ${{ github.event.pull_request.changed_files }} ""
+          echo "changed files: ${{ github.event.pull_request.changed_files }}"
           echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
 
       - name: Set up Docker Buildx
