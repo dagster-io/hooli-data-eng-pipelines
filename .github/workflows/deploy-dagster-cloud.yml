@@ -41,7 +41,7 @@ jobs:
         id: extract-changed-dirs
         run: |
               CHANGED_DIRS=$(echo ${{ steps.changed-files.outputs.all_changed_files }} | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
-              FILTERED_DIRS=$(echo $CHANGED_DIRS | tr ' ' '\n' | grep -E '^(dbt_project|hooli_basics|hooli_batch_enrichment|hooli_data_eng|hooli-bi|hooli-data-ingest|hooli_snowflake_insights)$' | tr '\n' ' ')
+              FILTERED_DIRS=$(echo $CHANGED_DIRS | tr ' ' '\n' | grep -F -E '^(dbt_project|hooli_basics|hooli_batch_enrichment|hooli_data_eng|hooli-bi|hooli-data-ingest|hooli_snowflake_insights)$' | tr '\n' ' ')
               echo $FILTERED_DIRS
               echo "FILTERED_DIRS=$FILTERED_DIRS" >> $GITHUB_ENV
               LOCATIONS=""
@@ -55,6 +55,7 @@ jobs:
                   hooli-bi) LOCATIONS="$LOCATIONS --location-name hooli_bi";;
                 esac
               done
+              echo "${{ steps.changed-files.outputs.all_changed_files }}"
               echo $FILTERED_DIRS
               echo $LOCATIONS
               echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
