@@ -43,7 +43,7 @@ jobs:
               # fix this to be an array and operate like one. 
               changed_dirs=$(echo ${{ steps.changed-files.outputs.all_changed_files }} | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               pattern="dbt_project|hooli_basics|hooli_batch_enrichment|hooli_data_eng|hooli-bi|hooli-data-ingest|hooli_snowflake_insights"
-              filtered_dirs=$(echo "$CHANGED_DIRS" | grep -oE "$pattern")
+              filtered_dirs=$(echo "$changed_dirs" | grep -oE "$pattern")
               echo $changed_dirs
               echo $filtered_dirs
               echo "FILTERED_DIRS=$FILTERED_DIRS" >> $GITHUB_ENV
