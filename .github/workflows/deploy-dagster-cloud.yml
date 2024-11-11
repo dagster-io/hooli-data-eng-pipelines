@@ -79,11 +79,12 @@ jobs:
 
       - name: Set Prod Deployment Environment Variable for Push
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
-        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+        run: |
+          echo "changed files: ${{ github.event.pull_request.changed_files }} ""
+          echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
 
       - name: Prepare dbt project
-        if: | 
-          steps.prerun.outputs.result != 'skip' && (contains(github.event.pull_request.changed_files, 'hooli_data_eng/') || contains(github.event.pull_request.changed_files, 'dbt_project') )
+        if: steps.prerun.outputs.result != 'skip' && (contains(github.event.pull_request.changed_files, 'hooli_data_eng/') || contains(github.event.pull_request.changed_files, 'dbt_project') )
         run: |
           uv venv
           source .venv/bin/activate
