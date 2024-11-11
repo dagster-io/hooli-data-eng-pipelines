@@ -41,7 +41,7 @@ jobs:
         id: extract-changed-dirs
         run: |
               CHANGED_DIRS=$(echo ${{ steps.changed-files.outputs.all_changed_files }} | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
-              FILTERED_DIRS=$(echo $CHANGED_DIRS | tr ' ' '\n' | grep -E '^(dbt\_project|hooli\_basics|hooli\_batch\_enrichment|hooli\_data\_eng|hooli-bi|hooli-data-ingest|hooli\_snowflake\_insights)$' | tr '\n' ' ')
+              FILTERED_DIRS=$(echo $CHANGED_DIRS | tr ' ' '\n' | grep -E '^(dbt_project|hooli\_basics|hooli\_batch\_enrichment|hooli\_data\_eng|hooli-bi|hooli-data-ingest|hooli\_snowflake\_insights)$' | tr '\n' ' ')
               echo $FILTERED_DIRS
               echo "FILTERED_DIRS=$FILTERED_DIRS" >> $GITHUB_ENV
               LOCATIONS=""
