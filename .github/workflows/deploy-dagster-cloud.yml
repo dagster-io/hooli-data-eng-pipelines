@@ -49,6 +49,7 @@ jobs:
               echo "FILTERED_DIRS=$FILTERED_DIRS" >> $GITHUB_ENV
               LOCATIONS=""
               for DIR in $filtered_dirs; do
+                echo $DIR
                 case $DIR in
                   hooli_data_eng|dbt_project) LOCATIONS="$LOCATIONS --location-name data-eng-pipeline";;
                   hooli_basics) LOCATIONS="$LOCATIONS --location-name basics";;
@@ -58,7 +59,7 @@ jobs:
                   hooli-bi) LOCATIONS="$LOCATIONS --location-name hooli_bi";;
                 esac
               done
-              if echo "$filtered_dirs" | grep -qw "hooli_data_eng|dbt_project"; then
+              if echo "$filtered_dirs" | grep -E -qw "\b(hooli_data_eng|dbt_project)\b"; then
                 echo "Hooli data eng or dbt project directory changed"
                 echo "RUN_DATA_ENG_PIPELINE=true" >> $GITHUB_ENV
               else 
