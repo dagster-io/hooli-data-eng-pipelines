@@ -230,7 +230,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-          command: "ci deploy --location-name $LOCATIONS"
+          command: "ci deploy $LOCATIONS"
       # - name: Deploy to Dagster Cloud
       #   id: ci-deploy
       #   if: steps.prerun.outputs.result != 'skip'
