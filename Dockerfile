@@ -18,17 +18,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 
-# Install the project's dependencies using the lockfile and settings
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     --mount=type=bind,source=uv.lock,target=uv.lock \
-#     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-#     uv sync --frozen --no-install-project --no-dev
 
-# Then, add the rest of the project source code and install it
-# Installing separately from its dependencies allows optimal layer caching
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     uv sync --frozen --no-dev
-ADD hooli_data_eng /opt/dagster/app/
+COPY hooli_data_eng /opt/dagster/app/
 COPY pyproject.toml  /opt/dagster/app/
 
 RUN uv pip install -e . --system
