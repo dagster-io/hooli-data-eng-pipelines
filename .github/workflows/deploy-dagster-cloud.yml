@@ -110,7 +110,7 @@ jobs:
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
 
       - name: Prepare dbt project
-        if: steps.prerun.outputs.result != 'skip' && (contains(${{ env.FILTERED_DIRS }}, 'hooli_data_eng/') || contains(${{ env.FILTERED_DIRS }}, 'dbt_project/') )
+        if: steps.prerun.outputs.result != 'skip' && contains(${{ env.FILTERED_DIRS }}, 'hooli_data_eng')
         run: |
           uv venv
           source .venv/bin/activate
@@ -127,10 +127,10 @@ jobs:
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
           # cache-from: type=gha,scope=buildx
           # cache-to: type=gha,mode=max,scope=buildx
-
+          # # || contains(${{ env.FILTERED_DIRS }}, 'dbt_project')
       - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output-data-eng-pipeline
-        if: steps.prerun.outputs.result != 'skip' && (contains(${{ env.FILTERED_DIRS }}, 'hooli_data_eng/') || contains(${{ env.FILTERED_DIRS }}, 'dbt_project') )
+        if: steps.prerun.outputs.result != 'skip' && contains(${{ env.FILTERED_DIRS }}, 'hooli_data_eng') 
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
           command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
