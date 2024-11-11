@@ -152,7 +152,7 @@ jobs:
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
 
       - name: Prepare dbt project
-        if: steps.prerun.outputs.result != 'skip' && ${{ env.RUN_DATA_ENG_PIPELINE }} == 'true'
+        if: steps.prerun.outputs.result != 'skip' && env.RUN_DATA_ENG_PIPELINE == 'true'
         run: |
           uv venv
           source .venv/bin/activate
@@ -161,7 +161,7 @@ jobs:
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
       - name: Build and upload Docker image for data-eng-pipeline
-        if: steps.prerun.outputs.result != 'skip' &&  ${{ env.RUN_DATA_ENG_PIPELINE }} == 'true'
+        if: steps.prerun.outputs.result != 'skip' &&  env.RUN_DATA_ENG_PIPELINE == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -172,7 +172,7 @@ jobs:
           # # || contains(${{ env.FILTERED_DIRS }}, 'dbt_project')
       - name: Update build session with image tag for data-eng-pipeline
         id: ci-set-build-output-data-eng-pipeline
-        if: steps.prerun.outputs.result != 'skip' &&  ${{ env.RUN_DATA_ENG_PIPELINE }} == 'true'
+        if: steps.prerun.outputs.result != 'skip' && env.RUN_DATA_ENG_PIPELINE == 'true'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
           command: "ci set-build-output --location-name=data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
