@@ -18,7 +18,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 
-
-ADD . /opt/dagster/app/
+# add because I don't want `hooli-data-eng` to be copied
+ADD hooli-data-eng/ /opt/dagster/app/
+# copy because I want the folder to be copied
+COPY dbt_project /opt/dagster/app/
 
 RUN uv pip install -e . --system
