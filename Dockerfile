@@ -19,6 +19,6 @@ RUN apt-get update && \
 
 
 # copy because I want the folder to be copied
-COPY hooli_data_eng/ dbt_project/ pyproject.toml /opt/dagster/app/
+ADD . /opt/dagster/app/
 
 RUN uv pip install -e . --system
