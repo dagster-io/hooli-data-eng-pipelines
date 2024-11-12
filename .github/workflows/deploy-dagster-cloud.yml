@@ -38,23 +38,18 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v45
         with:
-          files_data_eng_pipeline: |
+          files_yaml: |
             hooli_data_eng:
               - dbt_project/**
               - hooli_data_eng/**
-          files_basics: |
             hooli_basics:
               - hooli_basics/**
-          files_batch_enrichment: |
             hooli_batch_enrichment:
               - hooli_batch_enrichment/**
-          files_snowflake_insights: |
             hooli_snowflake_insights:
               - hooli_snowflake_insights/**
-          files_hooli_data_ingest: |
             hooli-data-ingest:
               - hooli-data-ingest/**
-          files_hooli_bi: | 
             hooli-bi:
               - hooli-bi/**   
     
