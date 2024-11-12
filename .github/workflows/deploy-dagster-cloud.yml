@@ -56,64 +56,29 @@ jobs:
       - name: Extract changed directories
         id: extract-changed-dirs
         run: |
-              changed_files=filtered_dirs=" ${{ steps.changed-files.outputs.hooli_data_eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli_basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli_batch_enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli_snowflake_insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli_data_ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli_bi_all_changed_files }}"
-              # fix this to be an array and operate like one. 
+              changed_files=filtered_dirs=" ${{ steps.changed-files.outputs.hooli_data_eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli_basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli_batch_enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli_snowflake_insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-bi_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
+              # needed for `dagster ci deploy` command, which needs one --location-name per code location.
               LOCATIONS=""
-              for DIR in $filtered_dirs; do
-                echo $DIR
-                case $DIR in
-                  hooli_data_eng|dbt_project) LOCATIONS="$LOCATIONS --location-name data-eng-pipeline";;
-                  hooli_basics) LOCATIONS="$LOCATIONS --location-name basics";;
-                  hooli_batch_enrichment) LOCATIONS="$LOCATIONS --location-name batch_enrichment";;
-                  hooli_snowflake_insights) LOCATIONS="$LOCATIONS --location-name snowflake_insights";;
-                  hooli-data-ingest) LOCATIONS="$LOCATIONS --location-name hooli_data_ingest";;
-                  hooli-bi) LOCATIONS="$LOCATIONS --location-name hooli_bi";;
-                esac
-              done
-              if echo "$filtered_dirs" | grep -E -qw "\b(hooli_data_eng|dbt_project)\b"; then
-                echo "Hooli data eng or dbt project directory changed"
-                echo "RUN_DATA_ENG_PIPELINE=true" >> $GITHUB_ENV
-              else 
-                echo "Hooli data eng or dbt project directory not changed"
-                echo "RUN_DATA_ENG_PIPELINE=false" >> $GITHUB_ENV 
+              if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true"]; then
+                LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
               fi
-              if echo "$filtered_dirs" | grep -qw "hooli_basics"; then
-                echo "hooli_basics directory changed"
-                echo "RUN_HOOLI_BASICS=true" >> $GITHUB_ENV
-              else 
-                echo "hooli_basics directory not changed"
-                echo "RUN_HOOLI_BASICS=false" >> $GITHUB_ENV 
+              if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true"]; then
+                LOCATIONS="$LOCATIONS --location-name basics"
               fi
-              if echo "$filtered_dirs" | grep -qw "hooli_batch_enrichment"; then 
-                echo "hooli_batch_enrichment project directory  changed"
-                echo "RUN_HOOLI_BATCH_ENRICHMENT=true" >> $GITHUB_ENV
-              else 
-                echo "hooli_batch_enrichment directory not changed"
-                echo "RUN_HOOLI_BATCH_ENRICHMENT=false" >> $GITHUB_ENV 
+              if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true"]; then
+                LOCATIONS="$LOCATIONS --location-name batch_enrichment"
               fi
-              if echo "$filtered_dirs" | grep -qw "hooli_snowflake_insights"; then 
-                echo "hooli_snowflake_insights directory  changed"
-                echo "RUN_HOOLI_SNOWFLAKE_INSIGHTS=true" >> $GITHUB_ENV
-              else 
-                echo "hooli_snowflake_insights directory not changed"
-                echo "RUN_HOOLI_SNOWFLAKE_INSIGHTS=false" >> $GITHUB_ENV 
+              if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true"]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_snowflake_insights"
               fi
-              if echo "$filtered_dirs" | grep -qw "hooli-data-ingest"; then 
-                echo "hooli-data-ingest directory changed"
-                echo "RUN_HOOLI_DATA_INGEST=true" >> $GITHUB_ENV
-              else 
-                echo "hooli-data-ingest directory not changed"
-                echo "RUN_HOOLI_DATA_INGEST=false" >> $GITHUB_ENV
+              if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true"]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_data_ingest"
               fi
-              if echo "$filtered_dirs" | grep -qw "hooli-bi"; then 
-                echo "hooli-bi directory changed"
-                echo "RUN_HOOLI_BI=true" >> $GITHUB_ENV
-              else 
-                echo "hooli-bi directory not changed"
-                echo "RUN_HOOLI_BI=false" >> $GITHUB_ENV
+              if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true"]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_bi"
               fi
               echo $LOCATIONS
               echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
