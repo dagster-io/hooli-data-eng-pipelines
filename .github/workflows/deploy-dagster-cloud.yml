@@ -168,7 +168,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' &&  env.RUN_DATA_ENG_PIPELINE == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-data-eng
+          context: .
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
           # cache-from: type=gha,scope=buildx
