@@ -19,5 +19,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
 ADD . /opt/dagster/app
+COPY ../dbt_project /opt/dagster/app/dbt_project 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
