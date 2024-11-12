@@ -243,7 +243,7 @@ jobs:
 
       # Build 'hooli_data_ingest' code location
       - name: Build and upload Docker image for hooli_data_ingest
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_ingest_any_changed == 'true'  
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-ingest_any_changed == 'true'  
         uses: docker/build-push-action@v5
         with:
           context: ./hooli-data-ingest
@@ -252,14 +252,14 @@ jobs:
 
       - name: Update build session with image tag for hooli_data_ingest
         id: ci-set-build-output-hooli-data-ingest
-        if: steps.prerun.outputs.result != 'skip'  && steps.changed-files.outputs.hooli_data_ingest_any_changed == 'true'  
+        if: steps.prerun.outputs.result != 'skip'  && steps.changed-files.outputs.hooli-data-ingest_any_changed == 'true'  
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
           command: "ci set-build-output --location-name=hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
 
       # Build 'hooli_bi' code location
       - name: Build and upload Docker image for hooli_bi
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_bi_any_changed == 'true'  
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'  
         uses: docker/build-push-action@v5
         with:
           context: ./hooli-bi
@@ -268,7 +268,7 @@ jobs:
 
       - name: Update build session with image tag for hooli_bi
         id: ci-set-build-output-hooli-bi
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_bi_any_changed == 'true'  
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'  
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
           command: "ci set-build-output --location-name=hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
