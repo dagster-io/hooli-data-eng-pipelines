@@ -19,7 +19,6 @@ RUN apt-get update && \
 
 
 
-COPY hooli_data_eng /opt/dagster/app/
-COPY pyproject.toml  /opt/dagster/app/
+ADD . /opt/dagster/app/
 
 RUN uv pip install -e . --system
