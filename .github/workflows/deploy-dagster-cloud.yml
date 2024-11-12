@@ -56,9 +56,11 @@ jobs:
       - name: Extract changed directories
         id: extract-changed-dirs
         run: |
-              filtered_dirs=" ${{ steps.changed-files.outputs.hooli_data_eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli_basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli_batch_enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli_snowflake_insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli_data_ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli_bi_all_changed_files }}"
+              changed_files=filtered_dirs=" ${{ steps.changed-files.outputs.hooli_data_eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli_basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli_batch_enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli_snowflake_insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli_data_ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli_bi_all_changed_files }}"
+              # fix this to be an array and operate like one. 
+              filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
+              echo $changed_files
               echo $filtered_dirs
-              echo "FILTERED_DIRS=$FILTERED_DIRS" >> $GITHUB_ENV
               LOCATIONS=""
               for DIR in $filtered_dirs; do
                 echo $DIR
@@ -113,7 +115,6 @@ jobs:
                 echo "hooli-bi directory not changed"
                 echo "RUN_HOOLI_BI=false" >> $GITHUB_ENV
               fi
-              echo $filtered_dirs
               echo $LOCATIONS
               echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
 
