@@ -6,7 +6,7 @@ pyvenv.cfg
 *.egg-info
 .ipynb_checkpoints/
 .bashrc
-dbt_project/dbt_packages*
+hooli-data-eng/dbt_project/dbt_packages*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -172,7 +172,8 @@ cython_debug/
 tmp*/
 
 # dbt
-dbt_project/example.duckdb*
-dbt_project/logs
+hooli-data-eng/dbt_project/example.duckdb*
+hooli-data-eng/dbt_project/logs
 
 .DS_Store
+/dagster-data
