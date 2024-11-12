@@ -37,14 +37,13 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v45
     
-        # old pattern  pattern="dbt_project|hooli_basics|hooli_batch_enrichment|hooli-data-eng|hooli-bi|hooli-data-ingest|hooli_snowflake_insights"
-        # old case: hooli-data-eng|dbt_project) LOCATIONS="$LOCATIONS --location-name data-eng-pipeline";;
       - name: Extract changed directories
         id: extract-changed-dirs
         run: |
               # fix this to be an array and operate like one. 
               changed_dirs=$(echo ${{ steps.changed-files.outputs.all_changed_files }} | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
-              pattern="hooli_basics|hooli_batch_enrichment|hooli-data-eng|hooli-bi|hooli-data-ingest|hooli_snowflake_insights"
+              pattern="dbt_project|hooli_basics|hooli_batch_enrichment|hooli_data_eng|hooli-bi|hooli-data-ingest|hooli_snowflake_insights"
+
               filtered_dirs=$(echo "$changed_dirs" | grep -oE "$pattern")
               echo $changed_dirs
               echo $filtered_dirs
@@ -53,7 +52,7 @@ jobs:
               for DIR in $filtered_dirs; do
                 echo $DIR
                 case $DIR in
-                  hooli-data-eng) LOCATIONS="$LOCATIONS --location-name data-eng-pipeline";;
+                  hooli_data_eng|dbt_project) LOCATIONS="$LOCATIONS --location-name data-eng-pipeline";;
                   hooli_basics) LOCATIONS="$LOCATIONS --location-name basics";;
                   hooli_batch_enrichment) LOCATIONS="$LOCATIONS --location-name batch_enrichment";;
                   hooli_snowflake_insights) LOCATIONS="$LOCATIONS --location-name snowflake_insights";;
@@ -61,7 +60,7 @@ jobs:
                   hooli-bi) LOCATIONS="$LOCATIONS --location-name hooli_bi";;
                 esac
               done
-              if echo "$filtered_dirs" | grep -E -qw "\b(hooli-data-eng)\b"; then
+              if echo "$filtered_dirs" | grep -E -qw "\b(hooli_data_eng|dbt_project)\b"; then
                 echo "Hooli data eng or dbt project directory changed"
                 echo "RUN_DATA_ENG_PIPELINE=true" >> $GITHUB_ENV
               else 
@@ -163,14 +162,14 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
-          dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/project.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/project.py --source-deployment data-eng-prod
+          dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
+          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' &&  env.RUN_DATA_ENG_PIPELINE == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-data-eng
+          context: .
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
           # cache-from: type=gha,scope=buildx
@@ -268,7 +267,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && env.RUN_DATA_ENG_PIPELINE == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-data-eng/hooli_data_eng/utils/example_container
+          context: ./hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
