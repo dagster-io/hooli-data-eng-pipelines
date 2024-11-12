@@ -12,7 +12,7 @@ def get_env():
     return "BRANCH"
 
 
-dbt_project_path = Path(__file__).parent.parent.parent.joinpath("dbt_project")
+dbt_project_path = Path(__file__).parent.parent.joinpath("dbt_project")
 DBT_PROJECT_DIR = os.fspath(dbt_project_path)
 
 dbt_project = DbtProject(
