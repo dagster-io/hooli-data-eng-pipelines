@@ -247,13 +247,20 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
-      #Deploy
+      #set build output 
+      - name: Deploy to Dagster Cloud
+        id: ci-set-build-output
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        with:
+          command: "ci set-build-output $LOCATIONS"
+      #Deploy 
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-          command: "ci build $LOCATIONS"
+          command: "ci deploy $LOCATIONS"
 
       # Get branch deployment as input to job trigger below
       - name: Get branch deployment
