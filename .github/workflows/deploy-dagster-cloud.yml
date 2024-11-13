@@ -253,7 +253,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-          command: "ci deploy $LOCATIONS"
+          command: "ci build $LOCATIONS"
 
       # Get branch deployment as input to job trigger below
       - name: Get branch deployment
