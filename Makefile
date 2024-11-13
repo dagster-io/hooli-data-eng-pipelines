@@ -20,7 +20,7 @@ stateful_dev_prod: clean manifest
 dependencies:
 	uv pip install -e ".[dev]"
 
-update_python_packages:
+update_packages:
 	uv lock --upgrade;
 	uv lock --upgrade --directory hooli_basics;
 	uv lock --upgrade --directory hooli_batch_enrichment;
