@@ -67,25 +67,25 @@ jobs:
               echo $changed_files
               echo $filtered_dirs
               LOCATIONS=""
-              if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true"]; then
+              if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
                 echo $LOCATIONS
               fi
-              if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true"]; then
+              if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics --image-tag=$IMAGE_TAG-basics"
                 echo $LOCATIONS
               fi
-              if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true"]; then
+              if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true"]; then
+              if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
                 echo $LOCATIONS
               fi
-              if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true"]; then
+              if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true"]; then
+              if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
               fi
               echo $LOCATIONS
