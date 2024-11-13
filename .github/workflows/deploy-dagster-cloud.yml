@@ -63,22 +63,22 @@ jobs:
               # needed for `dagster ci deploy` command, which needs one --location-name per code location.
               LOCATIONS=""
               if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true"]; then
-                LOCATIONS="$LOCATIONS --location-name data-eng-pipeline --docker-image-tag=$IMAGE_TAG-data-eng-pipeline"
+                LOCATIONS="$LOCATIONS --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true"]; then
-                LOCATIONS="$LOCATIONS --location-name basics --docker-image-tag=$IMAGE_TAG-basics"
+                LOCATIONS="$LOCATIONS --location-name basics --image-tag=$IMAGE_TAG-basics"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true"]; then
-                LOCATIONS="$LOCATIONS --location-name batch_enrichment --docker-image-tag=$IMAGE_TAG-batch-enrichment"
+                LOCATIONS="$LOCATIONS --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true"]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_snowflake_insights --docker-image-tag=$IMAGE_TAG-snowflake-insights"
+                LOCATIONS="$LOCATIONS --location-name hooli_snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true"]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_data_ingest --docker-image-tag=$IMAGE_TAG-hooli-data-ingest"
+                LOCATIONS="$LOCATIONS --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true"]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_bi --docker-image-tag=$IMAGE_TAG-hooli-bi"
+                LOCATIONS="$LOCATIONS --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
               fi
               echo $LOCATIONS
               echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
@@ -248,7 +248,7 @@ jobs:
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
       #set build output 
-      - name: Deploy to Dagster Cloud
+      - name: Set build output for Dagster Cloud
         id: ci-set-build-output
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
