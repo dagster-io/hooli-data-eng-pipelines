@@ -66,7 +66,6 @@ jobs:
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
-              # needed for `dagster ci deploy` command, which needs one --location-name per code location.
               LOCATIONS=""
               if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true"]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
