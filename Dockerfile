@@ -17,8 +17,14 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
 
-# copy because I want the folder to be copied
-ADD . /opt/dagster/app/
-
-RUN uv pip install -e . --system
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+ADD . /opt/dagster/app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
