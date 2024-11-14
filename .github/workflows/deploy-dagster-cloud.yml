@@ -70,23 +70,23 @@ jobs:
               LOCATIONS_WITH_IMAGE=""
               if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy  --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name basics --image-tag=$IMAGE_TAG-basics"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name basics --image-tag=$IMAGE_TAG-basics\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name batch_enrichment"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name snowflake_insights"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_data_ingest"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_bi"
@@ -220,17 +220,13 @@ jobs:
         id: ci-set-build-output
         if: steps.prerun.outputs.result != 'skip'
         run: |
-          while [[ $LOCATIONS_WITH_IMAGE ]]; do
-            # Extract the first --location-name and --image-tag pair
-            LOCATION_NAME=$(echo $LOCATIONS_WITH_IMAGE | awk '{print $2}')
-            IMAGE_TAG=$(echo $LOCATIONS_WITH_IMAGE | awk '{print $4}')
-            
-            # Run the ci deploy command
-            echo "Running ci deploy for $LOCATION_NAME with image tag $IMAGE_TAG"
-            dagster-cloud ci deploy --location-name $LOCATION_NAME --image-tag $IMAGE_TAG
-            
-            # Remove the processed pair from LOCATIONS_WITH_IMAGE
-            LOCATIONS_WITH_IMAGE=$(echo $LOCATIONS_WITH_IMAGE | sed 's/--location-name [^ ]* --image-tag=[^ ]*//')
+          source .venv/bin/activate
+          # Iterate through each line in LOCATIONS_WITH_IMAGE and execute it
+          echo -e "$LOCATIONS_WITH_IMAGE" | while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              echo "Executing: $line"
+              eval "$line"
+            fi
           done
         # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         # with:
