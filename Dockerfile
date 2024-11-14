@@ -1,17 +1,30 @@
-FROM python:3.12-slim
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm
 
 WORKDIR /opt/dagster/app
 
-RUN apt-get update && apt-get install -y git gcc
+# Enable bytecode compilation
+#ENV UV_COMPILE_BYTECODE=1
+ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
-RUN apt install -y default-jre
+# Copy from the cache instead of linking since it's a mounted volume
+#ENV UV_LINK_MODE=copy
 
-RUN python -m pip install -U pip
-# libcrypto fix oct 2023; should be able to remove sometime after that
-RUN python -m pip uninstall oscrypto -y
-RUN python -m pip install git+https://github.com/wbond/oscrypto.git@d5f3437ed24257895ae1edd9e503cfb352e635a8
-RUN python -m pip install -U uv
 
-ADD . .
+#RUN apt-get update && apt-get install -y git gcc default-jre
+RUN apt-get update && \
+    apt-get install -y default-jre && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN uv pip install --system -e .
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+ADD . /opt/dagster/app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev

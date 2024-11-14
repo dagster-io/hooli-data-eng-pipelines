@@ -21,7 +21,6 @@ from hooli_data_eng.resources.databricks import db_step_launcher
 # from hooli_data_eng.resources.dbt import DbtCli2 as DbtCli
 # from hooli_data_eng.resources.warehouse import MySnowflakeIOManager as SnowflakePandasIOManager
 from hooli_data_eng.resources.sensor_file_managers import s3FileSystem, LocalFileSystem
-from hooli_data_eng.resources.sensor_smtp import LocalEmailAlert, SESEmailAlert
 
 from databricks.sdk import WorkspaceClient
 from dagster_databricks import PipesDatabricksClient
@@ -70,9 +69,6 @@ resource_def = {
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
-        "email": LocalEmailAlert(
-            smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
-        ),
         "pipes_databricks_client": ResourceDefinition.none_resource(),
         "pipes_k8s_client": ResourceDefinition.none_resource(),
     },
@@ -97,7 +93,6 @@ resource_def = {
         "monitor_fs": s3FileSystem(
             region_name="us-west-2", s3_bucket="hooli-demo-branch"
         ),
-        "email": ResourceDefinition.none_resource(),
         "pipes_databricks_client": ResourceDefinition.none_resource(),
         "pipes_k8s_client": PipesK8sClient(),
     },
@@ -120,13 +115,6 @@ resource_def = {
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),
-        "email": SESEmailAlert(
-            smtp_host="email-smtp.us-west-2.amazonaws.com",
-            smtp_email_from="lopp@elementl.com",
-            smtp_email_to=["lopp@elementl.com"],
-            smtp_username=EnvVar("SMTP_USERNAME"),
-            smtp_password=EnvVar("SMTP_PASSWORD"),
-        ),
         "pipes_databricks_client": PipesDatabricksClient(client),
         "pipes_k8s_client": PipesK8sClient(),
     },

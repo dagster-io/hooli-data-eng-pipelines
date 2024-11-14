@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from dagster import (
     AnchorBasedFilePathMapping,
     Definitions,
@@ -15,6 +14,7 @@ from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
 from hooli_data_eng.assets.raw_data import check_users, raw_data_schema_checks
+from hooli_data_eng.blueprints.blueprints import loader
 from hooli_data_eng.jobs import analytics_job, predict_job
 from hooli_data_eng.resources import get_env, resource_def
 from hooli_data_eng.schedules import analytics_schedule
@@ -22,7 +22,6 @@ from hooli_data_eng.sensors import orders_sensor, dbt_code_version_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
 from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
 from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
-
 # ---------------------------------------------------
 # Assets
 
@@ -59,18 +58,20 @@ forecasting_assets = load_assets_from_package_module(
 
 marketing_assets = load_assets_from_package_module(marketing, group_name="MARKETING")
 
+
 # ---------------------------------------------------
 # Definitions
 
 # Definitions are the collection of assets, jobs, schedules, resources, and sensors
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
-defs = Definitions(
+# Use Definitions.merge to include blueprints definitions
+defs = Definitions.merge(loader.load_defs(), Definitions(
     executor=multiprocess_executor.configured(
         {"max_concurrent": 3}
     ),  
     assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets]),
+        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets,]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
             file_anchor_path_in_repository="hooli_data_eng/definitions.py"
@@ -88,4 +89,6 @@ defs = Definitions(
        weekly_freshness_check_sensor
     ],
     jobs=[analytics_job, predict_job, dbt_slim_ci_job],
+    )
 )
+

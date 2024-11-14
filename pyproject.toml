@@ -1,0 +1,59 @@
+[project]
+name = "hooli_data_eng"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+      "dagster",
+      "dagster-dbt",
+      "dagster-blueprints",
+      "pandas",
+      "numpy",
+      "scipy",
+      "dbt-core",
+      "dbt-duckdb",
+      "dbt-snowflake",
+      "dagster-duckdb",
+      "dagster-aws",
+      "dagster-duckdb-pandas",
+      "dagster-snowflake",
+      "dagster-snowflake-pandas",
+      "dagster-cloud[insights]",
+      "dagster-pyspark",
+      "dagster-databricks",
+      "dagster-k8s",
+      "dagstermill",
+      "gql",
+      "plotnine",
+      "responses",
+      "requests",
+      "requests-toolbelt",
+      "html5lib",
+      "scikit-learn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver", 
+    "pytest",
+]
+
+sling = ["dagster-embedded-elt"]
+
+powerbi = ["dagster-powerbi"]
+
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.dagster]
+module_name = "hooli_data_eng.definitions"
+code_location_name = "hooli_data_eng"
+
+[tool.setuptools]
+packages = { find = { exclude = ["hooli_data_eng_tests"] } }
+
+[tool.setuptools.package-data]
+"hooli_data_eng" = ["dbt_project/*"]

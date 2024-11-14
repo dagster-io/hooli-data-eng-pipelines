@@ -3,6 +3,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /opt/dagster/app
 
+
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
@@ -19,5 +20,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
 ADD . /opt/dagster/app
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev

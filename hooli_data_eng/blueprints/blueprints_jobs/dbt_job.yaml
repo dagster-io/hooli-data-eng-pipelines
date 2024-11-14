@@ -1,0 +1,5 @@
+type: dbt_select_job
+name: dbt_blueprints_job
+select: "tag:all_cleaned_models"
+exclude:
+cron: 0 8 * * *
