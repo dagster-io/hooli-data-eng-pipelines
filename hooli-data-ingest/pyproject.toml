@@ -1,13 +1,12 @@
 [project]
-name = "dagster_batch_enrichment"
+name = "hooli_data_ingest"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9,<3.13"
 dependencies = [
     "dagster-duckdb",
-    "pandas",
-    "responses",
+    "dagster-embedded-elt",
     "dagster-cloud[insights]"
 ]
 
@@ -22,8 +21,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.dagster]
-module_name = "dagster_batch_enrichment.definitions"
-code_location_name = "dagster_batch_enrichment"
+module_name = "hooli_data_ingest.definitions"
+code_location_name = "hooli_data_ingest"
 
 [tool.setuptools]
-packages = { find = { exclude = ["dagster_batch_enrichment_tests"] } }
+packages = { find = { exclude = ["hooli_data_ingest_tests"] } }

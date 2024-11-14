@@ -1,6 +1,0 @@
-dagster
-dagster-cloud[insights]
-dagster-dbt
-dagster-snowflake
-gql
-requests_toolbelt
