@@ -93,6 +93,7 @@ jobs:
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
               fi
               echo $LOCATIONS
+              echo $LOCATIONS_WITH_IMAGE
               echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
               echo "LOCATIONS_WITH_IMAGE=$LOCATIONS_WITH_IMAGE" >> $GITHUB_ENV
 
