@@ -101,14 +101,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-
-      - name: Cache Python packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('.github/python_dependencies/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
+          cache-local-path: ".github/python_dependencies"
 
       - name: Install python dependencies
         run: | 
