@@ -103,7 +103,7 @@ jobs:
           enable-cache: true
 
       - name: Cache Python packages
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.venv
           key: ${{ runner.os }}-uv-${{ hashFiles('.github/python_dependencies/uv.lock') }}
