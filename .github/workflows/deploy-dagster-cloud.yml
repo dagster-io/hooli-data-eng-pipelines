@@ -219,16 +219,29 @@ jobs:
       - name: Set build output for Dagster Cloud
         id: ci-set-build-output
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        with:
-          command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
+        run: |
+          while [[ $LOCATIONS_WITH_IMAGE ]]; do
+            # Extract the first --location-name and --image-tag pair
+            LOCATION_NAME=$(echo $LOCATIONS_WITH_IMAGE | awk '{print $2}')
+            IMAGE_TAG=$(echo $LOCATIONS_WITH_IMAGE | awk '{print $4}')
+            
+            # Run the ci deploy command
+            echo "Running ci deploy for $LOCATION_NAME with image tag $IMAGE_TAG"
+            dagster-cloud ci deploy --location-name $LOCATION_NAME --image-tag $IMAGE_TAG
+            
+            # Remove the processed pair from LOCATIONS_WITH_IMAGE
+            LOCATIONS_WITH_IMAGE=$(echo $LOCATIONS_WITH_IMAGE | sed 's/--location-name [^ ]* --image-tag=[^ ]*//')
+          done
+        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        # with:
+        #   command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
       #Deploy 
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-          command: "ci deploy $LOCATIONS"
+         command: "ci deploy $LOCATIONS"
 
       # Get branch deployment as input to job trigger below
       - name: Get branch deployment
