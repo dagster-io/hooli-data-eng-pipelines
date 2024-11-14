@@ -70,27 +70,27 @@ jobs:
               LOCATIONS_WITH_IMAGE=""
               if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy  --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name basics --image-tag=$IMAGE_TAG-basics\n"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy --location-name basics --image-tag=$IMAGE_TAG-basics\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name batch_enrichment"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name snowflake_insights"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights\n"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy --location-name snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_data_ingest"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest\n"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_bi"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci deploy --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
