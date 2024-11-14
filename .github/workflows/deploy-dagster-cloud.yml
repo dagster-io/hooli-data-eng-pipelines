@@ -102,6 +102,20 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Cache Python packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('.github/python_dependencies/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install python dependencies
+        run: | 
+          uv venv
+          source .venv/bin/activate
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
+
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
@@ -143,9 +157,7 @@ jobs:
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_eng_any_changed == 'true'  
         run: |
-          uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade;
           dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
