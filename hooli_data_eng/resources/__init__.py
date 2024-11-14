@@ -3,7 +3,7 @@ import os
 from dagster import EnvVar, FilesystemIOManager, ResourceDefinition
 from dagster._utils import file_relative_path
 from dagster_aws.s3 import ConfigurablePickledObjectS3IOManager, S3Resource
-from dagster_dbt import DbtCliClientResource, DbtCliResource
+from dagster_dbt import DbtCliResource
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_k8s import PipesK8sClient
 from dagster_pyspark import pyspark_resource
@@ -40,8 +40,6 @@ from unittest import mock
 #
 # The production deployment on Dagster Cloud uses production Snowflake
 # and S3 resources
-
-
 client = mock.MagicMock()
 
 if get_env() == "PROD":
@@ -67,7 +65,7 @@ resource_def = {
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI.configure_at_launch(),
         "s3": ResourceDefinition.none_resource(),
-        "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="LOCAL"),
+        "dbt": DbtCliResource(project_dir=dbt_project, target="LOCAL"),
         "dbt2": DbtCliResource(project_dir=dbt_project, target="LOCAL"),
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
@@ -92,7 +90,7 @@ resource_def = {
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI.configure_at_launch(),
-        "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="BRANCH"),
+        "dbt": DbtCliResource(project_dir=dbt_project, target="BRANCH"),
         "dbt2": DbtCliResource(project_dir=dbt_project, target="BRANCH"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
@@ -117,8 +115,8 @@ resource_def = {
         ),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
         "api": RawDataAPI.configure_at_launch(),
-        "dbt": DbtCliClientResource(project_dir=DBT_PROJECT_DIR, target="PROD"),
-        "dbt2": DbtCliResource(project_dir=DBT_PROJECT_DIR, target="PROD"),
+        "dbt": DbtCliResource(project_dir=dbt_project, target="PROD"),
+        "dbt2": DbtCliResource(project_dir=dbt_project, target="PROD"),
         "pyspark": pyspark_resource,
         "step_launcher": db_step_launcher,
         "monitor_fs": s3FileSystem(region_name="us-west-2", s3_bucket="hooli-demo"),

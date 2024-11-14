@@ -133,10 +133,12 @@ def _process_partitioned_dbt_assets(context: OpExecutionContext, dbt: DbtCliReso
 
 @dbt_assets(
     manifest=DBT_MANIFEST,
+    project=dbt_project,
     select="orders_cleaned users_cleaned orders_augmented location_stats",
     partitions_def=daily_partitions,
     dagster_dbt_translator=CustomDagsterDbtTranslator(
-        settings=DagsterDbtTranslatorSettings(enable_asset_checks=True)
+        settings=DagsterDbtTranslatorSettings(enable_asset_checks=True,
+                                              enable_code_references=True,)
     ),
     backfill_policy=BackfillPolicy.single_run(),
 )
@@ -146,10 +148,12 @@ def daily_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
 
 @dbt_assets(
     manifest=DBT_MANIFEST,
+    project=dbt_project,
     select="weekly_order_summary order_stats",
     partitions_def=weekly_partitions,
     dagster_dbt_translator=CustomDagsterDbtTranslator(
-        DagsterDbtTranslatorSettings(enable_asset_checks=True)
+        DagsterDbtTranslatorSettings(enable_asset_checks=True,
+                                     enable_code_references=True,)
     ),
     backfill_policy=BackfillPolicy.single_run(),
 )
@@ -164,9 +168,11 @@ weekly_freshness_check_sensor=build_sensor_for_freshness_checks(
 
 @dbt_assets(
     manifest=DBT_MANIFEST,
+    project=dbt_project,
     select="company_perf sku_stats company_stats locations_cleaned",
     dagster_dbt_translator=CustomDagsterDbtTranslatorForViews(
-        DagsterDbtTranslatorSettings(enable_asset_checks=True)
+        DagsterDbtTranslatorSettings(enable_asset_checks=True,
+                                     enable_code_references=True,)
     ),
 )
 def views_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
@@ -194,7 +200,7 @@ def dbt_slim_ci(dbt2: DbtCliResource):
     dbt_command = [
         "build",
         "--select",
-        "state:modified+",
+        "state:modified.body+",
         "--defer",
         "--state",
         dbt2.state_path,
@@ -204,7 +210,8 @@ def dbt_slim_ci(dbt2: DbtCliResource):
         args=dbt_command,
         manifest=DBT_MANIFEST,
         dagster_dbt_translator=CustomDagsterDbtTranslator(
-            DagsterDbtTranslatorSettings(enable_asset_checks=True)
+            DagsterDbtTranslatorSettings(enable_asset_checks=True,
+                                         enable_code_references=True,)
         ),
     ).stream().fetch_row_counts().fetch_column_metadata()
 

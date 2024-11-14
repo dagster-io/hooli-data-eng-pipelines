@@ -22,7 +22,7 @@ from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
 from pydantic import Field
 
-from hooli_data_eng.utils.config_utils import get_storage_kind
+from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
 
 
 # dynamically determine storage_kind based on environment
@@ -187,6 +187,7 @@ model_nb = define_dagstermill_asset(
         "order_forecast_model": AssetIn(),
     },
     required_resource_keys={"io_manager"},
+    asset_tags={**StorageKindTagSet(storage_kind="S3")},
 )
 
 
@@ -245,6 +246,7 @@ def databricks_asset(
 @asset(
     deps=[predicted_orders],
     compute_kind="kubernetes",
+    tags={**StorageKindTagSet(storage_kind="S3")},
 )
 def k8s_pod_asset(
     context: AssetExecutionContext,

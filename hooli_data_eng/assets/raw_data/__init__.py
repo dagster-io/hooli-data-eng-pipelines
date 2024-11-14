@@ -19,7 +19,7 @@ from dagster._core.definitions.tags import StorageKindTagSet
 import pandas as pd
 
 from hooli_data_eng.resources.api import RawDataAPI
-from hooli_data_eng.utils.config_utils import get_storage_kind
+from hooli_data_eng.utils.storage_kind_helpers import get_storage_kind
 
 
 # dynamically determine storage_kind based on environment

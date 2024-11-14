@@ -1,9 +1,17 @@
 import os
+from pathlib import Path
 
-from dagster import Definitions, EnvVar, ResourceDefinition
+from dagster import (
+    AnchorBasedFilePathMapping,
+    Definitions,
+    EnvVar,
+    ResourceDefinition,
+    with_source_code_references,
+)
 from dagster_cloud.dagster_insights import (
     create_snowflake_insights_asset_and_schedule,
 )
+from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 from dagster_snowflake import SnowflakeResource
 
 # Used to derive environment (LOCAL, BRANCH, PROD)
@@ -43,7 +51,13 @@ snowflake_insights_definitions = create_snowflake_insights_asset_and_schedule(
 )
 
 defs = Definitions(
-    assets=[*snowflake_insights_definitions.assets,],
+    assets=link_code_references_to_git_if_cloud(
+        with_source_code_references([*snowflake_insights_definitions.assets,]),
+        file_path_mapping=AnchorBasedFilePathMapping(
+            local_file_anchor=Path(__file__),
+            file_anchor_path_in_repository="hooli_snowflake_insights/definitions.py",
+        ),
+    ),
     schedules=[snowflake_insights_definitions.schedule,],
     resources=resource_def[get_env()],
 )

@@ -71,10 +71,6 @@ jobs:
         with:
           mask-password: 'true'
 
-      - name: Set Branch Deployment Environment Variable for PR
-        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        run: echo "DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT=1" >> $GITHUB_ENV
-
       - name: Set Prod Deployment Environment Variable for Push
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
@@ -85,7 +81,7 @@ jobs:
           pip install pip --upgrade;
           pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb dbt-snowflake --upgrade --upgrade-strategy eager;
           make deps
-          dagster-dbt project prepare-for-deployment --file hooli_data_eng/project.py
+          dagster-dbt project prepare-and-package --file hooli_data_eng/project.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/project.py --source-deployment data-eng-prod
 
       - name: Build and upload Docker image for data-eng-pipeline
