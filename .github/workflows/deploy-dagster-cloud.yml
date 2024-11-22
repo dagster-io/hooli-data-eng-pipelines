@@ -204,12 +204,15 @@ jobs:
 
       # Build 'hooli_bi' code location
       - name: Build and upload Docker image for hooli_bi
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'  
-        uses: docker/build-push-action@v5
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-          context: ./hooli-bi
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
+          command: "ci build --location-name hooli_bi --docker-image-tag $IMAGE_TAG-hooli-bi"
+        #uses: docker/build-push-action@v5
+        #with:
+        #  context: ./hooli-bi
+        #  push: true
+        #  tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
