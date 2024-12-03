@@ -8,7 +8,8 @@ import vertica_python
 
 
 
-@asset(io_manager_key="model_io_manager")
+@asset(io_manager_key="model_io_manager",
+       group_name="DEMO_EXAMPLES")
 def upstream_asset():
    """
    My Example Asset
@@ -17,7 +18,8 @@ def upstream_asset():
 
 
 
-#@asset(io_manager_key="model_io_manager")
+#@asset(io_manager_key="model_io_manager",
+#        group_name="DEMO_EXAMPLES")
 #def downstream_asset(upstream_asset):
 #    return upstream_asset + [4]
 

@@ -69,9 +69,6 @@ resource_def = {
         "pyspark": pyspark_resource,
         "step_launcher": ResourceDefinition.none_resource(),
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
-        "email": LocalEmailAlert(
-            smtp_email_to=["data@awesome.com"], smtp_email_from="no-reply@awesome.com"
-        ),
         "pipes_databricks_client": PipesDatabricksClient(client),
         "pipes_k8s_client": ResourceDefinition.none_resource(),
     },

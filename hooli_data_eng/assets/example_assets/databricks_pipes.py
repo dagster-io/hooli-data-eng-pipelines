@@ -1,15 +1,13 @@
 from dagster_databricks import PipesDatabricksClient
 
 from dagster import AssetExecutionContext, asset, MaterializeResult
-from dagster._core.definitions.tags import StorageKindTagSet
 from databricks.sdk.service import jobs
 
 # This databricks pipes asset only runs in prod, see utils/external_databricks_script.py
 # The dependency on predicted_orders is not a real dependency since the script does not rely
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @asset(
-    compute_kind="databricks",
-    tags={**StorageKindTagSet(storage_kind="databricks")},
+    kinds={"pyspark", "databricks"},
     group_name="DEMO_EXAMPLES"
 )
 def my_databricks_asset(

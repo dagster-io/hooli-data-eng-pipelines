@@ -218,7 +218,7 @@ def regular_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
                settings=DagsterDbtTranslatorSettings(enable_asset_checks=True)
             ),
 )
-def jaffle_shop_dbt_assets(context: OpExecutionContext, dbt2: DbtCliResource):
+def jaffle_shop_dbt_assets(context: AssetExecutionContext, dbt2: DbtCliResource):
    yield from dbt2.cli(["build"], context=context).stream()
 
 
