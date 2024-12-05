@@ -4,7 +4,7 @@ select *
 from {{ source("raw_data", "locations") }}
 
 ),
-
+ 
 source_renamed as (
 
     select l_user_id as user_id,
