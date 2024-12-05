@@ -144,7 +144,7 @@ def _process_partitioned_dbt_assets(context: AssetExecutionContext, dbt: DbtCliR
 @dbt_assets(
     manifest=DBT_MANIFEST,
     project=dbt_project,
-    select="orders_cleaned users_cleaned orders_augmented",
+    select="orders_cleaned users_cleaned orders_augmented location_stats",
     partitions_def=daily_partitions,
     dagster_dbt_translator=CustomDagsterDbtTranslator(
         settings=DagsterDbtTranslatorSettings(
