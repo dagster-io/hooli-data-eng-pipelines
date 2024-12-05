@@ -6,3 +6,10 @@ models:
           deadline_cron: "0 9 * * MON"
           lower_bound_delta_seconds: 1980
           severity: "WARN"
+  - name: orders_augmented
+    columns:
+      - name: user_id
+        description: "Platform id of the user that placed this order."
+        tests:
+          - not_null
+        tags: ["PII"]
