@@ -16,6 +16,7 @@ models:
         data_type: "int"
         tests:
           - not_null
+        tags: ["PII"]
       - name: quantity
         description: "The quantity of items purchased in this order."
       - name: purchase_price
@@ -42,10 +43,12 @@ models:
     # group: core-data-eng
     description: "Raw users data with test accounts removed"
     config:
-      tags: "core_kpis"
+      tags:
+        - "core_kpis"
     columns:
       - name: "user_id"
         description: "Platform id of the user."
+        tags: ["PII"]
         data_type: "int"
       - name: "company"
         description: "The name of the company that this user belongs to."
@@ -63,6 +66,7 @@ models:
     description: "Locations data with standardized column names"
     columns:
       - name: "user_id"
+        tags: ["PII"]
         description: "The unique identifier for the user"
         data_type: "int"
       - name: "street_address"
