@@ -30,7 +30,8 @@ class MyCustomPowerBITranslator(DagsterPowerBITranslator):
                                 metadata={"dagster/column_schema": TableSchema(
             columns=[TableColumn(
                 name=col["name"], 
-                type=col["dataType"]) 
+                type=col["dataType"],
+                tags={"PII":""} if col["name"] == "USER_ID" else None) 
                 for col in data.properties["tables"][0]["columns"]])},
                 tags={"core_kpis":""},
         )
