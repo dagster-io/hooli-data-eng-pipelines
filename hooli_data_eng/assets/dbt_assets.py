@@ -1,6 +1,9 @@
 import json
 import textwrap
-from typing import Any, Mapping
+from typing import Any, Mapping, Iterable
+import subprocess
+import re
+
 from dagster import (
     AutomationCondition,
     AssetKey,
@@ -10,6 +13,11 @@ from dagster import (
     op,
     AssetExecutionContext,
     WeeklyPartitionsDefinition,
+    AssetCheckExecutionContext,
+    AssetCheckResult,
+    AssetCheckSpec,
+    multi_asset_check,
+    AssetCheckSeverity,
 )
 from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
 from dagster_dbt import (
@@ -17,11 +25,67 @@ from dagster_dbt import (
     DagsterDbtTranslator,
     default_metadata_from_dbt_resource_props,
     DagsterDbtTranslatorSettings,
+    DbtCliEventMessage
 )
+
 from dagster_dbt.asset_decorator import dbt_assets
 from hooli_data_eng.resources import dbt_project
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
 from dagster import build_sensor_for_freshness_checks
+
+# Load and parse the dbt manifest
+def load_dbt_manifest(manifest_path):
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+    return manifest
+
+# Create AssetCheckSpec objects from the dbt manifest
+def create_source_freshness_check_specs(manifest_path):
+    manifest = load_dbt_manifest(manifest_path)
+    check_specs = []
+    for _, source_data in manifest['sources'].items():
+        if "freshness" in source_data and source_data["freshness"] is not None:
+            # Append check_specs as it currently is
+            asset_key = AssetKey([source_data["schema"].upper(), source_data["name"] ])
+            check_specs.append(
+                AssetCheckSpec(
+                    name="source_freshness_check",
+                    asset=asset_key,
+                    automation_condition=AutomationCondition.eager()),
+            )
+    return check_specs
+
+
+@multi_asset_check(
+    specs=create_source_freshness_check_specs(dbt_project.manifest_path),
+    can_subset=True,
+    required_resource_keys={"dbt"},
+)
+def source_freshness_check(context: AssetCheckExecutionContext):
+    dbt_resource = context.resources.dbt
+    for asset_check_key in context.selected_asset_check_keys:
+        # Extract the asset key and check name
+        asset_key = asset_check_key.asset_key
+        check_name = asset_check_key.name
+        context.log.info(f"Running check {check_name} on asset {asset_key}")
+        selection_string = f"source:{asset_key.path[0].lower()}.{asset_key.path[1]}"
+        dbt_cli_invocation = dbt_resource.cli(["source", "freshness", "--select", selection_string], raise_on_error=False)
+        # Process the raw event stream
+        for dbt_event in dbt_cli_invocation.stream_raw_events():
+            context.log.info(f"Received event: {dbt_event.raw_event}")
+            if dbt_event.raw_event.get('info', {}).get('name') == 'LogFreshnessResult':
+                log_freshness_result = dbt_event.raw_event['info']
+                context.log.info(f"Filtered LogFreshnessResult: {log_freshness_result}")
+                passed = True if log_freshness_result['level'] == 'info' else False
+                severity = AssetCheckSeverity.ERROR if log_freshness_result['level'] == 'error' else AssetCheckSeverity.WARN
+                yield AssetCheckResult(
+                    asset_key=asset_key,
+                    check_name="source_freshness_check",
+                    passed=passed,
+                    severity=severity,
+                    metadata={},
+                )
+
 
 
 # many dbt assets use an incremental approach to avoid
@@ -115,7 +179,6 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
             dbt_resource_props["group"]["owner"]["email"],
             f"team:{dbt_resource_props['group']['name']}",
         ]
-
 
 def _process_partitioned_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # map partition key range to dbt vars
@@ -211,6 +274,8 @@ def regular_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     for result in run_results_json["results"]:
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
+
+
 
 
 # This op will be used to run slim CI
