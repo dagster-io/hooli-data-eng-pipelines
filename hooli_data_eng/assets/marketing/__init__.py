@@ -12,11 +12,10 @@ from dagster import (
     AssetCheckResult,
     asset_check,
     AssetKey,
-    define_asset_job, 
+    define_asset_job,
     ScheduleDefinition,
     AssetSelection,
-    EnvVar,)
-from dagster_snowflake import SnowflakeResource
+)
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 import pandas as pd
 from hooli_data_eng.utils.kind_helpers import get_kind
@@ -30,7 +29,7 @@ storage_kind = get_kind()
 # dbt and create summaries using pandas
 @asset(
     key_prefix="MARKETING",
-    automation_condition=AutomationCondition.on_cron('0 0 1-31/2 * *'),
+    automation_condition=AutomationCondition.on_cron("0 0 1-31/2 * *"),
     owners=["team:programmers", "lopp@dagsterlabs.com"],
     ins={"company_perf": AssetIn(key_prefix=["ANALYTICS"])},
     kinds={"pandas", storage_kind},
@@ -90,23 +89,22 @@ def key_product_deepdive(context, sku_stats):
 
 
 min_order_freshness_check = build_last_update_freshness_checks(
-    assets=[min_order, 
-            AssetKey(["RAW_DATA", "orders"]),
-            AssetKey(["RAW_DATA", "users"])
-            ],
+    assets=[
+        min_order,
+        AssetKey(["RAW_DATA", "orders"]),
+        AssetKey(["RAW_DATA", "users"]),
+    ],
     lower_bound_delta=datetime.timedelta(
         hours=24
     ),  # expect new data at least once a day
 )
 
 avg_orders_freshness_check = build_anomaly_detection_freshness_checks(
-    assets=[avg_orders], 
-    params=None
+    assets=[avg_orders], params=None
 )
 
 min_order_freshness_check_sensor = build_sensor_for_freshness_checks(
-    freshness_checks=min_order_freshness_check, 
-    minimum_interval_seconds=10*60
+    freshness_checks=min_order_freshness_check, minimum_interval_seconds=10 * 60
 )
 
 avg_orders_freshness_check_schedule = ScheduleDefinition(
@@ -114,6 +112,6 @@ avg_orders_freshness_check_schedule = ScheduleDefinition(
     cron_schedule="*/10 * * * *",
     job=define_asset_job(
         "check_avg_orders_freshness_job",
-        selection=AssetSelection.checks(*avg_orders_freshness_check)
-    )
+        selection=AssetSelection.checks(*avg_orders_freshness_check),
+    ),
 )

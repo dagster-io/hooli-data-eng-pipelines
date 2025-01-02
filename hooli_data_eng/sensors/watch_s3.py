@@ -3,7 +3,6 @@
 # On file updates, this sensor triggers a job
 # To see an example of sensors off of assets, see definitions.py
 
-from typing import Any
 from hooli_data_eng.resources.sensor_file_managers import (
     FileSystem,
 )
@@ -48,7 +47,8 @@ def watch_s3_sensor(context, monitor_fs: FileSystem):
         if last_updated is None:
             yield SkipReason(f"customers.txt not found, using {env}")
             return
-    except:
+    except Exception as e:
+        context.log.error(f"Error occurred while checking customers.txt: {str(e)}")
         yield SkipReason(f"customers.txt not found HERE, using {env}")
         return
 

@@ -1,7 +1,7 @@
 import datetime
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict
 import random
 import numpy as np
 import pandas as pd
@@ -25,31 +25,43 @@ def _random_times(n: int):
         clipped_flipped_dist = np.append(
             clipped_flipped_dist, clipped_flipped_dist[: n - len(clipped_flipped_dist)]
         )
-    
-    times = pd.to_datetime((clipped_flipped_dist * (end_u - start_u)) + start_u, unit="s")
 
-    hours = times.round('60min').to_pydatetime()
+    times = pd.to_datetime(
+        (clipped_flipped_dist * (end_u - start_u)) + start_u, unit="s"
+    )
+
+    hours = times.round("60min").to_pydatetime()
 
     return hours
 
 
-def random_data(extra_columns: Dict[str, Any], n: int, filter_date = None) -> pd.DataFrame:
-    
-    skus = ["pepsi", "coke", "sprite", "coke zero", "powerade", "diet", "gingerale", "juice"]
-    
-    # always have user_id 
+def random_data(
+    extra_columns: Dict[str, Any], n: int, filter_date=None
+) -> pd.DataFrame:
+    skus = [
+        "pepsi",
+        "coke",
+        "sprite",
+        "coke zero",
+        "powerade",
+        "diet",
+        "gingerale",
+        "juice",
+    ]
+
+    # always have user_id
     data = {"user_id": np.random.randint(0, 1000, size=n)}
 
     for name, dtype in extra_columns.items():
-        if name == "sku": 
+        if name == "sku":
             data[name] = random.choices(skus, k=n)
-        elif dtype == str:
+        elif isinstance(dtype, str):
             data[name] = [str(uuid.uuid4()) for _ in range(n)]
-        elif dtype == int:
+        elif isinstance(dtype, int):
             data[name] = np.random.randint(0, 100, size=n)
-        elif dtype == float:
+        elif isinstance(dtype, float):
             data[name] = 100 * np.random.random(size=n)
-    
+
     data = pd.DataFrame(data)
 
     if filter_date:

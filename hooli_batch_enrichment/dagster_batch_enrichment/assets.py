@@ -1,6 +1,16 @@
 import json
 
-from dagster import asset, OpExecutionContext ,MetadataValue, DynamicOut, Config, op, DynamicOutput, Out, graph_asset, RetryPolicy, Config
+from dagster import (
+    asset,
+    OpExecutionContext,
+    MetadataValue,
+    DynamicOut,
+    op,
+    DynamicOutput,
+    graph_asset,
+    RetryPolicy,
+    Config,
+)
 import pandas as pd
 from pydantic import Field
 import numpy as np
@@ -11,30 +21,33 @@ from dagster_batch_enrichment.api import EnrichmentAPI
 
 class experimentConfig(Config):
     experiment_name: str = Field(
-        default="default_config", 
-        description="A name to give to this run's configuration set"
+        default="default_config",
+        description="A name to give to this run's configuration set",
     )
+
 
 @asset(
     kinds={"Kubernetes", "S3"},
 )
 def raw_data(
-    context: OpExecutionContext, 
+    context: OpExecutionContext,
     warehouse: MyWarehouse,
     config: experimentConfig,
 ):
-    """ Placeholder for querying a real data source"""
+    """Placeholder for querying a real data source"""
     orders_to_process = warehouse.get_raw_data()
-    
+
     # add any logging
     context.log.info(f"Received {len(orders_to_process)} orders to process")
-    
+
     # associate metadata with the raw data asset materialization
-    context.add_output_metadata(metadata={
-        "preview": MetadataValue.md(orders_to_process.head(3).to_markdown()), 
-        "nrows": len(orders_to_process),
-        "user_input": config.experiment_name
-    })
+    context.add_output_metadata(
+        metadata={
+            "preview": MetadataValue.md(orders_to_process.head(3).to_markdown()),
+            "nrows": len(orders_to_process),
+            "user_input": config.experiment_name,
+        }
+    )
 
     return orders_to_process
 
@@ -45,7 +58,10 @@ def raw_data(
 # The batch size is configurable with a default of 50 records per batch
 # The batches are processed in parallel threads
 class ParallelizationConfig(Config):
-    number_records_per_batch: int = Field(50, description="Number of records to use per batch")
+    number_records_per_batch: int = Field(
+        50, description="Number of records to use per batch"
+    )
+
 
 @op(out=DynamicOut())
 def split_rows(context: OpExecutionContext, raw_data, config: ParallelizationConfig):
@@ -60,10 +76,10 @@ def split_rows(context: OpExecutionContext, raw_data, config: ParallelizationCon
         yield DynamicOutput(c, mapping_key=str(r))
 
 
-@op(
-        retry_policy=RetryPolicy(max_retries=2)
-)
-def process_chunk(context: OpExecutionContext, chunk, api: EnrichmentAPI) -> pd.DataFrame:
+@op(retry_policy=RetryPolicy(max_retries=2))
+def process_chunk(
+    context: OpExecutionContext, chunk, api: EnrichmentAPI
+) -> pd.DataFrame:
     """
     Process rows in each chunk by calling the enrichment API
         within a chunk processing is sequential
@@ -97,6 +113,3 @@ def enriched_data(raw_data) -> pd.DataFrame:
     chunks_mapped = chunks.map(process_chunk)
     enriched_chunks = chunks_mapped.collect()
     return concat_chunk_list(enriched_chunks)
-
-
-

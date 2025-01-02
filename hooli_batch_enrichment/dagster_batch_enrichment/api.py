@@ -1,6 +1,5 @@
 import random
 
-import numpy as np
 import pandas as pd
 import requests
 import responses
@@ -12,10 +11,10 @@ class EnrichmentAPI(ConfigurableResource):
 
     @responses.activate
     def get_order_details(_, order_id):
-        x = random.randint(0,500)
+        x = random.randint(0, 500)
         if x <= 1:
             raise Exception("API time out")
-        
+
         responses.get(
             # fake endpoint
             "http://api.jaffleshop.co/v1/order_details",

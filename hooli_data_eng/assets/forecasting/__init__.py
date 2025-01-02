@@ -20,7 +20,6 @@ from dagster._core.definitions.tags import build_kind_tag
 from dagster._utils import file_relative_path
 from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
-from pydantic import Field
 
 from hooli_data_eng.utils.kind_helpers import get_kind
 
@@ -63,7 +62,7 @@ class modelHyperParams(Config):
 @asset(
     ins={"weekly_order_summary": AssetIn(key_prefix=["ANALYTICS"])},
     io_manager_key="model_io_manager",
-    kinds={"scikitlearn", "S3"}
+    kinds={"scikitlearn", "S3"},
 )
 def order_forecast_model(
     context, weekly_order_summary: pd.DataFrame, config: modelHyperParams
@@ -98,9 +97,9 @@ def order_forecast_model(
     io_manager_key="model_io_manager",
     partitions_def=MonthlyPartitionsDefinition(start_date="2022-01-01"),
     tags={
-        "core_kpis":"",
-        },
-    kinds={"scikitlearn", storage_kind}
+        "core_kpis": "",
+    },
+    kinds={"scikitlearn", storage_kind},
 )
 def model_stats_by_month(
     context,
@@ -138,7 +137,7 @@ def model_stats_by_month(
         "order_forecast_model": AssetIn(),
     },
     key_prefix=["FORECASTING"],
-    kinds={"pandas", storage_kind}
+    kinds={"pandas", storage_kind},
 )
 def predicted_orders(
     weekly_order_summary: pd.DataFrame, order_forecast_model: Tuple[float, float]
