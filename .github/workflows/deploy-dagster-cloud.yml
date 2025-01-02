@@ -108,10 +108,12 @@ jobs:
         run: | 
           uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" ruff --upgrade;
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
       
       - name: Run Ruff
-        run: ruff check --output-format=github .
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check --output-format=github .
 
       - name: Validate configuration
         id: ci-validate
