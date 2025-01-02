@@ -28,6 +28,9 @@ update_packages:
 	uv lock --upgrade --directory hooli-data-ingest;
 	uv lock --upgrade --directory hooli-bi;
 
+ruff:
+	-ruff check --fix .
+	ruff format .
 
 # ensure that DAGSTER_GIT_REPO_DIR is set to the path of the dagster repo
 # see https://www.notion.so/dagster/Local-Dev-Setup-e58aba352f704dcc88a8dc44cb1ce7fc for more details
