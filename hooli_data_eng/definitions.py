@@ -3,6 +3,7 @@ from dagster import (
     AnchorBasedFilePathMapping,
     Definitions,
     load_assets_from_modules,
+    load_asset_checks_from_modules,
     load_assets_from_package_module,
     build_column_schema_change_checks,
     multiprocess_executor,
@@ -45,6 +46,7 @@ raw_data_assets = load_assets_from_package_module(
 # specifies what databases to targets, and locally will
 # execute against a DuckDB
 
+dbt_source_freshness = load_asset_checks_from_modules([dbt_assets])
 dbt_assets = load_assets_from_modules([dbt_assets])
 
 dbt_asset_checks = build_column_schema_change_checks(assets=[*dbt_assets])
@@ -77,7 +79,7 @@ defs = Definitions.merge(loader.load_defs(), Definitions(
             file_anchor_path_in_repository="hooli_data_eng/definitions.py"
         )
     ),
-    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
+    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, *dbt_source_freshness, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
     resources=resource_def[get_env()],
     schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
     sensors=[

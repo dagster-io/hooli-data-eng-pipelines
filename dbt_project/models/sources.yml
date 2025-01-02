@@ -4,8 +4,31 @@ sources:
   - name: "raw_data"
     tables:
       - name: "orders"
+        loaded_at_field: dt
+        freshness:
+          warn_after:
+            count: 1 # orders and users will warn daily and error after 2 days
+            period: day #minute | hour | day
+          error_after:
+            count: 2
+            period: day #minute | hour | day
+        columns:
+          - name: "order_id"
+            tests:
+              - unique
       - name: "users"
+        loaded_at_field: created_at
       - name: "locations"
+        loaded_at_field: null 
+        freshness: null
+    freshness:
+      warn_after:
+        count: 1 # orders and users will warn daily and error after 2 days
+        period: day #minute | hour | day
+      error_after:
+        count: 2
+        period: day #minute | hour | day
+      #filter: <boolean_sql_expression>
   - name: "forecasting"
     tables:
       - name: "predicted_orders"
