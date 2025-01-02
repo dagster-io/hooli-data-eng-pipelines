@@ -266,15 +266,16 @@ def create_source_freshness_check_specs(manifest_path):
     manifest = load_dbt_manifest(manifest_path)
     check_specs = []
     for _, source_data in manifest['sources'].items():
-        if "freshness" in source_data and source_data["freshness"].get("error_after").get("count") is not None and source_data["name"] != "locations":
+        freshness = source_data.get("freshness")
+        if freshness and freshness.get("error_after", {}).get("count") is not None:
             asset_key = AssetKey([source_data["schema"].upper(), source_data["name"] ])
             check_specs.append(
                 AssetCheckSpec(
                     name="source_freshness_check",
                     asset=asset_key,
-                    blocking=True,
-                    automation_condition=allow_outdated_and_missing_parents_condition),
-            )
+                    blocking=True,            
+                    )
+        )
     return check_specs
 
 @multi_asset_check(
