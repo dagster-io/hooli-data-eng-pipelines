@@ -37,6 +37,7 @@ dependencies = [
 dev = [
     "dagster-webserver", 
     "pytest",
+    "ruff",
 ]
 
 sling = ["dagster-embedded-elt"]

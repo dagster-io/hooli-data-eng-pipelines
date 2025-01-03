@@ -10,6 +10,7 @@ from hooli_data_eng.assets.dbt_assets import daily_dbt_assets
 
 # This class is used to construct dbt jobs via yaml files
 
+
 class DbtSelectScheduledJobBlueprint(Blueprint):
     type: Literal["dbt_select_job"]
     name: str
@@ -26,6 +27,7 @@ class DbtSelectScheduledJobBlueprint(Blueprint):
         )
         schedule_def = ScheduleDefinition(job=job_def, cron_schedule=self.cron)
         return Definitions(schedules=[schedule_def])
+
 
 # The loader will pick up any yaml files in the blueprints_jobs directory
 loader = YamlBlueprintsLoader(

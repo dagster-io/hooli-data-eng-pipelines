@@ -20,8 +20,16 @@ from hooli_data_eng.resources import get_env, resource_def
 from hooli_data_eng.schedules import analytics_schedule
 from hooli_data_eng.sensors import orders_sensor, dbt_code_version_sensor
 from hooli_data_eng.sensors.watch_s3 import watch_s3_sensor
-from hooli_data_eng.assets.marketing import avg_orders_freshness_check, min_order_freshness_check, min_order_freshness_check_sensor, check_avg_orders, avg_orders_freshness_check_schedule
-from hooli_data_eng.assets.dbt_assets import weekly_freshness_check, weekly_freshness_check_sensor
+from hooli_data_eng.assets.marketing import (
+    avg_orders_freshness_check,
+    min_order_freshness_check,
+    min_order_freshness_check_sensor,
+    avg_orders_freshness_check_schedule,
+)
+from hooli_data_eng.assets.dbt_assets import (
+    weekly_freshness_check,
+    weekly_freshness_check_sensor,
+)
 # ---------------------------------------------------
 # Assets
 
@@ -66,29 +74,43 @@ marketing_assets = load_assets_from_package_module(marketing, group_name="MARKET
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
 
 # Use Definitions.merge to include blueprints definitions
-defs = Definitions.merge(loader.load_defs(), Definitions(
-    executor=multiprocess_executor.configured(
-        {"max_concurrent": 3}
-    ),  
-    assets=link_code_references_to_git_if_cloud(
-        with_source_code_references([*dbt_assets, *raw_data_assets, *forecasting_assets, *marketing_assets,]),
-        file_path_mapping=AnchorBasedFilePathMapping(
-            local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli_data_eng/definitions.py"
-        )
+defs = Definitions.merge(
+    loader.load_defs(),
+    Definitions(
+        executor=multiprocess_executor.configured({"max_concurrent": 3}),
+        assets=link_code_references_to_git_if_cloud(
+            with_source_code_references(
+                [
+                    *dbt_assets,
+                    *raw_data_assets,
+                    *forecasting_assets,
+                    *marketing_assets,
+                ]
+            ),
+            file_path_mapping=AnchorBasedFilePathMapping(
+                local_file_anchor=Path(__file__),
+                file_anchor_path_in_repository="hooli_data_eng/definitions.py",
+            ),
+        ),
+        asset_checks=[
+            *raw_data_schema_checks,
+            *dbt_asset_checks,
+            check_users,
+            check_avg_orders,
+            *min_order_freshness_check,
+            *avg_orders_freshness_check,
+            *weekly_freshness_check,
+        ],
+        resources=resource_def[get_env()],
+        schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
+        sensors=[
+            orders_sensor,
+            watch_s3_sensor,
+            #       asset_delay_alert_sensor,
+            min_order_freshness_check_sensor,
+            dbt_code_version_sensor,
+            weekly_freshness_check_sensor,
+        ],
+        jobs=[analytics_job, predict_job, dbt_slim_ci_job],
     ),
-    asset_checks=[*raw_data_schema_checks, *dbt_asset_checks, check_users, check_avg_orders, *min_order_freshness_check, *avg_orders_freshness_check, *weekly_freshness_check],
-    resources=resource_def[get_env()],
-    schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
-    sensors=[
-       orders_sensor,   
-       watch_s3_sensor,
-#       asset_delay_alert_sensor,
-       min_order_freshness_check_sensor,
-       dbt_code_version_sensor,
-       weekly_freshness_check_sensor
-    ],
-    jobs=[analytics_job, predict_job, dbt_slim_ci_job],
-    )
 )
-

@@ -7,7 +7,6 @@ from dagster import (
     AssetCheckResult,
     AssetKey,
     BackfillPolicy,
-    Backoff,
     build_column_schema_change_checks,
     Backoff,
     DailyPartitionsDefinition,
@@ -25,16 +24,14 @@ from hooli_data_eng.utils.kind_helpers import get_kind
 storage_kind = get_kind()
 
 
-daily_partitions = DailyPartitionsDefinition(
-    start_date="2023-05-25"
-)
+daily_partitions = DailyPartitionsDefinition(start_date="2023-05-25")
 
 
 def _daily_partition_seq(start, end):
     start = pd.to_datetime(start)
     end = pd.to_datetime(end)
     daily_diffs = int((end - start) / timedelta(hours=24))
-    
+
     return [str(start + timedelta(hours=i)) for i in range(daily_diffs)]
 
 
@@ -56,36 +53,36 @@ def users(context, api: RawDataAPI) -> pd.DataFrame:
         users = pd.read_json(resp.json())
         all_users.append(users)
 
-
     return pd.concat(all_users)
 
+
 @asset_check(
-        asset=AssetKey(["RAW_DATA", "users"]),
-        description="check that users are from expected companies",
+    asset=AssetKey(["RAW_DATA", "users"]),
+    description="check that users are from expected companies",
 )
 def check_users(context, users: pd.DataFrame):
-    observed_companies = set(pd.unique(users['company']))
+    observed_companies = set(pd.unique(users["company"]))
     expected_companies = {"ShopMart", "SportTime", "FamilyLtd", "DiscountStore"}
 
     return AssetCheckResult(
-        passed=  (set(observed_companies) == expected_companies),
-        metadata={"result": MetadataValue.md(
-            f"""
+        passed=(set(observed_companies) == expected_companies),
+        metadata={
+            "result": MetadataValue.md(
+                f"""
                 Observed the following unexpected companies: 
                 {list(observed_companies - expected_companies)}
             """
-        )},
-        severity=AssetCheckSeverity.WARN
+            )
+        },
+        severity=AssetCheckSeverity.WARN,
     )
+
 
 @asset(
     partitions_def=daily_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=RetryPolicy(
-        max_retries=3, 
-        delay=1, 
-        backoff=Backoff.LINEAR,
-        jitter=Jitter.FULL
+        max_retries=3, delay=1, backoff=Backoff.LINEAR, jitter=Jitter.FULL
     ),
     backfill_policy=BackfillPolicy.single_run(),
     kinds={"api", storage_kind},
@@ -99,12 +96,15 @@ def orders(context, api: RawDataAPI) -> pd.DataFrame:
         resp = api.get_orders(partition)
         users = pd.read_json(resp.json())
         all_orders.append(users)
-    
+
     all_orders_df = pd.concat(all_orders)
-    all_orders_df['dt'] = pd.to_datetime(all_orders_df['dt'], unit = "ms")
+    all_orders_df["dt"] = pd.to_datetime(all_orders_df["dt"], unit="ms")
     return all_orders_df
 
-raw_data_schema_checks = build_column_schema_change_checks(assets=[
-    AssetKey(["RAW_DATA", "orders"]),
-    AssetKey(["RAW_DATA", "users"]),
-])
+
+raw_data_schema_checks = build_column_schema_change_checks(
+    assets=[
+        AssetKey(["RAW_DATA", "orders"]),
+        AssetKey(["RAW_DATA", "users"]),
+    ]
+)

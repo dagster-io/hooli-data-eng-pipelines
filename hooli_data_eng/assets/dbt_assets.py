@@ -101,12 +101,17 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         return {**default_metadata, **metadata}
 
     def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
-        if dbt_resource_props["name"] in ["company_stats", "locations_cleaned", "weekly_order_summary", "order_stats"]:
-           return allow_outdated_and_missing_parents_condition
+        if dbt_resource_props["name"] in [
+            "company_stats",
+            "locations_cleaned",
+            "weekly_order_summary",
+            "order_stats",
+        ]:
+            return allow_outdated_and_missing_parents_condition
 
-        if  dbt_resource_props["name"] in ["sku_stats"]:
-            return AutomationCondition.on_cron('0 0 1 * *')
-        
+        if dbt_resource_props["name"] in ["sku_stats"]:
+            return AutomationCondition.on_cron("0 0 1 * *")
+
         if dbt_resource_props["name"] in ["company_perf"]:
             return AutomationCondition.any_downstream_conditions()
 
@@ -117,7 +122,9 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
         ]
 
 
-def _process_partitioned_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+def _process_partitioned_dbt_assets(
+    context: AssetExecutionContext, dbt: DbtCliResource
+):
     # map partition key range to dbt vars
     first_partition, last_partition = context.partition_time_window
     dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
