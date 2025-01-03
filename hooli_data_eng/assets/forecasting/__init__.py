@@ -9,7 +9,6 @@ from dagster import (
     AssetIn,
     MonthlyPartitionsDefinition,
     Output,
-    Field,
     Config,
     AssetExecutionContext,
     MaterializeResult,
@@ -22,7 +21,7 @@ from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
 
 from hooli_data_eng.utils.kind_helpers import get_kind
-
+from pydantic import Field
 
 # dynamically determine storage_kind based on environment
 storage_kind = get_kind()
