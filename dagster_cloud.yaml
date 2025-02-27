@@ -50,7 +50,7 @@ locations:
 
   - location_name: hooli_airlift
     code_source:
-      package_name: hooli_airlift
+      python_file: definitions.py
     build:
       directory: ./hooli-airlift
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
