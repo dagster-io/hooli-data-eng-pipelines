@@ -95,7 +95,7 @@ jobs:
                 LOCATIONS="$LOCATIONS --location-name hooli_bi"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
               fi
-              if [ "${{ steps.changed-files.outputs.airlift_any_changed}}" == "true" ]; then
+              if [ "${{ steps.changed-files.outputs.hooli-airlift_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_airlift"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift\n"
               fi
