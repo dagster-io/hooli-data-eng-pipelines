@@ -53,7 +53,7 @@ locations:
 
   - location_name: hooli_airlift
     code_source:
-      package_name: hooli_airlift
+      module_name: hooli_airlift.definitions
     build:
       directory: ./hooli-airlift
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
