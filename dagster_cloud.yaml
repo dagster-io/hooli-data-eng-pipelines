@@ -47,3 +47,10 @@ locations:
     build:
       directory: ./hooli-bi
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
+  - location_name: hooli_airlift
+    code_source:
+      package_name: hooli_airlift
+    build:
+      directory: ./hooli-airlift
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

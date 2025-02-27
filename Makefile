@@ -27,6 +27,7 @@ update_packages:
 	uv lock --upgrade --directory hooli_snowflake_insights;
 	uv lock --upgrade --directory hooli-data-ingest;
 	uv lock --upgrade --directory hooli-bi;
+	uv lock --upgrade --directory hooli-airlift;
 
 ruff:
 	-ruff check --fix .
