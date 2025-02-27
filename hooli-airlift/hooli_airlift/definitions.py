@@ -18,7 +18,7 @@ all_assets = dg.load_assets_from_modules([assets])
 if os.environ.get("environment") == "development":
     session = boto3.Session(profile_name=os.environ.get("AWS_PROFILE"))
 else:
-    session = boto3.Session()
+    session = boto3.Session(region_name="us-west-2")
 
 boto_client = session.client("mwaa")
 
