@@ -115,11 +115,11 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
-      
+
       - name: Run Ruff
         uses: astral-sh/ruff-action@v3
         with:
-          args: check --fix --output-format=github .
+          args: check --fix
 
       - name: Validate configuration
         id: ci-validate
