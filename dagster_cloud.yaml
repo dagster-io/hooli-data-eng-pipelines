@@ -15,25 +15,28 @@ locations:
               limits:
                 cpu: 1000m
                 memory: 2G
+
   - location_name: basics
     code_source:
       python_file: definitions.py
     build:
       directory: ./hooli_basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
   - location_name: batch_enrichment
     code_source:
       package_name: dagster_batch_enrichment
     build:
       directory: ./hooli_batch_enrichment
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
   - location_name: snowflake_insights
     code_source:
       python_file: definitions.py
     build:
       directory: ./hooli_snowflake_insights
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-  
+
   - location_name: hooli_data_ingest
     code_source:
       package_name: hooli_data_ingest
@@ -46,4 +49,11 @@ locations:
       package_name: hooli_bi
     build:
       directory: ./hooli-bi
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
+  - location_name: hooli_airlift
+    code_source:
+      module_name: hooli_airlift.definitions
+    build:
+      directory: ./hooli-airlift
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

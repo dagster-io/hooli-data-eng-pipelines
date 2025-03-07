@@ -1,3 +1,4 @@
+.tmp_dagster_home*
 .venv/
 .vscode/
 bin/
