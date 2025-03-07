@@ -58,3 +58,6 @@ packages = { find = { exclude = ["hooli_data_eng_tests"] } }
 
 [tool.setuptools.package-data]
 "hooli_data_eng" = ["dbt_project/*"]
+
+[tool.ruff]
+exclude = ["**/.github/**"]
