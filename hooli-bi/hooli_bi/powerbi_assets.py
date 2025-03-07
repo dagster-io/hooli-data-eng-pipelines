@@ -14,7 +14,7 @@ class MyCustomPowerBITranslator(DagsterPowerBITranslator):
         spec = super().get_report_spec(data)
         specs_replaced = replace_attributes(
             spec,
-            description=f"Report link: https://app.powerbi.com/groups/{EnvVar("AZURE_POWERBI_WORKSPACE_ID").get_value()}/reports/{data.properties["id"]}",
+            description=f"Report link: https://app.powerbi.com/groups/{EnvVar('AZURE_POWERBI_WORKSPACE_ID').get_value()}/reports/{data.properties['id']}",
             group_name="BI",
         )
         return merge_attributes(specs_replaced, tags={"core_kpis": ""})
@@ -23,7 +23,7 @@ class MyCustomPowerBITranslator(DagsterPowerBITranslator):
         spec = super().get_semantic_model_spec(data)
         spec_replaced = replace_attributes(
             spec,
-            description=f"Semantic model link: https://app.powerbi.com/groups/{EnvVar("AZURE_POWERBI_WORKSPACE_ID").get_value()}/datasets/{data.properties["id"]}/details",
+            description=f"Semantic model link: https://app.powerbi.com/groups/{EnvVar('AZURE_POWERBI_WORKSPACE_ID').get_value()}/datasets/{data.properties['id']}/details",
             group_name="BI",
             deps=[
                 AssetKey(path=[dep.asset_key.path[1].upper(), dep.asset_key.path[2]])
