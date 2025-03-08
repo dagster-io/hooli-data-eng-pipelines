@@ -33,6 +33,11 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
 
+      - name: Run Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check --fix
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v45
@@ -115,11 +120,6 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
-
-      - name: Run Ruff
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: check --fix
 
       - name: Validate configuration
         id: ci-validate
