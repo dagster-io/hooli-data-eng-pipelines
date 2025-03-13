@@ -55,11 +55,11 @@ def random_data(
     for name, dtype in extra_columns.items():
         if name == "sku":
             data[name] = random.choices(skus, k=n)
-        elif isinstance(dtype, str):
+        elif dtype is str:
             data[name] = [str(uuid.uuid4()) for _ in range(n)]
-        elif isinstance(dtype, int):
+        elif dtype is int:
             data[name] = np.random.randint(0, 100, size=n)
-        elif isinstance(dtype, float):
+        elif dtype is float:
             data[name] = 100 * np.random.random(size=n)
 
     data = pd.DataFrame(data)
