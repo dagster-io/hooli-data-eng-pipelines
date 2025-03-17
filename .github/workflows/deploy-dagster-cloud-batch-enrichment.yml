@@ -47,14 +47,6 @@ jobs:
         run: | 
           echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG  
 
-      - name: Get Code locations that changed
-        id: extract-changed-dirs
-        run: |
-              LOCATIONS="$LOCATIONS --location-name batch_enrichment"
-              LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n"
-              echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
-              echo "LOCATIONS_WITH_IMAGE=$LOCATIONS_WITH_IMAGE" >> $GITHUB_ENV
-
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -85,7 +77,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -105,7 +96,6 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
 
-      # Build 'batch enrichment' code location
       - name: Build and upload Docker image for batch enrichment
         if: steps.prerun.outputs.result != 'skip'
         uses: docker/build-push-action@v5
@@ -114,31 +104,20 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
 
-      # Set build output 
       - name: Set build output for Dagster Cloud
         id: ci-set-build-output
         if: steps.prerun.outputs.result != 'skip'
         run: |
           source .venv/bin/activate
-          # Iterate through each line in LOCATIONS_WITH_IMAGE and execute it
-          echo -e "$LOCATIONS_WITH_IMAGE" | while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              echo "Executing: $line"
-              eval "$line"
-            fi
-          done
-        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
-        # with:
-        #   command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
-      #Deploy 
+          dagster-cloud ci set-build-output --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n
+
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-         command: "ci deploy $LOCATIONS"
+         command: "ci deploy --location-name batch_enrichment"
 
-      # Get branch deployment as input to job trigger below
       - name: Get branch deployment
         id: get-branch-deployment
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
@@ -146,7 +125,6 @@ jobs:
         with:
           organization_id: 'hooli'
 
-      # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
         uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
@@ -156,7 +134,6 @@ jobs:
           job_name: dbt_slim_ci_job
           organization_id: hooli
 
-      # Summary and comment updates - note these always() run
       - name: Update PR comment for branch deployments
         id: ci-notify
         if: steps.prerun.outputs.result != 'skip' && always()

@@ -57,14 +57,6 @@ jobs:
         run: | 
           echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG  
 
-      - name: Get Code locations that changed
-        id: extract-changed-dirs
-        run: |
-              LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
-              LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
-              echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
-              echo "LOCATIONS_WITH_IMAGE=$LOCATIONS_WITH_IMAGE" >> $GITHUB_ENV
-
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -142,20 +134,14 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         run: |
           source .venv/bin/activate
-          # Iterate through each line in LOCATIONS_WITH_IMAGE and execute it
-          echo -e "$LOCATIONS_WITH_IMAGE" | while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              echo "Executing: $line"
-              eval "$line"
-            fi
-          done
+          dagster-cloud ci set-build-output --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n
 
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
         with:
-         command: "ci deploy $LOCATIONS"
+         command: "ci deploy --location-name data-eng-pipeline"
 
       - name: Get branch deployment
         id: get-branch-deployment
