@@ -1,0 +1,172 @@
+name: Dagster Cloud Hybrid Deployment - Basics
+on:
+  push: # For full deployment
+    branches:
+      - "main"
+      - "master"
+    paths:
+      - hooli_basics/**
+  pull_request:  # For branch deployments
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - hooli_basics/**
+
+concurrency:
+  # Cancel in-progress deploys to the same branch
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+env:
+  DAGSTER_CLOUD_ORGANIZATION: "hooli"
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  DAGSTER_PROJECT_DIR: "."
+  DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
+  IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+jobs: 
+  dagster-cloud-deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Pre-run checks
+        id: prerun
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.47
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: steps.prerun.outputs.result != 'skip'
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Run Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check --fix
+
+      - name: Generate docker image tag
+        id: generate-image-tag
+        if: steps.prerun.outputs.result != 'skip'
+        run: | 
+          echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG  
+
+      - name: Get Code locations that changed
+        id: extract-changed-dirs
+        run: |
+              LOCATIONS="$LOCATIONS --location-name basics"
+              LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name basics --image-tag=$IMAGE_TAG-basics\n"
+              echo "LOCATIONS=$LOCATIONS" >> $GITHUB_ENV
+              echo "LOCATIONS_WITH_IMAGE=$LOCATIONS_WITH_IMAGE" >> $GITHUB_ENV
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-local-path: ".github/python_dependencies"
+
+      - name: Install python dependencies
+        run: | 
+          uv venv
+          source .venv/bin/activate
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
+
+      - name: Validate configuration
+        id: ci-validate
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        with:
+          command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
+
+      - name: Initialize build session
+        id: ci-init
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.47
+        with:
+          project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
+          dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
+          deployment: 'data-eng-prod'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        if: steps.prerun.outputs.result != 'skip'
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:  us-west-2
+
+      - name: Login to ECR
+        if: ${{ steps.prerun.outputs.result != 'skip' }}
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Set Prod Deployment Environment Variable for Push
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+
+      # Build 'basics' code location
+      - name: Build and upload Docker image for basics
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli_basics
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
+
+      # Set build output 
+      - name: Set build output for Dagster Cloud
+        id: ci-set-build-output
+        if: steps.prerun.outputs.result != 'skip'
+        run: |
+          source .venv/bin/activate
+          # Iterate through each line in LOCATIONS_WITH_IMAGE and execute it
+          echo -e "$LOCATIONS_WITH_IMAGE" | while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              echo "Executing: $line"
+              eval "$line"
+            fi
+          done
+        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        # with:
+        #   command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
+      #Deploy 
+      - name: Deploy to Dagster Cloud
+        id: ci-deploy
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        with:
+         command: "ci deploy $LOCATIONS"
+
+      # Get branch deployment as input to job trigger below
+      - name: Get branch deployment
+        id: get-branch-deployment
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        with:
+          organization_id: 'hooli'
+
+      # Trigger dbt slim CI job
+      - name: Trigger dbt slim CI
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+        with:
+          location_name: data-eng-pipeline
+          deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
+          job_name: dbt_slim_ci_job
+          organization_id: hooli
+
+      # Summary and comment updates - note these always() run
+      - name: Update PR comment for branch deployments
+        id: ci-notify
+        if: steps.prerun.outputs.result != 'skip' && always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        with:
+          command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
+
+      - name: Generate summary
+        id: ci-summary
+        if: steps.prerun.outputs.result != 'skip' && always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        with:
+          command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
