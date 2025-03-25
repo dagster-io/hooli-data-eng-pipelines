@@ -1,7 +1,22 @@
 import os
 
 
-from dagster import asset, AssetSelection, define_asset_job, Definitions, graph_asset, In, Nothing, op, RetryPolicy, graph_multi_asset, AssetOut, Output
+from dagster import (
+   asset,
+   AssetSelection, 
+   define_asset_job, 
+   Definitions, 
+   graph_asset, 
+   In, Nothing, 
+   op, 
+   RetryPolicy, 
+   graph_multi_asset, 
+   AssetOut, 
+   Output,
+   MultiPartitionsDefinition, 
+   DynamicPartitionsDefinition, 
+   DailyPartitionsDefinition,
+)
 from dagster_aws.s3 import S3Resource
 
 import vertica_python
@@ -17,12 +32,17 @@ def upstream_asset():
    return [1, 2, 3]
 
 
+@asset(io_manager_key="model_io_manager",
+       group_name="DEMO_EXAMPLES",)
+def downstream_asset(upstream_asset):
+    return upstream_asset + [4]
+
+
 
 #@asset(io_manager_key="model_io_manager",
-#        group_name="DEMO_EXAMPLES")
-#def downstream_asset(upstream_asset):
-#    return upstream_asset + [4]
-
+#        group_name="DEMO_EXAMPLES",)
+#def other_downstream_asset(downstream_asset):
+#    return upstream_asset + [5]
 
 
 
@@ -111,3 +131,22 @@ def upstream_asset():
 #    jobs=[run_pipeline],
 #    resources={'s3': s3_resource}
 #)
+
+
+
+#
+#dynamic_colors = DynamicPartitionsDefinition(name="dynamic_colors")
+#
+#partitions_def = MultiPartitionsDefinition(
+#    {
+#        "time": DailyPartitionsDefinition(start_date="2022-01-01"),
+#        "color": dynamic_colors,
+#    }
+#)
+#
+#@asset(
+#    partitions_def=partitions_def
+#)
+#def multi_dynamic_asset(context):
+#    partition = context.partition_key.keys_by_dimension
+#    context.log.info(f"Partition: time: {partition['time']}, color: {partition['color']}")
