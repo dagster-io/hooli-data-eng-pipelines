@@ -30,6 +30,10 @@ from hooli_data_eng.assets.dbt_assets import (
     weekly_freshness_check,
     weekly_freshness_check_sensor,
 )
+from hooli_data_eng.checks_dsl.loader import load_checks_from_yaml
+
+dsl_asset_checks =  load_checks_from_yaml("hooli_data_eng/checks_dsl/check_specs.yaml")
+
 # ---------------------------------------------------
 # Assets
 
@@ -100,6 +104,7 @@ defs = Definitions.merge(
             *min_order_freshness_check,
             *avg_orders_freshness_check,
             *weekly_freshness_check,
+            *dsl_asset_checks, #new YAML Asset Checks
         ],
         resources=resource_def[get_env()],
         schedules=[analytics_schedule, avg_orders_freshness_check_schedule],
