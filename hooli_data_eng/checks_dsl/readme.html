@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Asset Checks Framework</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      line-height: 1.6;
+      max-width: 1000px;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 0.5em;
+    }
+    h2 {
+      font-size: 1.6em;
+      margin-top: 2em;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 0.2em;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      overflow-x: auto;
+      border-radius: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1em;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #ecf0f1;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+  </style>  
+</head>
+<body>
+
+<h1>Dynamic Asset Checks Framework</h1>
+
+<p>This framework provides a flexible, extensible system for defining and evaluating <strong>data quality checks</strong> dynamically, based on YAML configuration.</p>
+
+<ul>
+  <li>✅ Easy YAML configuration</li>
+  <li>✅ Grouped or non-grouped checks</li>
+  <li>✅ Optional blocking of downstream materialization</li>
+  <li>✅ Dynamic time window filtering (days, hours, minutes)</li>
+  <li>✅ Built-in pattern matching for common field types</li>
+</ul>
+
+<h2>✨ How It Works</h2>
+<p>Define checks in YAML, and they automatically register as Dagster <code>asset_check</code> functions. Checks support dynamic filtering, historical evaluation, predictive modeling, value validation, and much more.</p>
+
+<h2>🛠 YAML Configuration Fields</h2>
+
+<table>
+<thead>
+<tr><th>Field</th><th>Required?</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>asset</td><td>✅</td><td>Asset name (e.g., <code>RAW_DATA.users</code>)</td></tr>
+<tr><td>check_name</td><td>✅</td><td>Unique name for the check</td></tr>
+<tr><td>type</td><td>✅</td><td>Type of check.<br><strong>Allowed values:</strong><br><code>static_threshold</code>, <code>percent_delta</code>, <code>anomaly_detection</code>, <code>predicted_range</code>, <code>custom</code>, <code>correlation_check</code>, <code>value_set_check</code>, <code>type_check</code>, <code>freshness</code>.</td></tr>
+<tr><td>metric</td><td>✅*</td><td>Metric to compute.<br><strong>Examples:</strong> <code>mean:revenue</code>, <code>null_pct:email</code>, <code>distinct_count:user_id</code>, <code>pattern_match_pct:email_address</code>.</td></tr>
+<tr><td>pattern</td><td>Optional</td><td>Use a built-in pattern name or a custom regex.<br><strong>Built-in options:</strong> <code>email</code>, <code>uuid</code>, <code>zip_code</code>, <code>us_state_code</code>, <code>us_phone_number</code>, <code>us_ssn</code>, <code>credit_card</code>, <code>ipv4</code>, <code>ipv6</code>, <code>mac_address</code>, <code>iso_date</code>, <code>iso_datetime</code>, <code>hex_color</code>.</td></tr>
+<tr><td>allowed_values</td><td>Optional</td><td>List of allowed values for <code>value_set_check</code>.</td></tr>
+<tr><td>expected_type</td><td>Optional</td><td>Expected data type for <code>type_check</code>.<br><strong>Allowed values:</strong> <code>timestamp</code>, <code>int</code>, <code>float</code>, <code>string</code>.</td></tr>
+<tr><td>threshold</td><td>Optional</td><td>Static threshold for static/anomaly checks.</td></tr>
+<tr><td>threshold_pct</td><td>Optional</td><td>Percent threshold for <code>percent_delta</code> checks.</td></tr>
+<tr><td>min / max</td><td>Optional</td><td>Static minimum or maximum allowed value.</td></tr>
+<tr><td>history</td><td>Optional</td><td>Number of past evaluations to retrieve (for anomaly, prediction checks).</td></tr>
+<tr><td>confidence</td><td>Optional</td><td>Prediction confidence.<br><strong>Allowed values:</strong> Numeric (<code>0.9</code>, <code>0.95</code>, <code>0.99</code>) or Sensitivity string (<code>Low</code>, <code>Normal</code>, <code>High</code>).</td></tr>
+<tr><td>where</td><td>Optional</td><td>SQL-like filter before evaluating the check.</td></tr>
+<tr><td>group_by</td><td>Optional</td><td>Group evaluation based on a column's values.</td></tr>
+<tr><td>allowed_failures</td><td>Optional</td><td>Number of groups allowed to fail before marking the check failed.</td></tr>
+<tr><td>blocking</td><td>Optional</td><td>If true, prevents downstream materialization when check fails.</td></tr>
+<tr><td>custom_sql</td><td>Optional</td><td>Custom SQL condition to check for failures (rows failing the condition).</td></tr>
+<tr><td>time_range</td><td>Optional</td><td>Dynamic time filter.<br><strong>Fields:</strong> <code>column</code> (datetime field), <code>days_back</code>, <code>hours_back</code>, <code>minutes_back</code>.</td></tr>
+</tbody>
+</table>
+
+<h2>📚 Supported Metric Types</h2>
+
+<h3>🔹 Row / Count Metrics</h3>
+<ul>
+  <li><code>num_rows</code> — Total number of rows</li>
+  <li><code>null_count:column</code> — Number of NULLs in a column</li>
+  <li><code>non_null_count:column</code> — Number of non-NULL values in a column</li>
+  <li><code>distinct_count:column</code> — Number of distinct (unique) values in a column</li>
+  <li><code>duplicate_pct:column</code> — Percentage of duplicated rows based on column values</li>
+</ul>
+
+<h3>🔹 Statistical Metrics</h3>
+<ul>
+  <li><code>mean:column</code> — Average of a column</li>
+  <li><code>median:column</code> — Median value of a column</li>
+  <li><code>mode:column</code> — Most common value in a column</li>
+  <li><code>sum:column</code> — Sum of all values in a column</li>
+  <li><code>min:column</code> — Minimum value</li>
+  <li><code>max:column</code> — Maximum value</li>
+  <li><code>stddev:column</code> — Standard deviation of values</li>
+  <li><code>variance:column</code> — Variance of values</li>
+  <li><code>range:column</code> — Difference between max and min values</li>
+</ul>
+
+<h3>🔹 Value Sign Metrics</h3>
+<ul>
+  <li><code>zero_pct:column</code> — Percentage of zero values</li>
+  <li><code>positive_pct:column</code> — Percentage of positive values</li>
+  <li><code>negative_pct:column</code> — Percentage of negative values</li>
+</ul>
+
+<h3>🔹 String Metrics</h3>
+<ul>
+  <li><code>max_length:column</code> — Maximum string length</li>
+  <li><code>min_length:column</code> — Minimum string length</li>
+  <li><code>avg_length:column</code> — Average string length</li>
+  <li><code>pattern_match_pct:column</code> — Percentage of values matching a regex or built-in pattern</li>
+</ul>
+
+<h3>🔹 Distribution Metrics</h3>
+<ul>
+  <li><code>distribution_change:column</code> — Changes in value distribution over time (monitors total variation distance)</li>
+</ul>
+
+<h2>🧠 Built-In Pattern Names</h2>
+
+<table>
+<thead>
+<tr><th>Pattern</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>email</code></td><td>Email address (e.g., user@example.com)</td></tr>
+<tr><td><code>uuid</code></td><td>Universally Unique Identifier (UUID)</td></tr>
+<tr><td><code>zip_code</code></td><td>U.S. ZIP code (5 digits, optional 4-digit extension)</td></tr>
+<tr><td><code>us_state_code</code></td><td>Two-letter U.S. state abbreviation (e.g., CA, NY)</td></tr>
+<tr><td><code>us_phone_number</code></td><td>U.S. phone number (various formats)</td></tr>
+<tr><td><code>us_ssn</code></td><td>U.S. Social Security Number (SSN)</td></tr>
+<tr><td><code>credit_card</code></td><td>Credit card number formats (Visa, Mastercard, etc.)</td></tr>
+<tr><td><code>ipv4</code></td><td>IPv4 address (e.g., 192.168.1.1)</td></tr>
+<tr><td><code>ipv6</code></td><td>IPv6 address</td></tr>
+<tr><td><code>mac_address</code></td><td>MAC address (e.g., AA:BB:CC:DD:EE:FF)</td></tr>
+<tr><td><code>iso_date</code></td><td>ISO 8601 Date (YYYY-MM-DD)</td></tr>
+<tr><td><code>iso_datetime</code></td><td>ISO 8601 DateTime (YYYY-MM-DDTHH:MM:SS)</td></tr>
+<tr><td><code>hex_color</code></td><td>Hexadecimal color code (e.g., #FFFFFF)</td></tr>
+</tbody>
+</table>
+
+<h2>📋 Example YAML</h2>
+
+<pre><code>checks:
+
+  # New users in the last 7 days
+  - asset: RAW_DATA.users
+    check_name: new_users_last_7_days
+    type: static_threshold
+    metric: num_rows
+    time_range:
+      column: created_at
+      days_back: 7
+    min: 1000
+
+  # Valid email formats
+  - asset: RAW_DATA.users
+    check_name: valid_email_format_check
+    type: static_threshold
+    metric: pattern_match_pct:email_address
+    pattern: email
+    min: 90
+
+  # UUID format for order IDs
+  - asset: RAW_DATA.orders
+    check_name: order_id_uuid_check
+    type: static_threshold
+    metric: pattern_match_pct:order_id
+    pattern: uuid
+    min: 99
+</code></pre>
+
+</body>
+</html>
