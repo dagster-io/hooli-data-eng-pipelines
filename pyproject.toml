@@ -7,7 +7,6 @@ requires-python = ">=3.9,<3.13"
 dependencies = [
       "dagster",
       "dagster-dbt",
-      "dagster-blueprints",
       "pandas",
       "numpy",
       "scipy",
@@ -61,3 +60,10 @@ packages = { find = { exclude = ["hooli_data_eng_tests"] } }
 
 [tool.ruff]
 exclude = ["**/.github/**"]
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "hooli_data_eng"
+code_location_target_module = "hooli_data_eng.definitions"
