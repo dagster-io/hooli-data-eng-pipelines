@@ -1,5 +1,4 @@
 from dagster import AssetKey, AssetSpec, EnvVar, TableSchema, TableColumn
-from dagster._core.definitions.asset_spec import replace_attributes, merge_attributes
 from dagster_powerbi import (
     load_powerbi_asset_specs,
     DagsterPowerBITranslator,
@@ -12,26 +11,22 @@ from hooli_bi.powerbi_workspace import power_bi_workspace
 class MyCustomPowerBITranslator(DagsterPowerBITranslator):
     def get_report_spec(self, data: PowerBIContentData) -> AssetSpec:
         spec = super().get_report_spec(data)
-        specs_replaced = replace_attributes(
-            spec,
+        specs_replaced = spec.replace_attributes(
             description=f"Report link: https://app.powerbi.com/groups/{EnvVar('AZURE_POWERBI_WORKSPACE_ID').get_value()}/reports/{data.properties['id']}",
             group_name="BI",
         )
-        return merge_attributes(specs_replaced, tags={"core_kpis": ""})
+        return specs_replaced.merge_attributes(tags={"core_kpis": ""})
 
     def get_semantic_model_spec(self, data: PowerBIContentData) -> AssetSpec:
         spec = super().get_semantic_model_spec(data)
-        spec_replaced = replace_attributes(
-            spec,
+        spec_replaced = spec.replace_attributes(
             description=f"Semantic model link: https://app.powerbi.com/groups/{EnvVar('AZURE_POWERBI_WORKSPACE_ID').get_value()}/datasets/{data.properties['id']}/details",
             group_name="BI",
             deps=[
                 AssetKey(path=[dep.asset_key.path[1].upper(), dep.asset_key.path[2]])
                 for dep in spec.deps
             ],
-        )
-        return merge_attributes(
-            spec_replaced,
+        ).merge_attributes(
             metadata={
                 "dagster/column_schema": TableSchema(
                     columns=[
@@ -46,14 +41,15 @@ class MyCustomPowerBITranslator(DagsterPowerBITranslator):
             },
             tags={"core_kpis": ""},
         )
+        return spec_replaced
 
     def get_dashboard_spec(self, data: PowerBIContentData) -> AssetSpec:
         spec = super().get_dashboard_spec(data)
-        return replace_attributes(spec, group_name="BI")
+        return spec.replace_attributes(group_name="BI")
 
     def get_data_source_spec(self, data: PowerBIContentData) -> AssetSpec:
         spec = super().get_data_source_spec(data)
-        return replace_attributes(spec, group_name="BI")
+        return spec.replace_attributes(group_name="BI")
 
 
 powerbi_assets = [
