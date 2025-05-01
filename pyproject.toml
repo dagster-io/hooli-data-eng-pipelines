@@ -67,3 +67,6 @@ directory_type = "project"
 [tool.dg.project]
 root_module = "hooli_data_eng"
 code_location_target_module = "hooli_data_eng.definitions"
+
+[project.entry-points]
+"dagster_dg.plugin" = { hooli_data_eng = "hooli_data_eng.lib"}

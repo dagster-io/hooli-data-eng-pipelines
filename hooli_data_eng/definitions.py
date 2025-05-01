@@ -8,8 +8,10 @@ from dagster import (
     multiprocess_executor,
     with_source_code_references,
 )
+from dagster.components import load_defs
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 
+import hooli_data_eng.defs
 from hooli_data_eng.assets import forecasting, raw_data, marketing, dbt_assets
 from hooli_data_eng.assets.dbt_assets import dbt_slim_ci_job
 from hooli_data_eng.assets.marketing import check_avg_orders
@@ -71,7 +73,10 @@ marketing_assets = load_assets_from_package_module(marketing, group_name="MARKET
 
 # Definitions are the collection of assets, jobs, schedules, resources, and sensors
 # used with a project. Dagster Cloud deployments can contain mulitple projects.
-defs = Definitions(
+
+defs = Definitions.merge(
+    load_defs(hooli_data_eng.defs),
+    Definitions(
         executor=multiprocess_executor.configured({"max_concurrent": 3}),
         assets=link_code_references_to_git_if_cloud(
             with_source_code_references(
@@ -108,3 +113,4 @@ defs = Definitions(
         ],
         jobs=[analytics_job, predict_job, dbt_slim_ci_job],
     )
+)
