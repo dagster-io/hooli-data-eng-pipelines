@@ -1,8 +1,8 @@
-from dagster_embedded_elt.sling import (
+from dagster_sling import (
     sling_assets,
     SlingResource,
 )
-from dagster_embedded_elt.sling.dagster_sling_translator import DagsterSlingTranslator
+from dagster_sling.dagster_sling_translator import DagsterSlingTranslator
 
 from hooli_data_ingest.resources import replication_config
 

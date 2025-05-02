@@ -39,7 +39,7 @@ dev = [
     "ruff",
 ]
 
-sling = ["dagster-embedded-elt"]
+sling = ["dagster-sling"]
 
 powerbi = ["dagster-powerbi"]
 
