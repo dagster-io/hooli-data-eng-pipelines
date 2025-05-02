@@ -98,11 +98,11 @@ jobs:
               fi
               if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_bi"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-airlift_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_airlift"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift\n"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
