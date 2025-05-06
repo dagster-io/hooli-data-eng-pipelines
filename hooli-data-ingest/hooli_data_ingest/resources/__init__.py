@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from dagster import EnvVar
-from dagster_embedded_elt.sling import (
+from dagster_sling import (
     SlingResource,
     SlingConnectionResource,
 )

@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.9,<3.13"
 dependencies = [
     "dagster-duckdb",
-    "dagster-embedded-elt",
+    "dagster-sling",
     "dagster-cloud[insights]"
 ]
 

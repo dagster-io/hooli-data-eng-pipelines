@@ -117,9 +117,9 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 
     def get_owners(self, dbt_resource_props: Mapping[str, Any]):
         return [
-            dbt_resource_props["group"]["owner"]["email"],
-            f"team:{dbt_resource_props['group']['name']}",
-        ]
+            dbt_resource_props.get["groups"]["owner"]["email"],
+            f"team:{dbt_resource_props['groups']['name']}",
+        ] if dbt_resource_props.get("groups") is not None else []
 
 
 def _process_partitioned_dbt_assets(
