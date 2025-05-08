@@ -12,15 +12,16 @@ notebooks_assets = dg.load_assets_from_modules(
 )
 
 defs = dg.Definitions(
-        assets=link_code_references_to_git_if_cloud(
-            dg.with_source_code_references(
-                [*notebooks_assets,
-                ]
-            ),
-            file_path_mapping=dg.AnchorBasedFilePathMapping(
-                local_file_anchor=Path(__file__),
-                file_anchor_path_in_repository="hooli_data_eng/notebooks/definitions.py",
-            ),
+    assets=link_code_references_to_git_if_cloud(
+        dg.with_source_code_references(
+            [
+                *notebooks_assets,
+            ]
         ),
-        resources=resource_def[get_env()],
+        file_path_mapping=dg.AnchorBasedFilePathMapping(
+            local_file_anchor=Path(__file__),
+            file_anchor_path_in_repository="hooli_data_eng/notebooks/definitions.py",
+        ),
+    ),
+    resources=resource_def[get_env()],
 )

@@ -17,6 +17,7 @@ storage_kind = get_kind()
 def model_func(x, a, b):
     return a * np.exp(b * (x / 10**18 - 1.6095))
 
+
 # ----- Forecasting Assets -----
 # These assets live downstream of tables created by dbt
 # which are referenced by the key_prefix 'analytics',
@@ -107,5 +108,6 @@ def model_stats_by_month(
     error = sum(target_orders["num_orders"]) - sum(predicted_orders)
     context.log.info("Error for " + str(target_date) + ": " + str(error))
 
-    return dg.Output(pd.DataFrame({"error": [error]}), metadata={"error_obs_prds": error})
-
+    return dg.Output(
+        pd.DataFrame({"error": [error]}), metadata={"error_obs_prds": error}
+    )

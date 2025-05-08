@@ -11,12 +11,11 @@ from dagster_pyspark import pyspark_resource
 resource_def = {
     "LOCAL": {
         "pyspark": pyspark_resource,
-        
     },
     "BRANCH": {
         "pyspark": pyspark_resource,
     },
     "PROD": {
         "pyspark": pyspark_resource,
-}
+    },
 }

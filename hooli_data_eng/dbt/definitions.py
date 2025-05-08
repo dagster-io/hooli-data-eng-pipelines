@@ -7,8 +7,8 @@ from hooli_data_eng.dbt.schedules import (
     weekly_freshness_check_sensor,
     dbt_slim_ci_job,
     dbt_code_version_sensor,
-    analytics_job, 
-    analytics_schedule
+    analytics_job,
+    analytics_schedule,
 )
 from hooli_data_eng.utils import get_env
 
@@ -19,18 +19,15 @@ dbt_asset_checks = dg.build_column_schema_change_checks(assets=[*dbt_assets])
 
 defs = dg.Definitions(
     assets=link_code_references_to_git_if_cloud(
-        dg.with_source_code_references([*dbt_assets]
-        ),
+        dg.with_source_code_references([*dbt_assets]),
         file_path_mapping=dg.AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
             file_anchor_path_in_repository="hooli_data_eng/dbt/definitions.py",
-        )
+        ),
     ),
-    asset_checks = [*dbt_asset_checks],
+    asset_checks=[*dbt_asset_checks],
     resources=resource_def[get_env()],
     jobs=[analytics_job, dbt_slim_ci_job],
     schedules=[analytics_schedule],
-    sensors=[
-        weekly_freshness_check_sensor,
-        dbt_code_version_sensor],
+    sensors=[weekly_freshness_check_sensor, dbt_code_version_sensor],
 )

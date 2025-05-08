@@ -10,6 +10,6 @@ resource_def = {
         "pipes_k8s_client": PipesK8sClient(),
     },
     "PROD": {
-       "pipes_k8s_client": PipesK8sClient(),
+        "pipes_k8s_client": PipesK8sClient(),
     },
 }

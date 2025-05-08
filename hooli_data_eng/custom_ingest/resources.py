@@ -16,7 +16,11 @@ import random
 import dagster as dg
 from typing import Optional
 
-from hooli_data_eng.resources import snowflake_branch_io_manager, snowflake_prod_io_manager, duckdb_io_manager
+from hooli_data_eng.resources import (
+    snowflake_branch_io_manager,
+    snowflake_prod_io_manager,
+    duckdb_io_manager,
+)
 
 
 class RawDataAPI(dg.ConfigurableResource):
@@ -72,7 +76,6 @@ class RawDataAPI(dg.ConfigurableResource):
         )
 
         return requests.get("http://api.jaffleshop.co/v1/users")
-
 
 
 # Resources represent external systems and, and specifically IO Managers

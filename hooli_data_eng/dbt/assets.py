@@ -24,20 +24,24 @@ weekly_partitions = dg.WeeklyPartitionsDefinition(start_date="2023-05-25")
 DBT_MANIFEST = dbt_project.manifest_path
 
 
-allow_outdated_parents_policy = dg.AutomationCondition.eager().as_auto_materialize_policy()
+allow_outdated_parents_policy = (
+    dg.AutomationCondition.eager().as_auto_materialize_policy()
+)
 
 
 became_missing_or_any_parents_updated = (
     dg.AutomationCondition.missing().newly_true().with_label("became missing")
     | dg.AutomationCondition.any_deps_match(
-        dg.AutomationCondition.newly_updated() | dg.AutomationCondition.will_be_requested()
+        dg.AutomationCondition.newly_updated()
+        | dg.AutomationCondition.will_be_requested()
     ).with_label("any parents updated")
 )
 
 allow_outdated_and_missing_parents_condition = (
     dg.AutomationCondition.in_latest_time_window()
     & became_missing_or_any_parents_updated.since(
-        dg.AutomationCondition.newly_requested() | dg.AutomationCondition.newly_updated()
+        dg.AutomationCondition.newly_requested()
+        | dg.AutomationCondition.newly_updated()
     )
     & ~dg.AutomationCondition.in_progress()
 ).with_label(
@@ -105,10 +109,14 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
             return dg.AutomationCondition.any_downstream_conditions()
 
     def get_owners(self, dbt_resource_props: Mapping[str, Any]):
-        return [
-            dbt_resource_props.get["groups"]["owner"]["email"],
-            f"team:{dbt_resource_props['groups']['name']}",
-        ] if dbt_resource_props.get("groups") is not None else []
+        return (
+            [
+                dbt_resource_props.get["groups"]["owner"]["email"],
+                f"team:{dbt_resource_props['groups']['name']}",
+            ]
+            if dbt_resource_props.get("groups") is not None
+            else []
+        )
 
 
 def _process_partitioned_dbt_assets(
@@ -204,4 +212,3 @@ def regular_dbt_assets(context: dg.AssetExecutionContext, dbt: DbtCliResource):
     for result in run_results_json["results"]:
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
-

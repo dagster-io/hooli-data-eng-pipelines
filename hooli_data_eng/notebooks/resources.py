@@ -16,5 +16,6 @@ resource_def = {
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
     },
     "PROD": {
-        "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),}
+        "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
+    },
 }

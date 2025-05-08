@@ -26,7 +26,6 @@ analytics_job = dg.define_asset_job(
 analytics_schedule = dg.build_schedule_from_partitioned_job(analytics_job)
 
 
-
 # This op will be used to run slim CI
 @dg.op(out={})
 def dbt_slim_ci(dbt: DbtCliResource):
@@ -60,6 +59,7 @@ def dbt_slim_ci(dbt: DbtCliResource):
 @dg.job
 def dbt_slim_ci_job():
     dbt_slim_ci()
+
 
 @dg.sensor(asset_selection=dg.AssetSelection.assets(regular_dbt_assets))
 def dbt_code_version_sensor(context: dg.SensorEvaluationContext):

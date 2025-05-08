@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import dagster as dg
 from dagster_dbt import DbtProject, DbtCliResource
 from hooli_data_eng.utils import get_env
 
@@ -29,7 +28,6 @@ resource_def = {
     },
     "BRANCH": {
         "dbt": DbtCliResource(project_dir=dbt_project, target="BRANCH"),
-
     },
     "PROD": {
         "dbt": DbtCliResource(project_dir=dbt_project, target="PROD"),

@@ -1,12 +1,7 @@
-import warnings 
-
+import warnings
 from dagster._utils.warnings import BetaWarning, PreviewWarning
-warnings.filterwarnings("ignore", category=PreviewWarning)
-warnings.filterwarnings("ignore", category=BetaWarning)
-
 import dagster as dg
 from dagster.components import load_defs
-
 import hooli_data_eng.dbt.definitions as dbt_definitions
 import hooli_data_eng.custom_ingest.definitions as custom_ingest_definitions
 import hooli_data_eng.databricks.definitions as databricks_definitions
@@ -15,9 +10,11 @@ import hooli_data_eng.scikit_learn.definitions as scikit_learn_definitions
 import hooli_data_eng.files.definitions as files_definitions
 import hooli_data_eng.pandas.definitions as pandas_definitions
 import hooli_data_eng.notebooks.definitions as notebooks_definitions
-import hooli_data_eng.spark.definitions as spark_definitions   
+import hooli_data_eng.spark.definitions as spark_definitions
 import hooli_data_eng.defs
 
+warnings.filterwarnings("ignore", category=PreviewWarning)
+warnings.filterwarnings("ignore", category=BetaWarning)
 
 # ---------------------------------------------------
 # Assets
@@ -47,5 +44,5 @@ defs = dg.Definitions.merge(
     dg.Definitions(
         # only apply this setting once
         executor=dg.multiprocess_executor.configured({"max_concurrent": 3}),
-    )
+    ),
 )

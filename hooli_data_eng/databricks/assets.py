@@ -29,7 +29,7 @@ def big_orders(context, predicted_orders: pd.DataFrame):
 # The dependency on predicted_orders is not a real dependency since the script does not rely
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @dg.asset(
-    deps=[dg.AssetKey(["FORECASTING","predicted_orders"])],
+    deps=[dg.AssetKey(["FORECASTING", "predicted_orders"])],
     kinds={"pyspark", "databricks"},
 )
 def databricks_asset(

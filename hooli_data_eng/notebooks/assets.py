@@ -11,7 +11,6 @@ from hooli_data_eng.utils.kind_helpers import get_kind
 storage_kind = get_kind()
 
 
-
 # This asset uses a Jupyter Notebook which takes inputs from the warehouse
 # and the trained model coefficients
 model_nb = define_dagstermill_asset(
@@ -26,5 +25,3 @@ model_nb = define_dagstermill_asset(
     required_resource_keys={"io_manager"},
     asset_tags={**build_kind_tag("S3")},
 )
-
-

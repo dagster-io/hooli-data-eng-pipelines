@@ -19,7 +19,7 @@ resource_def = {
         "monitor_fs": LocalFileSystem(base_dir=file_relative_path(__file__, ".")),
     },
     "BRANCH": {
-       "monitor_fs": s3FileSystem(
+        "monitor_fs": s3FileSystem(
             region_name="us-west-2", s3_bucket="hooli-demo-branch"
         ),
     },

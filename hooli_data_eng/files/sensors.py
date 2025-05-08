@@ -9,7 +9,6 @@ from hooli_data_eng.files.sensor_file_managers import (
 from hooli_data_eng.utils import get_env
 
 
-
 # This op/job combo represent an imperative task
 # that runs when the sensor triggers
 # To target asset updates instead, use:
@@ -25,7 +24,6 @@ def process_file(context):
 @dg.job
 def log_file_job():
     process_file()
-
 
 
 # This sensor watches for updates to the file
