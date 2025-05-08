@@ -1,0 +1,362 @@
+checks:
+  # ───── Static Thresholds ─────
+  - asset: RAW_DATA.users
+    check_name: user_count_static_threshold
+    type: static_threshold
+    metric: num_rows
+    min: 500
+    blocking: false
+
+  # ───── Percent Delta ─────
+  - asset: RAW_DATA.users
+    check_name: user_count_percent_delta
+    type: percent_delta
+    metric: num_rows
+    threshold_pct: 15
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: new_users_by_company_delta
+    type: percent_delta
+    metric: num_rows
+    group_by: company
+    threshold_pct: 10
+    allowed_failures: 2
+    blocking: false
+
+  # ───── Anomaly Detection ─────
+  - asset: RAW_DATA.users
+    check_name: new_user_anomaly
+    type: anomaly_detection
+    metric: num_rows
+    threshold: 2
+    history: 10
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: predicted_user_growth_by_company
+    type: predicted_range
+    metric: num_rows
+    group_by: company
+    confidence: 0.95
+    history: 10
+    allowed_failures: 1
+    blocking: false
+
+  # ───── Pattern Matching ─────
+  - asset: RAW_DATA.users
+    check_name: email_pattern_validity
+    type: static_threshold
+    pattern: '^[\w\.-]+@[\w\.-]+\.\w{2,4}$'
+    metric: pattern_match_pct:company  # substitute with email column if available
+    min: 90
+    blocking: false
+
+
+  # ───── Advanced Metrics ─────
+  - asset: RAW_DATA.users
+    check_name: user_id_null_pct_check
+    type: static_threshold
+    metric: null_pct:user_id
+    max: 0
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: min_created_at_check
+    type: static_threshold
+    metric: min:created_at
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: max_company_name_length
+    type: static_threshold
+    metric: max_length:company
+    max: 50
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_distinct_check
+    type: static_threshold
+    metric: distinct_count:company
+    min: 3
+    blocking: false
+
+  # ───── Distribution Change (Group-Based) ─────
+  - asset: RAW_DATA.users
+    check_name: store_distribution_stability
+    type: static_threshold
+    metric: distribution_change:company
+    group_by: is_test_user
+    threshold: 0.2
+    history: 5
+    allowed_failures: 1
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_distribution_percent_delta
+    type: percent_delta
+    metric: distribution_change:company
+    group_by: is_test_user
+    threshold_pct: 25
+    history: 5
+    allowed_failures: 1
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_distribution_prediction
+    type: predicted_range
+    metric: distribution_change:company
+    group_by: is_test_user
+    confidence: 0.95
+    history: 10
+    allowed_failures: 1
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: user_id_unique
+    type: static_threshold
+    metric: duplicate_pct:user_id
+    max: 0
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: user_id_positive
+    type: static_threshold
+    metric: positive_pct:user_id
+    min: 100
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_null_pct
+    type: static_threshold
+    metric: null_pct:company
+    max: 10
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_empty_string_pct
+    type: static_threshold
+    metric: empty_string_pct:company
+    max: 5
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_name_max_length
+    type: static_threshold
+    metric: max_length:company
+    max: 255
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: is_test_user_null
+    type: static_threshold
+    metric: null_pct:is_test_user
+    max: 0
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: created_at_not_null
+    type: static_threshold
+    metric: null_pct:created_at
+    max: 0
+    blocking: false
+
+  # ───── Distribution Changes ─────
+  - asset: RAW_DATA.users
+    check_name: company_distribution_stability
+    type: percent_delta
+    metric: distribution_change:company
+    group_by: is_test_user
+    threshold_pct: 20
+    history: 10
+    allowed_failures: 1
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: test_user_ratio_stability
+    type: percent_delta
+    metric: distribution_change:is_test_user
+    threshold_pct: 15
+    history: 10
+    allowed_failures: 1
+    blocking: false
+
+  # ───── Anomaly and Predictive ─────
+  - asset: RAW_DATA.users
+    check_name: new_users_anomaly
+    type: anomaly_detection
+    metric: num_rows
+    threshold: 2
+    history: 14
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: predicted_new_users
+    type: predicted_range
+    metric: num_rows
+    confidence: Normal
+    history: 30
+    blocking: false
+
+  # ───── Benford's Law ─────
+  - asset: RAW_DATA.users
+    check_name: user_id_benford_law
+    type: benford_law
+    metric: user_id
+    threshold: 0.1
+    blocking: false
+
+  # ───── Type Checks ─────
+  - asset: RAW_DATA.users
+    check_name: user_id_type_check
+    type: type_check
+    metric: type:user_id
+    expected_type: int
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_type_check
+    type: type_check
+    metric: type:company
+    expected_type: string
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: is_test_user_type_check
+    type: type_check
+    metric: type:is_test_user
+    expected_type: bool
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: created_at_type_check
+    type: type_check
+    metric: type:created_at
+    expected_type: timestamp
+    blocking: false
+
+  # ───── Standard Checks ─────
+  - asset: RAW_DATA.users
+    check_name: user_id_not_null
+    type: static_threshold
+    metric: null_pct:user_id
+    max: 0
+    blocking: false
+
+  # ───── Custom SQL Check ─────
+  - asset: RAW_DATA.users
+    check_name: created_at_vs_now_check
+    type: custom
+    custom_sql: "created_at > @now"
+    time_column: created_at
+    threshold: 0
+    blocking: true
+
+  # ───── Pattern Matching Check (Built-in Email) ─────
+  - asset: RAW_DATA.users
+    check_name: company_name_custom_pattern
+    type: static_threshold
+    metric: pattern_match_pct:company
+    pattern: "^[A-Za-z0-9 .,&'-]+$"  # Company names only allowed basic chars
+    min: 95
+    blocking: false
+
+  # ───── Where Clause Filtered Check ─────
+  - asset: RAW_DATA.users
+    check_name: test_user_created_recently
+    type: static_threshold
+    metric: num_rows
+    where: "is_test_user == True"
+    time_range:
+      column: created_at  # ✅ Tell it what timestamp field to use
+      hours_back: 24
+    min: 1
+    blocking: false
+
+
+  # ───── Allowed Values Check ─────
+  - asset: RAW_DATA.users
+    check_name: test_user_valid_boolean
+    type: value_set_check
+    metric: value_set:is_test_user
+    allowed_values: [true, false]
+    blocking: false
+
+  # ───── Type Check with Where Clause ─────
+  - asset: RAW_DATA.users
+    check_name: company_type_check_when_not_null
+    type: type_check
+    metric: type:company
+    expected_type: string
+    where: "company != ''"
+    blocking: false
+
+  # ───── Grouped Check With Allowed Failures ─────
+  - asset: RAW_DATA.users
+    check_name: new_users_by_company_anomaly
+    type: anomaly_detection
+    metric: num_rows
+    group_by: company
+    threshold: 2
+    history: 10
+    allowed_failures: 3
+    blocking: false
+
+  # ───── Advanced Benford Law Check ─────
+  - asset: RAW_DATA.users
+    check_name: user_id_second_digit_benford
+    type: benford_law
+    metric: user_id
+    threshold: 0.2
+    benford_digit: 2  # (if we wanted to)
+    blocking: false
+
+    # ───── Time-Scoped Drift Check ─────
+  - asset: RAW_DATA.users
+    check_name: is_test_user_distribution_change_last_week
+    type: percent_delta
+    metric: distribution_change:is_test_user
+    history: 7
+    threshold_pct: 10
+    time_range:
+      column: created_at    # ✅ Add this!
+      hours_back: 168        # 7 days
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: test_users_have_company
+    type: static_threshold
+    metric: null_pct:company
+    where: "is_test_user == True"
+    max: 5
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: test_users_with_missing_company
+    type: custom
+    custom_sql: "is_test_user == True and company == ''"
+    threshold: 0
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: created_vs_user_id_correlation
+    type: correlation_check
+    column_x: user_id
+    column_y: created_at
+    min_correlation: 0.8
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: company_entropy
+    type: entropy_check
+    metric: entropy:company
+    min: 1.5  # Tuned based on historical range
+    max: 5.0
+    blocking: false
+
+  - asset: RAW_DATA.users
+    check_name: is_test_user_mostly_constant
+    type: constant_value_check
+    metric: constant_value:is_test_user
+    threshold_pct: 95  # Fail if more than 95% are the same
+    blocking: false
