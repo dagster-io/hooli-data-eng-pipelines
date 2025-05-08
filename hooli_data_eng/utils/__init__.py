@@ -1,5 +1,6 @@
 import datetime
 import time
+import os
 import uuid
 from typing import Any, Dict
 import random
@@ -70,3 +71,12 @@ def random_data(
         data["dt"] = _random_times(n=n)
 
     return pd.DataFrame(data)
+
+
+def get_env():
+    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
+        return "PROD"
+    if os.getenv("DAGSTER_IS_DEV_CLI"):
+        return "LOCAL"
+    # default to BRANCH so we use that in github CI
+    return "BRANCH"
