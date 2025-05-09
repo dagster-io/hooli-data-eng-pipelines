@@ -14,8 +14,9 @@ from hooli_data_eng.utils import get_env
 
 dbt_assets = dg.load_assets_from_modules([assets])
 
-dbt_asset_checks = dg.build_column_schema_change_checks(assets=[*dbt_assets])
+dbt_schema_checks = dg.build_column_schema_change_checks(assets=[*dbt_assets])
 
+dbt_asset_checks = dg.load_asset_checks_from_modules([assets])
 
 defs = dg.Definitions(
     assets=link_code_references_to_git_if_cloud(
@@ -25,7 +26,7 @@ defs = dg.Definitions(
             file_anchor_path_in_repository="hooli_data_eng/dbt/definitions.py",
         ),
     ),
-    asset_checks=[*dbt_asset_checks],
+    asset_checks=[*dbt_asset_checks, *dbt_schema_checks],
     resources=resource_def[get_env()],
     jobs=[analytics_job, dbt_slim_ci_job],
     schedules=[analytics_schedule],
