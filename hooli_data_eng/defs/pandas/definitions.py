@@ -1,6 +1,6 @@
-from hooli_data_eng.pandas import assets as pandas_assets
-from hooli_data_eng.pandas.resources import resource_def
-from hooli_data_eng.pandas.schedules import (
+from hooli_data_eng.defs.pandas import assets as pandas_assets
+from hooli_data_eng.defs.pandas.resources import resource_def
+from hooli_data_eng.defs.pandas.schedules import (
     predict_job,
     min_order_freshness_check_sensor,
     avg_orders_freshness_check_schedule,

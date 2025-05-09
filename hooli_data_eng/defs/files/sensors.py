@@ -3,7 +3,7 @@
 # On file updates, this sensor triggers a job
 # To see an example of sensors off of assets, see definitions.py
 import dagster as dg
-from hooli_data_eng.files.sensor_file_managers import (
+from hooli_data_eng.defs.files.sensor_file_managers import (
     FileSystem,
 )
 from hooli_data_eng.utils import get_env

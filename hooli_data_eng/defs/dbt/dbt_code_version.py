@@ -1,7 +1,7 @@
 import hashlib
 import json
 import dagster as dg
-from hooli_data_eng.dbt.resources import dbt_project
+from hooli_data_eng.defs.dbt.resources import dbt_project
 
 
 def get_current_dbt_code_version(asset_key: dg.AssetKey) -> str:

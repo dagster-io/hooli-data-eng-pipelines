@@ -11,7 +11,7 @@ from dagster_dbt import (
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
 from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
-from hooli_data_eng.dbt.resources import dbt_project
+from hooli_data_eng.defs.dbt.resources import dbt_project
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run

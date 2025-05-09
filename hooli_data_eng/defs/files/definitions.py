@@ -1,6 +1,6 @@
-from hooli_data_eng.files import assets as files_assets
-from hooli_data_eng.files.resources import resource_def
-from hooli_data_eng.files.sensors import watch_s3_sensor
+from hooli_data_eng.defs.files import assets as files_assets
+from hooli_data_eng.defs.files.resources import resource_def
+from hooli_data_eng.defs.files.sensors import watch_s3_sensor
 from hooli_data_eng.utils import get_env
 
 from pathlib import Path

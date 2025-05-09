@@ -1,5 +1,5 @@
 import dagster as dg
-from hooli_data_eng.pandas.assets import (
+from hooli_data_eng.defs.pandas.assets import (
     min_order_freshness_check,
     avg_orders_freshness_check,
 )
