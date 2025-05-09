@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dagster_dbt import DbtProject, DbtCliResource
-from .utils import get_env
+from hooli_data_eng.utils import get_env
 
 
 dbt_project_path = Path(__file__).parent.parent.parent.joinpath("dbt_project")
