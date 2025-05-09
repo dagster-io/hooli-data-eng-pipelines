@@ -1,6 +1,7 @@
 import dagster as dg
-from dagster.components import Component, ComponentLoadContext, Model, Resolvable
+from dagster.components import Component, ComponentLoadContext, Resolvable
 from dataclasses import dataclass
+
 
 @dataclass
 class ScheduledJobComponent(Component, Resolvable):
@@ -14,7 +15,9 @@ class ScheduledJobComponent(Component, Resolvable):
     dagster_selection: str
     job_name: str
 
-    def __init__(self, cron_schedule: str, dagster_selection: str, job_name: str, **kwargs):
+    def __init__(
+        self, cron_schedule: str, dagster_selection: str, job_name: str, **kwargs
+    ):
         self.cron_schedule = cron_schedule
         self.dagster_selection = dagster_selection
         self.job_name = job_name
@@ -32,5 +35,7 @@ class ScheduledJobComponent(Component, Resolvable):
             cron_schedule=self.cron_schedule,
         )
 
-        return dg.Definitions(schedules=[schedule], jobs=[job],)
-
+        return dg.Definitions(
+            schedules=[schedule],
+            jobs=[job],
+        )

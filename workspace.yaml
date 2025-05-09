@@ -1,6 +1,6 @@
 load_from:
   - python_module:
-      module_name: hooli_data_eng
+      module_name: hooli_data_eng.definitions
 # Example of deploying multiple code locations locally
   # - python_module:
   #     module_name: hooli_data_ingest
