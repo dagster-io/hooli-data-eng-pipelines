@@ -161,13 +161,13 @@ jobs:
 
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
-        
+
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_eng_any_changed == 'true'
         run: |
           source .venv/bin/activate
-          dagster-dbt project prepare-and-package --file hooli_data_eng/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/dbt/resources.py --source-deployment data-eng-prod 
+          dagster-dbt project prepare-and-package --file hooli_data_eng/defs/dbt/resources.py
+          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_eng_any_changed == 'true'

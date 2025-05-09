@@ -1,6 +1,6 @@
-from hooli_data_eng.custom_ingest import assets as raw_data
-from hooli_data_eng.custom_ingest.assets import check_users, raw_data_schema_checks
-from hooli_data_eng.custom_ingest.resources import resource_def
+from hooli_data_eng.defs.custom_ingest import assets as raw_data
+from hooli_data_eng.defs.custom_ingest.assets import check_users, raw_data_schema_checks
+from hooli_data_eng.defs.custom_ingest.resources import resource_def
 from hooli_data_eng.utils import get_env
 
 from pathlib import Path

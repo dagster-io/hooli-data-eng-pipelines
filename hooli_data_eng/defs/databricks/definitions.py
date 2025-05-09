@@ -1,5 +1,5 @@
-from hooli_data_eng.databricks import assets as databricks_assets
-from hooli_data_eng.databricks.resources import resource_def
+from hooli_data_eng.defs.databricks import assets as databricks_assets
+from hooli_data_eng.defs.databricks.resources import resource_def
 from hooli_data_eng.utils import get_env
 
 from pathlib import Path

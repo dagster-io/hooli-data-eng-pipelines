@@ -2,7 +2,7 @@ import os
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 from dagster_snowflake_pandas import SnowflakePandasIOManager
 import dagster as dg
-from hooli_data_eng.dbt.resources import DBT_PROJECT_DIR
+from hooli_data_eng.defs.dbt.resources import DBT_PROJECT_DIR
 
 # The dbt file dbt_project/config/profiles.yaml
 # specifies what databases to targets, and locally will

@@ -1,5 +1,5 @@
 from dagster._utils import file_relative_path
-from hooli_data_eng.files.sensor_file_managers import s3FileSystem, LocalFileSystem
+from hooli_data_eng.defs.files.sensor_file_managers import s3FileSystem, LocalFileSystem
 
 # Resources represent external systems and, and specifically IO Managers
 # tell dagster where our assets should be materialized. In dagster

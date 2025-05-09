@@ -1,5 +1,5 @@
-from hooli_data_eng.kubernetes import assets as kubernetes_assets
-from hooli_data_eng.kubernetes.resources import resource_def
+from hooli_data_eng.defs.kubernetes import assets as kubernetes_assets
+from hooli_data_eng.defs.kubernetes.resources import resource_def
 from hooli_data_eng.utils import get_env
 
 from pathlib import Path

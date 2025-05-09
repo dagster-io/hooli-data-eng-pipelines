@@ -1,9 +1,9 @@
 from pathlib import Path
 import dagster as dg
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
-from hooli_data_eng.dbt import assets
-from hooli_data_eng.dbt.resources import resource_def
-from hooli_data_eng.dbt.schedules import (
+from hooli_data_eng.defs.dbt import assets
+from hooli_data_eng.defs.dbt.resources import resource_def
+from hooli_data_eng.defs.dbt.schedules import (
     weekly_freshness_check_sensor,
     dbt_slim_ci_job,
     dbt_code_version_sensor,
