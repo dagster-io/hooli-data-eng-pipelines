@@ -21,7 +21,7 @@ dependencies:
 	uv pip install -e ".[dev]"
 
 update_packages:
-	uv lock --upgrade;
+	uv lock --upgrade --directory hooli-data-eng;
 	uv lock --upgrade --directory hooli_basics;
 	uv lock --upgrade --directory hooli_batch_enrichment;
 	uv lock --upgrade --directory hooli_snowflake_insights;
