@@ -1,0 +1,7 @@
+directory_type = "workspace"
+
+[workspace]
+[[workspace.projects]]
+path = "hooli-data-eng"
+[[workspace.projects]]
+path = "hooli-data-ingest"
