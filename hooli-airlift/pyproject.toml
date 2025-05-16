@@ -8,7 +8,7 @@ dependencies = [
     "dagster==1.10.2",
     "dagster-shared",
     "dagster-cloud",
-    "dagster-airlift",
+    "dagster-airlift==0.26.2",
     "boto3",
 ]
 
