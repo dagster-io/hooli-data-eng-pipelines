@@ -22,9 +22,9 @@ dependencies:
 
 update_packages:
 	uv lock --upgrade --directory hooli-data-eng;
-	uv lock --upgrade --directory hooli_basics;
-	uv lock --upgrade --directory hooli_batch_enrichment;
-	uv lock --upgrade --directory hooli_snowflake_insights;
+	uv lock --upgrade --directory hooli-basics;
+	uv lock --upgrade --directory hooli-batch-enrichment;
+	uv lock --upgrade --directory hooli-snowflake-insights;
 	uv lock --upgrade --directory hooli-data-ingest;
 	uv lock --upgrade --directory hooli-bi;
 	uv lock --upgrade --directory hooli-airlift;
@@ -38,3 +38,9 @@ ruff:
 # ensure your virtual environment is activated here
 install_from_dagster_clone:
 	source .venv/bin/activate; uv pip install pip; cd ${DAGSTER_GIT_REPO_DIR} && python scripts/install_dev_python_modules.py; cd -; 
+
+install_dg_from_dagster_clone:
+	source .venv/bin/activate; cd ${DAGSTER_GIT_REPO_DIR} && uv tool install -e python_modules/libraries/dagster-dg \
+	  --with-editable python_modules/libraries/dagster-shared \
+	  --with-editable python_modules/libraries/dagster-cloud-cli \
+	  --reinstall; cd -;

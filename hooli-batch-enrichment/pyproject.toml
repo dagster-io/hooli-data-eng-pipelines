@@ -1,14 +1,14 @@
 [project]
-name = "hooli_airlift"
+name = "dagster_batch_enrichment"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9,<3.13"
 dependencies = [
-    "dagster",
-    "dagster-cloud",
-    "dagster-airlift",
-    "boto3",
+    "dagster-duckdb",
+    "pandas",
+    "responses",
+    "dagster-cloud[insights]"
 ]
 
 [project.optional-dependencies]
@@ -21,20 +21,19 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.dagster]
-module_name = "hooli_airlift.definitions"
-code_location_name = "hooli_airlift"
-
 [tool.hatch.build.targets.wheel]
-packages = ["hooli_airlift"]
+packages = ["hooli_batch_enrichment"]
+
+
+[tool.setuptools]
+packages = { find = { exclude = ["hooli_batch_enrichment_tests"] } }
 
 [tool.dg]
 directory_type = "project"
 
 [tool.dg.project]
-root_module = "hooli_airlift"
-code_location_target_module = "hooli_airlift.definitions"
+root_module = "hooli_batch_enrichment"
+code_location_target_module = "hooli_batch_enrichment.definitions"
 
 [tool.dg.project.python_environment]
 uv_managed = true
-

@@ -24,8 +24,8 @@ root_module = "hooli_data_ingest"
 code_location_target_module = "hooli_data_ingest.definitions"
 
 [tool.dg.project.python_environment]
-uv_managed = false
-active = true
+uv_managed = true
+active = false
 
 
 [dependency-groups]

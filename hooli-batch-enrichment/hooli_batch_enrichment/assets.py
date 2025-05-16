@@ -15,8 +15,8 @@ import pandas as pd
 from pydantic import Field
 import numpy as np
 
-from dagster_batch_enrichment.warehouse import MyWarehouse
-from dagster_batch_enrichment.api import EnrichmentAPI
+from hooli_batch_enrichment.warehouse import MyWarehouse
+from hooli_batch_enrichment.api import EnrichmentAPI
 
 
 class experimentConfig(Config):
