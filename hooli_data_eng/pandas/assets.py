@@ -1,6 +1,6 @@
 from typing import Tuple
 
-import datetime
+from datewtime import timedelta
 import numpy as np
 import pandas as pd
 import dagster as dg
@@ -77,8 +77,8 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     group_name="MARKETING",
     owners=["team:programmers"],
     ins={"company_perf": dg.AssetIn(key_prefix=["ANALYTICS"])},
-    kinds={"pandas", storage_kind},,
-    internal_freshness_policy=policy
+    kinds={"pandas", storage_kind},
+    internal_freshness_policy=policy,
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""
@@ -108,7 +108,6 @@ def key_product_deepdive(context, sku_stats):
         {"sku_preview": dg.MetadataValue.md(sku.head().to_markdown())}
     )
     return sku
-
 
 
 # min_order_freshness_check = dg.build_last_update_freshness_checks(
