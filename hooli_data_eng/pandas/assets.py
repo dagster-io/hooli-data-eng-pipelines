@@ -6,7 +6,9 @@ import pandas as pd
 import dagster as dg
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 from hooli_data_eng.utils.kind_helpers import get_kind
+from dagster._core.defintions.freshness import InternalFreshnessPolicy
 
+policy = InternalFreshnessPolicy.time_window(fail_window=timedelta(hours=24))
 
 # dynamically determine storage_kind based on environment
 storage_kind = get_kind()
@@ -75,7 +77,8 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     group_name="MARKETING",
     owners=["team:programmers"],
     ins={"company_perf": dg.AssetIn(key_prefix=["ANALYTICS"])},
-    kinds={"pandas", storage_kind},
+    kinds={"pandas", storage_kind},,
+    internal_freshness_policy=policy
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""
@@ -107,16 +110,17 @@ def key_product_deepdive(context, sku_stats):
     return sku
 
 
-min_order_freshness_check = dg.build_last_update_freshness_checks(
-    assets=[
-        min_order,
-        dg.AssetKey(["RAW_DATA", "orders"]),
-        dg.AssetKey(["RAW_DATA", "users"]),
-    ],
-    lower_bound_delta=datetime.timedelta(
-        hours=24
-    ),  # expect new data at least once a day
-)
+
+# min_order_freshness_check = dg.build_last_update_freshness_checks(
+#     assets=[
+#         min_order,
+#         dg.AssetKey(["RAW_DATA", "orders"]),
+#         dg.AssetKey(["RAW_DATA", "users"]),
+#     ],
+#     lower_bound_delta=datetime.timedelta(
+#         hours=24
+#     ),  # expect new data at least once a day
+# )
 
 avg_orders_freshness_check = build_anomaly_detection_freshness_checks(
     assets=[avg_orders], params=None
