@@ -6,7 +6,7 @@ import pandas as pd
 import dagster as dg
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 from hooli_data_eng.utils.kind_helpers import get_kind
-from dagster._core.defintions.freshness import InternalFreshnessPolicy
+from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
 policy = InternalFreshnessPolicy.time_window(fail_window=timedelta(hours=24))
 
