@@ -1,6 +1,5 @@
 import dagster as dg
 from hooli_data_eng.pandas.assets import (
-    min_order_freshness_check,
     avg_orders_freshness_check,
 )
 
@@ -11,7 +10,6 @@ predict_job = dg.define_asset_job(
     selection=dg.AssetSelection.keys(["FORECASTING", "predicted_orders"]),
     tags={"alert_team": "ml"},
 )
-
 
 # This sensor listens for changes to the orders_augmented asset which
 # represents a dbt model. When the table managed by dbt is updated,
@@ -25,7 +23,7 @@ def orders_sensor(context: dg.SensorEvaluationContext, asset_event: dg.EventLogE
 
 
 min_order_freshness_check_sensor = dg.build_sensor_for_freshness_checks(
-    freshness_checks=min_order_freshness_check, minimum_interval_seconds=10 * 60
+    freshness_checks=minimum_interval_seconds=10 * 60
 )
 
 avg_orders_freshness_check_schedule = dg.ScheduleDefinition(
