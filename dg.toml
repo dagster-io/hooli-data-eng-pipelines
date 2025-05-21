@@ -19,6 +19,7 @@ path = "hooli-snowflake-insights"
 [[workspace.projects]]
 path = "hooli-batch-enrichment"
 
-[[workspace.projects]]
-path = "hooli-airlift"
+# currently failing bc of strange import error or package versions
+#[[workspace.projects]]
+#path = "hooli-airlift"
 
