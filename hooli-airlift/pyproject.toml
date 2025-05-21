@@ -5,9 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9,<3.13"
 dependencies = [
-    "dagster",
+    "dagster==1.10.2",
     "dagster-cloud",
-    "dagster-airlift[core,mwaa]",
+    "dagster-airlift[core,mwaa]==0.26.2",
     "boto3",
 ]
 
