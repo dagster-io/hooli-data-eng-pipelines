@@ -2,7 +2,6 @@ from hooli_data_eng.defs.pandas import assets as pandas_assets
 from hooli_data_eng.defs.pandas.resources import resource_def
 from hooli_data_eng.defs.pandas.schedules import (
     predict_job,
-    min_order_freshness_check_sensor,
     avg_orders_freshness_check_schedule,
     orders_sensor,
 )
@@ -35,6 +34,6 @@ defs = dg.Definitions(
     asset_checks=[*pandas_checks],
     jobs=[predict_job],
     resources=resource_def[get_env()],
-    sensors=[min_order_freshness_check_sensor, orders_sensor],
+    sensors=[orders_sensor],
     schedules=[avg_orders_freshness_check_schedule],
 )
