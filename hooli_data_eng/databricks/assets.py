@@ -3,6 +3,7 @@ import dagster as dg
 
 from dagster_databricks import PipesDatabricksClient
 from databricks.sdk.service import jobs
+from hooli_data_eng.databricks.resources import launch_and_poll_databricks_job
 
 
 # This asset uses the forecasted orders to flag any days that
@@ -71,3 +72,12 @@ def databricks_asset(
         context=context,
         extras=extras,
     ).get_materialize_result()
+
+
+@dg.asset(
+    required_resource_keys={"databricks"},
+    deps=[dg.AssetKey(["databricks_asset"])],
+)
+def databricks_workflow_asset(context: dg.AssetExecutionContext) -> None:
+    databricks = context.resources.databricks
+    launch_and_poll_databricks_job(context, databricks, 733330858351118)
