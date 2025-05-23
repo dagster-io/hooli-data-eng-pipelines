@@ -17,7 +17,6 @@ databricks_client_instance = databricks_client.configured(
 )
 
 
-
 def launch_and_poll_databricks_job(context, client, job_id):
     jobs_service = client.workspace_client.jobs
 
@@ -39,6 +38,7 @@ def launch_and_poll_databricks_job(context, client, job_id):
         poll_interval_sec=5,
         max_wait_time_sec=600,
     )
+
 
 # The production deployment on Dagster Cloud uses production Snowflake
 # and S3 resources
