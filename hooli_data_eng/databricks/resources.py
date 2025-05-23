@@ -5,7 +5,40 @@ from unittest import mock
 import dagster as dg
 from dagster_databricks import PipesDatabricksClient, databricks_pyspark_step_launcher
 from hooli_data_eng.utils import get_env
+from dagster_databricks import databricks_client
 
+
+# Configure the Databricks client resource
+databricks_client_instance = databricks_client.configured(
+    {
+        "host": {"env": "DATABRICKS_HOST"},
+        "token": {"env": "DATABRICKS_TOKEN"},
+    }
+)
+
+
+
+def launch_and_poll_databricks_job(context, client, job_id):
+    jobs_service = client.workspace_client.jobs
+
+    run = jobs_service.run_now(
+        job_id=job_id,
+    )
+    run_id = run.bind()["run_id"]
+
+    get_run_response = jobs_service.get_run(run_id=run_id)
+
+    context.log.info(
+        f"Launched databricks job run for '{get_run_response.run_name}' (`{run_id}`). URL:"
+        f" {get_run_response.run_page_url}. Waiting to run to complete."
+    )
+
+    client.wait_for_run_to_complete(
+        logger=context.log,
+        databricks_run_id=run_id,
+        poll_interval_sec=5,
+        max_wait_time_sec=600,
+    )
 
 # The production deployment on Dagster Cloud uses production Snowflake
 # and S3 resources
@@ -109,13 +142,16 @@ resource_def = {
     "LOCAL": {
         "step_launcher": dg.ResourceDefinition.none_resource(),
         "pipes_databricks_client": dg.ResourceDefinition.none_resource(),
+        "databricks": databricks_client_instance,
     },
     "BRANCH": {
         "step_launcher": db_step_launcher,
         "pipes_databricks_client": dg.ResourceDefinition.none_resource(),
+        "databricks": databricks_client_instance,
     },
     "PROD": {
         "step_launcher": db_step_launcher,
         "pipes_databricks_client": PipesDatabricksClient(client),
+        "databricks": databricks_client_instance,
     },
 }
