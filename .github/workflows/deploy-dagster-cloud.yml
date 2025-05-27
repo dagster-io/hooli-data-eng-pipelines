@@ -65,6 +65,24 @@ jobs:
         run: |
           echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
 
+      - name: Checkout Dagster repo
+        if: env.DAGSTER_BRANCH != 'unset'
+        uses: actions/checkout@v3
+        with:
+          repository: dagster-io/dagster
+          path: dagster
+          ref: master
+
+      - name: Checkout Dagster internal repo
+        if: env.DAGSTER_BRANCH != 'unset'
+        uses: actions/checkout@v3
+        with:
+          repository: dagster-io/internal
+          path: internal
+          ref: master
+          token: ${{ secrets.PRIVATE_REPO_GITHUB_PAT }}
+
+
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
@@ -137,6 +155,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
 
       - name: Configure AWS credentials
@@ -165,7 +185,25 @@ jobs:
         run: |
           source .venv/bin/activate
           dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
+          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod
+
+      - name: Build and upload base Docker bookworm image
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: bookworm.Dockerfile
+          push: false
+          tags: bookworm-base:latest
+
+      - name: Build and upload base Docker bookworm-slimimage
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: bookworm_slim.Dockerfile
+          push: false
+          tags: bookworm-slim-base:latest
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -175,6 +213,8 @@ jobs:
           file: ./hooli-data-eng/Dockerfile
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
+          build-contexts: |
+            bookworm-base=docker-image://bookworm-base:latest
 
 
       # Build 'basics' code location
@@ -185,7 +225,8 @@ jobs:
           context: ./hooli-basics
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
-
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
 
       # Build 'batch enrichment' code location
       - name: Build and upload Docker image for batch enrichment
@@ -195,6 +236,9 @@ jobs:
           context: ./hooli-batch-enrichment
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
+
 
 
       # Build 'snowflake_insights' code location
@@ -205,6 +249,9 @@ jobs:
           context: ./hooli-snowflake-insights
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
+
 
 
       # Build 'hooli_data_ingest' code location
@@ -215,6 +262,9 @@ jobs:
           context: ./hooli-data-ingest
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
+
 
       # Build 'hooli_bi' code location
       - name: Build and upload Docker image for hooli_bi
@@ -224,6 +274,9 @@ jobs:
           context: ./hooli-bi
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
+
 
       # Build 'hooli_airlift' code location
       - name: Build and upload Docker image for hooli_airlift
@@ -233,6 +286,9 @@ jobs:
           context: ./hooli-airlift
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-airlift
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
+
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
@@ -242,6 +298,9 @@ jobs:
           context: ./hooli-data-eng/hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
+          build-contexts: |
+            bookworm-slim-base=docker-image://bookworm-slim-base:latest
+
 
       #set build output
       - name: Set build output for Dagster Cloud
