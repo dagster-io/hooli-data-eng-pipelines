@@ -1,16 +1,14 @@
 [project]
-name = "hooli_snowflake_insights"
+name = "dagster_batch_enrichment"
 version = "0.1.0"
 description = "Add your description here"
+readme = "README.md"
 requires-python = ">=3.9,<3.13"
 dependencies = [
-    "dagster",
-    "dagster-cloud[insights]",
-    "dagster-dbt",
-    "dagster-snowflake>=0.25.0",
-    "gql",
-    "requests-toolbelt",
-    "dagster-pipes",
+    "dagster-duckdb",
+    "pandas",
+    "responses",
+    "dagster-cloud[insights]"
 ]
 
 [project.optional-dependencies]
@@ -20,28 +18,16 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["hooli_snowflake_insights"]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [tool.dagster]
-module_name = "hooli_snowflake_insights.definitions"
-code_location_name = "hooli_snowflake_insights"
+module_name = "dagster_batch_enrichment.definitions"
+code_location_name = "dagster_batch_enrichment"
 
 [tool.setuptools]
-packages = { find = { exclude = ["hooli_snowflake_insights_tests"] } }
+packages = { find = { exclude = ["dagster_batch_enrichment_tests"] } }
 
-[tool.dg]
-directory_type = "project"
-
-[tool.dg.project]
-root_module = "hooli_snowflake_insights"
-code_location_target_module = "hooli_snowflake_insights.definitions"
-
-[tool.dg.project.python_environment]
-uv_managed = true
 
 [tool.uv.sources]
 dagster = { path = "../../dagster/python_modules/dagster", editable = true }
