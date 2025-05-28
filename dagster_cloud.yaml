@@ -18,23 +18,23 @@ locations:
 
   - location_name: basics
     code_source:
-      python_file: definitions.py
+      package_name: hooli_basics
     build:
-      directory: ./hooli_basics
+      directory: ./hooli-basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: batch_enrichment
     code_source:
-      package_name: dagster_batch_enrichment
+      package_name: hooli_batch_enrichment
     build:
-      directory: ./hooli_batch_enrichment
+      directory: ./hooli-batch-enrichment
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: snowflake_insights
     code_source:
-      python_file: definitions.py
+      package_name: hooli_snowflake_insights
     build:
-      directory: ./hooli_snowflake_insights
+      directory: ./hooli-snowflake-insights
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: hooli_data_ingest
