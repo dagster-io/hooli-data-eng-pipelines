@@ -43,16 +43,14 @@ jobs:
         uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
         with:
           files_yaml: |
-            hooli_data_eng:
+            hooli-data-eng:
               - dbt_project/**
               - hooli_data_eng/**
-              - pyproject.toml
-              - Dockerfile
-            hooli_basics:
+            hooli-basics:
               - hooli_basics/**
-            hooli_batch_enrichment:
+            hooli-batch-enrichment:
               - hooli_batch_enrichment/**
-            hooli_snowflake_insights:
+            hooli-snowflake-insights:
               - hooli_snowflake_insights/**
             hooli-data-ingest:
               - hooli-data-ingest/**
@@ -70,25 +68,25 @@ jobs:
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
-              changed_files="${{ steps.changed-files.outputs.hooli_data_eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli_basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli_batch_enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli_snowflake_insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-bi_all_changed_files }} ${{ steps.changed-files.outputs.hooli-airlift_all_changed_files }}"
+              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-batch-enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli-snowflake-insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-bi_all_changed_files }} ${{ steps.changed-files.outputs.hooli-airlift_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
               LOCATIONS=""
               LOCATIONS_WITH_IMAGE=""
-              if [ "${{ steps.changed-files.outputs.hooli_data_eng_any_changed}}" == "true" ]; then
+              if [ "${{ steps.changed-files.outputs.hooli-data-eng_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli_basics_any_changed}}" == "true" ]; then
+              if [ "${{ steps.changed-files.outputs.hooli-basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name basics --image-tag=$IMAGE_TAG-basics\n"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli_batch_enrichment_any_changed}}" == "true" ]; then
+              if [ "${{ steps.changed-files.outputs.hooli-batch-enrichment_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name batch_enrichment"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli_snowflake_insights_any_changed}}" == "true" ]; then
+              if [ "${{ steps.changed-files.outputs.hooli-snowflake-insights_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name snowflake_insights"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights\n"
               fi
@@ -163,14 +161,14 @@ jobs:
         run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
 
       - name: Prepare dbt project
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_eng_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         run: |
           source .venv/bin/activate
           dagster-dbt project prepare-and-package --file hooli_data_eng/defs/dbt/resources.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
 
       - name: Build and upload Docker image for data-eng-pipeline
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_eng_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -180,30 +178,30 @@ jobs:
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_basics_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-basics_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli_basics
+          context: ./hooli-basics
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
 
 
       # Build 'batch enrichment' code location
       - name: Build and upload Docker image for batch enrichment
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_batch_enrichment_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-batch-enrichment_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli_batch_enrichment
+          context: ./hooli-batch-enrichment
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
 
 
       # Build 'snowflake_insights' code location
       - name: Build and upload Docker image for snowflake insights
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_snowflake_insights_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-snowflake-insights_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli_snowflake_insights
+          context: ./hooli-snowflake-insights
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
 
@@ -237,10 +235,10 @@ jobs:
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli_data_eng_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli_data_eng/utils/example_container
+          context: ./hooli-data-eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
@@ -278,7 +276,7 @@ jobs:
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
-        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli_bi_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
         uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
         with:
           location_name: data-eng-pipeline
