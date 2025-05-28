@@ -45,13 +45,13 @@ jobs:
           files_yaml: |
             hooli-data-eng:
               - dbt_project/**
-              - hooli_data_eng/**
+              - hooli-data-eng/**
             hooli-basics:
-              - hooli_basics/**
+              - hooli-basics/**
             hooli-batch-enrichment:
-              - hooli_batch_enrichment/**
+              - hooli-batch-enrichment/**
             hooli-snowflake-insights:
-              - hooli_snowflake_insights/**
+              - hooli-snowflake-insights/**
             hooli-data-ingest:
               - hooli-data-ingest/**
             hooli-bi:
