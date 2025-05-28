@@ -158,14 +158,14 @@ jobs:
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
 
       - name: Set PYTHONPATH
-        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng" >> $GITHUB_ENV
 
       - name: Prepare dbt project
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         run: |
           source .venv/bin/activate
-          dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
+          dagster-dbt project prepare-and-package --file hooli_data_eng/defs/dbt/resources.py
+          dagster-cloud ci dagster-dbt project manage-state --file hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -238,7 +238,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-data-eng/utils/example_container
+          context: ./hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
