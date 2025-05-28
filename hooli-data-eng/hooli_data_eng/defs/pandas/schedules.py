@@ -1,5 +1,5 @@
 import dagster as dg
-from hooli_data_eng.pandas.assets import avg_orders_freshness_check
+from hooli_data_eng.defs.pandas.assets import avg_orders_freshness_check
 
 # This job selects the predicted_orders asset defined in
 # databricks/assets.py
