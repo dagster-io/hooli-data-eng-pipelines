@@ -18,7 +18,7 @@ locations:
 
   - location_name: basics
     code_source:
-      package_name: hooli_basics
+      module_name: hooli_basics.definitions
     build:
       directory: ./hooli-basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
@@ -32,7 +32,7 @@ locations:
 
   - location_name: snowflake_insights
     code_source:
-      package_name: hooli_snowflake_insights
+       module_name: hooli_snowflake_insights.definitions
     build:
       directory: ./hooli-snowflake-insights
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

@@ -19,12 +19,15 @@ RUN apt-get update && \
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=hooli-data-eng/uv.lock,target=uv.lock \
+    --mount=type=bind,source=hooli-data-eng/pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
-# Then, add the rest of the project source code and install it
+# Copy dbt_project directory to maintain structure
+COPY dbt_project/ /opt/dagster/app/dbt_project/
+
+# Then, add the hooli-data-eng project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-ADD . /opt/dagster/app
+COPY hooli-data-eng/ /opt/dagster/app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
