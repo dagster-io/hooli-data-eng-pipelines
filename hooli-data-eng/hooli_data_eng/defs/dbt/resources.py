@@ -4,7 +4,9 @@ from dagster_dbt import DbtProject, DbtCliResource
 from hooli_data_eng.utils import get_env
 
 
-dbt_project_path = Path(__file__).parent.parent.parent.parent.parent.joinpath("dbt_project")
+dbt_project_path = Path(__file__).parent.parent.parent.parent.parent.joinpath(
+    "dbt_project"
+)
 DBT_PROJECT_DIR = os.fspath(dbt_project_path)
 
 
@@ -26,7 +28,7 @@ dbt_project.prepare_if_dev()
 resource_def = {
     "LOCAL": {
         "dbt": DbtCliResource(
-            project_dir=dbt_project, # Using the DbtProject instance is fine
+            project_dir=dbt_project,  # Using the DbtProject instance is fine
             target="LOCAL",
         ),
     },

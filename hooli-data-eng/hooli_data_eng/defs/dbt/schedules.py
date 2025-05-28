@@ -4,7 +4,10 @@ from dagster_dbt import DbtCliResource, DagsterDbtTranslatorSettings
 from hooli_data_eng.defs.dbt.resources import dbt_project
 from hooli_data_eng.defs.dbt.assets import weekly_freshness_check
 from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
-from hooli_data_eng.defs.dbt.assets import regular_dbt_assets, CustomDagsterDbtTranslator
+from hooli_data_eng.defs.dbt.assets import (
+    regular_dbt_assets,
+    CustomDagsterDbtTranslator,
+)
 
 DBT_MANIFEST = dbt_project.manifest_path
 
