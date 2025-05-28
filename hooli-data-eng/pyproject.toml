@@ -1,0 +1,76 @@
+[project]
+name = "hooli_data_eng"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+      "dagster",
+      "dagster-dbt",
+      "pandas",
+      "numpy",
+      "scipy",
+      "dbt-core",
+      "dbt-duckdb",
+      "dbt-snowflake",
+      "dagster-duckdb",
+      "dagster-aws",
+      "dagster-duckdb-pandas",
+      "dagster-snowflake",
+      "dagster-snowflake-pandas",
+      "dagster-cloud[insights]",
+      "dagster-pyspark",
+      "dagster-databricks",
+      "dagster-k8s",
+      "dagstermill",
+      "gql",
+      "plotnine",
+      "responses",
+      "requests",
+      "requests-toolbelt",
+      "html5lib",
+      "scikit-learn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver", 
+    "pytest",
+    "ruff",
+]
+
+sling = ["dagster-sling"]
+
+powerbi = ["dagster-powerbi"]
+
+
+
+[tool.setuptools]
+packages = { find = { exclude = ["hooli_data_eng_tests"] } }
+
+[tool.setuptools.package-data]
+"hooli_data_eng" = ["dbt_project/*"]
+
+[tool.ruff]
+exclude = ["**/.github/**"]
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "hooli_data_eng"
+code_location_target_module = "hooli_data_eng.definitions"
+
+[tool.dg.project.python_environment]
+uv_managed = true
+
+[dependency-groups]
+dev = [
+    "dagster-webserver",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.entry-points]
+"dagster_dg.plugin" = { hooli_data_eng = "hooli_data_eng.lib"}
