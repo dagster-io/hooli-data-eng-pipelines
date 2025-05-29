@@ -1,7 +1,7 @@
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm
+FROM bookworm-base
 
-WORKDIR /opt/dagster/app
+WORKDIR /opt/dagster-project/app
 
 # Enable bytecode compilation
 #ENV UV_COMPILE_BYTECODE=1
@@ -24,10 +24,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 
 # Copy dbt_project directory to maintain structure
-COPY dbt_project/ /opt/dagster/dbt_project/
+COPY dbt_project/ /opt/dagster-project/dbt_project/
 
 # Then, add the hooli-data-eng project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-COPY hooli-data-eng/ /opt/dagster/app/
+COPY hooli-data-eng/ /opt/dagster-project/app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
