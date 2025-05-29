@@ -28,8 +28,6 @@ COPY dbt_project/ /opt/dagster/dbt_project/
 
 # Then, add the hooli-data-eng project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-ADD . /opt/dagster-project/app
-RUN rm -rf /opt/dagster-project/app/dagster && \
-    rm -rf /opt/dagster-project/app/internal
+COPY hooli-data-eng/ /opt/dagster-project/app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
