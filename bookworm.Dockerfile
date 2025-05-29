@@ -3,6 +3,5 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm
 
 WORKDIR /opt/dagster-project/app
 
-
-COPY dagster /opt/dagster-project/dagster
-COPY internal /opt/dagster-project/internal
+COPY dagster /opt/dagster
+COPY internal /opt/internal
