@@ -13,3 +13,6 @@ class Foo(Component, Model, Resolvable):
     def build_defs(self, context: ComponentLoadContext) -> dg.Definitions:
         # Add definition construction logic here.
         return dg.Definitions()
+
+
+# test

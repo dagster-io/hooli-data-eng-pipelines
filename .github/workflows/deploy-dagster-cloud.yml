@@ -4,7 +4,6 @@ on:
     branches:
       - "main"
       - "master"
-      - "benpankow/editable-dagster-version"
   pull_request:  # For branch deployments
      types: [opened, synchronize, reopened, closed]
 
