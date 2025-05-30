@@ -1,0 +1,34 @@
+type: hooli_data_eng.defs.dbt.component.HooliDbtComponent
+
+attributes:
+  groups:
+    - selection: "company_stats locations_cleaned sku_stats company_perf"
+      run_on_code_version_change: true
+
+    - selection: "weekly_order_summary order_stats"
+      partitioning: "weekly"
+      freshness_check_sensor: weekly_freshness_check_sensor
+
+    - selection: "orders_cleaned users_cleaned orders_augmented"
+      partitioning: "daily"
+
+---
+
+type: hooli_data_eng.components.ScheduledJobComponent
+
+attributes:
+  job_name: dbt_components_job
+  cron_schedule: "0 8 * * *"
+  asset_selection: tag:"all_cleaned_models"
+
+
+---
+
+type: hooli_data_eng.components.ScheduledPartitionedJobComponent
+
+
+attributes:
+  job_name: refresh_analytics_model_job
+  asset_selection: +key:"ANALYTICS/orders_augmented" and not +key:"CLEANED/locations_cleaned"
+  tags:
+    dagster/max_retries: 1
