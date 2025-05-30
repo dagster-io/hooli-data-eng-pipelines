@@ -1,4 +1,4 @@
-type: hooli_data_eng.lib.ScheduledJobComponent
+type: hooli_data_eng.components.ScheduledJobComponent
 
 attributes:
   job_name: dbt_components_job

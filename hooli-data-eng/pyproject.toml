@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "dagster-webserver", 
+    "dagster-webserver",
     "pytest",
     "ruff",
 ]
@@ -73,4 +73,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.entry-points]
-"dagster_dg.plugin" = { hooli_data_eng = "hooli_data_eng.lib"}
+"dagster_dg.plugin" = { hooli_data_eng = "hooli_data_eng.components"}
