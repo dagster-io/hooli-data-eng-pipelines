@@ -1,7 +1,0 @@
-type: hooli_data_eng.components.ScheduledJobComponent
-
-attributes:
-  job_name: dbt_components_job
-  cron_schedule: "0 8 * * *"
-  dagster_selection: 'tag:"all_cleaned_models"'
-  #'key:"target/main/orders"+'
