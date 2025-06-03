@@ -71,7 +71,7 @@ jobs:
         with:
           repository: dagster-io/dagster
           path: dagster
-          ref: master
+          ref: benpankow/powerbi-semantic-model-refresh
 
       - name: Checkout Dagster internal repo
         if: env.DAGSTER_BRANCH != 'unset'

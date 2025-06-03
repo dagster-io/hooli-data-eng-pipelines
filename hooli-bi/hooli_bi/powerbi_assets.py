@@ -1,10 +1,11 @@
-from dagster import AssetKey, AssetSpec, EnvVar, TableSchema, TableColumn
 from dagster_powerbi import (
-    load_powerbi_asset_specs,
     DagsterPowerBITranslator,
     build_semantic_model_refresh_asset_definition,
+    load_powerbi_asset_specs,
 )
 from dagster_powerbi.translator import PowerBIContentData
+
+from dagster import AssetKey, AssetSpec, EnvVar, TableColumn, TableSchema
 from hooli_bi.powerbi_workspace import power_bi_workspace
 
 
