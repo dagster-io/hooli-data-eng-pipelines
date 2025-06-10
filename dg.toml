@@ -23,3 +23,7 @@ path = "hooli-batch-enrichment"
 #[[workspace.projects]]
 #path = "hooli-airlift"
 
+[cli]
+suppress_warnings = [
+    "deprecated_dagster_dg_library_entry_point"
+]
