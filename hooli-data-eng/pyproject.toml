@@ -12,15 +12,18 @@ dependencies = [
       "dbt-core",
       "dbt-duckdb",
       "dbt-snowflake",
-      "dagster-duckdb",
       "dagster-aws",
-      "dagster-duckdb-pandas",
-      "dagster-snowflake",
-      "dagster-snowflake-pandas",
+      "dagster-graphql",
       "dagster-cloud[insights]",
-      "dagster-pyspark",
       "dagster-databricks",
+      "dagster-duckdb-pandas",
+      "dagster-duckdb",
       "dagster-k8s",
+      "dagster-pipes",
+      "dagster-pyspark",
+      "dagster-snowflake-pandas",
+      "dagster-snowflake",
+      "dagster-spark",
       "dagstermill",
       "gql",
       "plotnine",
@@ -74,3 +77,31 @@ build-backend = "hatchling.build"
 
 [project.entry-points]
 "dagster_dg.plugin" = { hooli_data_eng = "hooli_data_eng.components"}
+
+
+[tool.uv.sources]
+dagster = { path = "../../dagster/python_modules/dagster", editable = true }
+dagster-graphql = { path = "../../dagster/python_modules/dagster-graphql", editable = true }
+dagster-aws = { path = "../../dagster/python_modules/libraries/dagster-aws", editable = true }
+dagster-cloud = { path = "../../internal/dagster-cloud/python_modules/dagster-cloud", editable = true }
+dagster-cloud-cli = { path = "../../dagster/python_modules/libraries/dagster-cloud-cli", editable = true }
+dagster-databricks = { path = "../../dagster/python_modules/libraries/dagster-databricks", editable = true }
+dagster-dbt = { path = "../../dagster/python_modules/libraries/dagster-dbt", editable = true }
+dagster-dlt = { path = "../../dagster/python_modules/libraries/dagster-dlt", editable = true }
+dagster-duckdb = { path = "../../dagster/python_modules/libraries/dagster-duckdb", editable = true }
+dagster-duckdb-pandas = { path = "../../dagster/python_modules/libraries/dagster-duckdb-pandas", editable = true }
+dagster-embedded-elt = { path = "../../dagster/python_modules/libraries/dagster-embedded-elt", editable = true }
+dagster-fivetran = { path = "../../dagster/python_modules/libraries/dagster-fivetran", editable = true }
+dagster-gcp = { path = "../../dagster/python_modules/libraries/dagster-gcp", editable = true }
+dagster-k8s = { path = "../../dagster/python_modules/libraries/dagster-k8s", editable = true }
+dagster-pandas = { path = "../../dagster/python_modules/libraries/dagster-pandas", editable = true }
+dagster-pipes = { path = "../../dagster/python_modules/dagster-pipes", editable = true }
+dagster-pyspark = { path = "../../dagster/python_modules/libraries/dagster-pyspark", editable = true }
+dagster-shared = { path = "../../dagster/python_modules/libraries/dagster-shared", editable = true }
+dagster-slack = { path = "../../dagster/python_modules/libraries/dagster-slack", editable = true }
+dagster-sling = { path = "../../dagster/python_modules/libraries/dagster-sling", editable = true }
+dagster-spark = { path = "../../dagster/python_modules/libraries/dagster-spark", editable = true }
+dagster-snowflake = { path = "../../dagster/python_modules/libraries/dagster-snowflake", editable = true }
+dagster-snowflake-pandas = { path = "../../dagster/python_modules/libraries/dagster-snowflake-pandas", editable = true }
+dagster-webserver = { path = "../../dagster/python_modules/dagster-webserver", editable = true }
+dagstermill = { path = "../../dagster/python_modules/libraries/dagstermill", editable = true }
