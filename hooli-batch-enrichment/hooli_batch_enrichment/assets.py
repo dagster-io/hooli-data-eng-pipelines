@@ -19,9 +19,7 @@ from hooli_batch_enrichment.warehouse import MyWarehouse
 from hooli_batch_enrichment.api import EnrichmentAPI
 
 from datetime import timedelta
-from dagster._core.definitions.freshness import (
-    InternalFreshnessPolicy,
-)
+from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
 # Define a freshness policy between 7:30PM and 8:30PM Pacific Time
 cron_policy = InternalFreshnessPolicy.cron(
