@@ -6,7 +6,6 @@ from hooli_data_eng.defs.custom_ingest.resources import RawDataAPI
 from hooli_data_eng.utils.kind_helpers import get_kind
 from dagster._core.definitions.freshness import (
     InternalFreshnessPolicy,
-    TimeWindowFreshnessPolicy,
 )
 
 # Define a freshness policy between 7:30PM and 8:30PM Pacific Time
@@ -37,7 +36,6 @@ def _daily_partition_seq(start, end):
     metadata={"partition_expr": "created_at"},
     backfill_policy=dg.BackfillPolicy.single_run(),
     kinds={"api", storage_kind},
-
 )
 def users(context, api: RawDataAPI) -> pd.DataFrame:
     """A table containing all users data"""

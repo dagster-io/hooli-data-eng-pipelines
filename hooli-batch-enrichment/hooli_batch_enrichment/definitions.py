@@ -38,6 +38,8 @@ defs = Definitions(
     resources={
         "api": EnrichmentAPI(),
         # place holder for a real warehouse with required connection config
-        "warehouse": MyWarehouse(path=str(Path(__file__).parent.joinpath("raw_data.csv"))),
+        "warehouse": MyWarehouse(
+            path=str(Path(__file__).parent.joinpath("raw_data.csv"))
+        ),
     },
 )
