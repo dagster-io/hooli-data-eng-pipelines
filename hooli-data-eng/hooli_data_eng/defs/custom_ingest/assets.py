@@ -4,7 +4,14 @@ import pandas as pd
 
 from hooli_data_eng.defs.custom_ingest.resources import RawDataAPI
 from hooli_data_eng.utils.kind_helpers import get_kind
+from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
+# Define a freshness policy between 7:30PM and 8:30PM Pacific Time
+cron_policy = InternalFreshnessPolicy.cron(
+    deadline_cron="30 20 * * *",
+    lower_bound_delta=timedelta(hours=1),
+    timezone="America/Los_Angeles",
+)
 
 # dynamically determine storage_kind based on environment
 storage_kind = get_kind()
@@ -22,6 +29,7 @@ def _daily_partition_seq(start, end):
 
 
 @dg.asset(
+    internal_freshness_policy=cron_policy,
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
     backfill_policy=dg.BackfillPolicy.single_run(),
@@ -65,6 +73,7 @@ def check_users(context, users: pd.DataFrame):
 
 
 @dg.asset(
+    internal_freshness_policy=cron_policy,
     partitions_def=daily_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=dg.RetryPolicy(
