@@ -469,6 +469,18 @@ wheels = [
 ]
 
 [[package]]
+name = "click-aliases"
+version = "1.0.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/40/d8/adbaeadc13c9686b9bda8b4c50e5a3983f504faae2ffbea5165d5beb1cdb/click_aliases-1.0.5.tar.gz", hash = "sha256:e37d4cabbaad68e1c48ec0f063a59dfa15f0e7450ec901bd1ce4f4b954bc881d", size = 3105, upload-time = "2024-10-17T15:44:19.056Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/1a/d5e29a6f896293e32ab3e63201df5d396599e57a726575adaafbcd9d70a6/click_aliases-1.0.5-py3-none-any.whl", hash = "sha256:cbb83a348acc00809fe18b6da13a7f6307bc71b3c5f69cc730e012dfb4bbfdc3", size = 3524, upload-time = "2024-10-17T15:44:17.389Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -826,6 +838,47 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7e/4e/52d48aa3953ad02a64594f8c2876428ebea2e10c0947ce40a30737ea14cb/dagster_dbt-0.26.20.tar.gz", hash = "sha256:67146755138df91ff8ab11f4e903d7e9faa3a6bddc0858d8638170910dd09c2d", size = 89307, upload-time = "2025-06-13T19:55:33.115Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/06/10/8df798e1e18418d6b57c64598416ab73347e7405730fe2c73e9f9c1bd447/dagster_dbt-0.26.20-py3-none-any.whl", hash = "sha256:78eb8c2ab40dab001f8e7c337eb35ba595f046cf8cdda7d887861e8ad8dee5cf", size = 108283, upload-time = "2025-06-13T19:55:31.588Z" },
+]
+
+[[package]]
+name = "dagster-dg-cli"
+version = "1.10.18"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dagster-dg-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0b/f3/dcdeca179a69fad1cc75054725e72ddab4ebd3c095b2af6a63cf18228fe0/dagster_dg_cli-1.10.18.tar.gz", hash = "sha256:666d64f448b707ef557d855b94e2431b6f9ce86e35e09b877be16ae164cd678b", size = 539236, upload-time = "2025-05-29T21:52:30.092Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8b/4f/0e452fa2846a41ba6db0fa3a3772b9fde40ea0c342ddf17f9a27eb7e2b69/dagster_dg_cli-1.10.18-py3-none-any.whl", hash = "sha256:949043b72d9ce5af0eee2499c606e132b8655db51dc2b78f8e7b2e380f475109", size = 569884, upload-time = "2025-05-29T21:52:28.111Z" },
+]
+
+[[package]]
+name = "dagster-dg-core"
+version = "1.10.18"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "click-aliases" },
+    { name = "dagster-cloud-cli" },
+    { name = "dagster-shared" },
+    { name = "gql", extra = ["requests"] },
+    { name = "jinja2" },
+    { name = "jsonschema" },
+    { name = "markdown" },
+    { name = "packaging" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "setuptools" },
+    { name = "tomlkit" },
+    { name = "typer" },
+    { name = "typing-extensions" },
+    { name = "watchdog" },
+    { name = "yaspin" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d2/a8/3965d6d769d541bddd545e5624378c853539a7aa7582479e78d5b516bf30/dagster_dg_core-1.10.18.tar.gz", hash = "sha256:4e988e30f1d390ccf4a1f0ec15d571a2482b14e18c4089bce515ef07c533cff0", size = 43181, upload-time = "2025-05-29T21:36:04.451Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/58/59cc3dce6fa82cc62da6e6b876d8decc549255995a7394736d707543c1b7/dagster_dg_core-1.10.18-py3-none-any.whl", hash = "sha256:3299badb16949405033b8690796269112b4243f90766410edd0098c638c556ec", size = 49977, upload-time = "2025-05-29T21:36:03.419Z" },
 ]
 
 [[package]]
@@ -1713,6 +1766,7 @@ dependencies = [
     { name = "dagster-cloud", extra = ["insights"] },
     { name = "dagster-databricks" },
     { name = "dagster-dbt" },
+    { name = "dagster-dg-cli" },
     { name = "dagster-duckdb" },
     { name = "dagster-duckdb-pandas" },
     { name = "dagster-k8s" },
@@ -1765,6 +1819,7 @@ requires-dist = [
     { name = "dagster-cloud", extras = ["insights"] },
     { name = "dagster-databricks" },
     { name = "dagster-dbt" },
+    { name = "dagster-dg-cli", specifier = ">=1.10.18" },
     { name = "dagster-duckdb" },
     { name = "dagster-duckdb-pandas" },
     { name = "dagster-k8s" },
@@ -2416,6 +2471,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474, upload-time = "2025-04-10T12:44:31.16Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509, upload-time = "2025-04-10T12:50:53.297Z" },
+]
+
+[[package]]
+name = "markdown"
+version = "3.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-metadata", marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2f/15/222b423b0b88689c266d9eac4e61396fe2cc53464459d6a37618ac863b24/markdown-3.8.tar.gz", hash = "sha256:7df81e63f0df5c4b24b7d156eb81e4690595239b7d70937d0409f1b0de319c6f", size = 360906, upload-time = "2025-04-11T14:42:50.928Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl", hash = "sha256:794a929b79c5af141ef5ab0f2f642d0f7b1872981250230e72682346f7cc90dc", size = 106210, upload-time = "2025-04-11T14:42:49.178Z" },
 ]
 
 [[package]]
@@ -4983,6 +5050,15 @@ wheels = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/85/147a0529b4e80b6b9d021ca8db3a820fcac53ec7374b87073d004aaf444c/termcolor-2.3.0.tar.gz", hash = "sha256:b5b08f68937f138fe92f6c089b99f1e2da0ae56c52b78bf7075fd95420fd9a5a", size = 12163, upload-time = "2023-04-23T19:45:24.004Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/e1/434566ffce04448192369c1a282931cf4ae593e91907558eaecd2e9f2801/termcolor-2.3.0-py3-none-any.whl", hash = "sha256:3afb05607b89aed0ffe25202399ee0867ad4d3cb4180d98aaf8eefa6a5f7d475", size = 6872, upload-time = "2023-04-23T19:45:22.671Z" },
+]
+
+[[package]]
 name = "text-unidecode"
 version = "1.3"
 source = { registry = "https://pypi.org/simple" }
@@ -5535,6 +5611,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/8d/43/bbb4ed4c34d5bb62b48bf957f68cd43f736f79059d4f85225ab1ef80f4b9/yarl-1.20.1-cp39-cp39-win32.whl", hash = "sha256:b5f307337819cdfdbb40193cad84978a029f847b0a357fbe49f712063cfc4f06", size = 82293, upload-time = "2025-06-10T00:46:03.763Z" },
     { url = "https://files.pythonhosted.org/packages/d7/cd/ce185848a7dba68ea69e932674b5c1a42a1852123584bccc5443120f857c/yarl-1.20.1-cp39-cp39-win_amd64.whl", hash = "sha256:eae7bfe2069f9c1c5b05fc7fe5d612e5bbc089a39309904ee8b829e322dcad00", size = 87385, upload-time = "2025-06-10T00:46:05.655Z" },
     { url = "https://files.pythonhosted.org/packages/b4/2d/2345fce04cfd4bee161bf1e7d9cdc702e3e16109021035dbb24db654a622/yarl-1.20.1-py3-none-any.whl", hash = "sha256:83b8eb083fe4683c6115795d9fc1cfaf2cbbefb19b3a1cb68f6527460f483a77", size = 46542, upload-time = "2025-06-10T00:46:07.521Z" },
+]
+
+[[package]]
+name = "yaspin"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "termcolor" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/3c/70df5034e6712fcc238b76f6afd1871de143a2a124d80ae2c377cde180f3/yaspin-3.1.0.tar.gz", hash = "sha256:7b97c7e257ec598f98cef9878e038bfa619ceb54ac31d61d8ead2b3128f8d7c7", size = 36791, upload-time = "2024-09-22T17:07:09.376Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/89/78/fa25b385d9f2c406719b5cf574a0980f5ccc6ea1f8411d56249f44acd3c2/yaspin-3.1.0-py3-none-any.whl", hash = "sha256:5e3d4dfb547d942cae6565718123f1ecfa93e745b7e51871ad2bbae839e71b73", size = 18629, upload-time = "2024-09-22T17:07:06.923Z" },
 ]
 
 [[package]]

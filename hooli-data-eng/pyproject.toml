@@ -29,6 +29,7 @@ dependencies = [
       "requests-toolbelt",
       "html5lib",
       "scikit-learn",
+      "dagster-dg-cli>=1.10.18",
 ]
 
 [project.optional-dependencies]
