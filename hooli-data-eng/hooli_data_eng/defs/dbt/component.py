@@ -17,6 +17,10 @@ from datetime import datetime
 from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
 from hooli_data_eng.defs.dbt.resources import resource_def
 
+from datetime import timedelta
+from dagster._core.definitions.asset_spec import attach_internal_freshness_policy
+from dagster._core.definitions.freshness import InternalFreshnessPolicy
+
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
 # this approach can be modelled in dagster using partitions
@@ -166,6 +170,8 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
         checks = []
         sensors = []
 
+        policies = {}
+
         for group in self.groups:
             backfill_policy = None
             partitions_def = None
@@ -174,10 +180,26 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
                 name = group.partitioning
                 backfill_policy = dg.BackfillPolicy.single_run()
                 partitions_def = weekly_partitions
+                asset_name = f"{name}_dbt_assets"
+                policies[asset_name] = InternalFreshnessPolicy.time_window(
+                    fail_window=timedelta(days=7),
+                    warn_window=timedelta(days=2),
+                )
             if group.partitioning == "daily":
                 name = group.partitioning
                 backfill_policy = dg.BackfillPolicy.single_run()
                 partitions_def = daily_partitions
+                asset_name = f"{name}_dbt_assets"
+                policies[asset_name] = InternalFreshnessPolicy.time_window(
+                    fail_window=timedelta(hours=24),
+                    warn_window=timedelta(hours=12),
+                )
+            # regular dbt assets without partitioning
+            asset_name = f"{name}_dbt_assets"
+            policies[asset_name] = InternalFreshnessPolicy.time_window(
+                fail_window=timedelta(days=7),
+                warn_window=timedelta(days=3),
+            )
 
             @dbt_assets(
                 name=f"{name}_dbt_assets",
@@ -210,13 +232,23 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
             if group.run_on_code_version_change:
                 sensors.append(build_code_version_sensor(_dbt_asset))
 
-        return dg.Definitions(
+        defs = dg.Definitions(
             assets=assets,
             asset_checks=checks,
             sensors=sensors,
             resources=resource_def[get_env()],
             jobs=[get_slim_ci_job()],
         )
+
+        defs = defs.map_asset_specs(
+            func=lambda spec: (
+                attach_internal_freshness_policy(spec, policies[spec.key.name])
+                if spec.key.name in policies
+                else spec
+            )
+        )
+
+        return defs
 
 
 def build_code_version_sensor(target_assets: dg.AssetsDefinition):

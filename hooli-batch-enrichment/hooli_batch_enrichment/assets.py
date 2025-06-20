@@ -21,9 +21,9 @@ from hooli_batch_enrichment.api import EnrichmentAPI
 from datetime import timedelta
 from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
-# Define a freshness policy between 7:30PM and 8:30PM Pacific Time
+# Define a freshness policy for every hour Pacific Time
 cron_policy = InternalFreshnessPolicy.cron(
-    deadline_cron="30 20 * * *",
+    deadline_cron="0 * * * *",
     lower_bound_delta=timedelta(hours=1),
     timezone="America/Los_Angeles",
 )
