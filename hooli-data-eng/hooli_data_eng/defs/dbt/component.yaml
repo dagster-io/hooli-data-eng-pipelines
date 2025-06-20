@@ -26,7 +26,6 @@ attributes:
 
 type: hooli_data_eng.components.ScheduledPartitionedJobComponent
 
-
 attributes:
   job_name: refresh_analytics_model_job
   asset_selection: +key:"ANALYTICS/orders_augmented" and not +key:"CLEANED/locations_cleaned"
