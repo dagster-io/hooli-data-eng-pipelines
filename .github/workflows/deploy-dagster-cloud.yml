@@ -2,8 +2,7 @@ name: Dagster Cloud Hybrid Deployment
 on:
   push: # For full deployment
     branches:
-      - "main"
-      - "master"
+      - "gtm20"
   pull_request:  # For branch deployments
      types: [opened, synchronize, reopened, closed]
 
@@ -133,7 +132,7 @@ jobs:
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          deployment: 'data-eng-prod'
+          deployment: 'gtm20'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -155,7 +154,7 @@ jobs:
 
       - name: Set Prod Deployment Environment Variable for Push
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
-        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=gtm20" >> $GITHUB_ENV
 
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng" >> $GITHUB_ENV
@@ -165,7 +164,7 @@ jobs:
         run: |
           source .venv/bin/activate
           dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
+          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment gtm20
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
