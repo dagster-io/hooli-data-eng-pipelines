@@ -242,8 +242,8 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
 
         defs = defs.map_asset_specs(
             func=lambda spec: (
-                attach_internal_freshness_policy(spec, policies[spec.key.name])
-                if spec.key.name in policies
+                attach_internal_freshness_policy(spec, policies[spec.key])
+                if spec.key in policies
                 else spec
             )
         )
