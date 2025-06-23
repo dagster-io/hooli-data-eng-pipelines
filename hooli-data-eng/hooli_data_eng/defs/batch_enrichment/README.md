@@ -1,5 +1,5 @@
 
-This example Dagster project shows a simple pipeline that pulls raw data from a warehouse and then uses an API to enrich that raw data.
+The defs in this folder implement  a simple pipeline that pulls raw data from a warehouse and then uses an API to enrich that raw data.
 
 ![](enrichment_pipeline.png)
 
