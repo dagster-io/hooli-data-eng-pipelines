@@ -1,10 +1,10 @@
 from dagster_sling import (
-    sling_assets,
     SlingResource,
+    sling_assets,
 )
 from dagster_sling.dagster_sling_translator import DagsterSlingTranslator
 
-from hooli_data_ingest.resources import replication_config
+from hooli_data_eng.defs.data_ingest.resources import replication_config
 
 
 class CustomSlingTranslator(DagsterSlingTranslator):

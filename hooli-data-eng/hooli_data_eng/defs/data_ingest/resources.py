@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
 
-from dagster import EnvVar
+from dagster import Definitions, EnvVar
 from dagster_sling import (
-    SlingResource,
     SlingConnectionResource,
+    SlingResource,
 )
 
 
@@ -18,8 +18,8 @@ def get_env():
 
 # Paths for local dev
 current_file_path = Path(__file__)
-hooli_data_ingest_root = current_file_path.parent.parent.parent
-project_root = hooli_data_ingest_root.parent
+hooli_data_ingest_root = current_file_path.parent
+project_root = hooli_data_ingest_root.parent.parent.parent.parent
 DUCKDB_PATH = project_root / "dbt_project" / "example.duckdb"
 LOCATIONS_CSV_PATH = f"file://{hooli_data_ingest_root}/locations.csv"
 
@@ -89,3 +89,7 @@ if get_env() != "LOCAL":
             ),
         ]
     )
+
+defs = Definitions(
+    resources={"sling": sling_resource},
+)
