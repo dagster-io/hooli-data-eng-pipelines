@@ -8,20 +8,11 @@ path = "hooli-data-eng"
 path = "hooli-data-ingest"
 
 [[workspace.projects]]
-path = "hooli-bi"
-
-[[workspace.projects]]
 path = "hooli-basics"
-
-[[workspace.projects]]
-path = "hooli-snowflake-insights"
-
-[[workspace.projects]]
-path = "hooli-batch-enrichment"
 
 # currently failing bc of strange import error or package versions
 #[[workspace.projects]]
-#path = "hooli-airlift"
+#path = "hooli-interoperability"
 
 [cli]
 suppress_warnings = [

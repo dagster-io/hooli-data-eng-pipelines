@@ -23,20 +23,6 @@ locations:
       directory: ./hooli-basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
-  - location_name: batch_enrichment
-    code_source:
-      package_name: hooli_batch_enrichment
-    build:
-      directory: ./hooli-batch-enrichment
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
-  - location_name: snowflake_insights
-    code_source:
-       module_name: hooli_snowflake_insights.definitions
-    build:
-      directory: ./hooli-snowflake-insights
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
   - location_name: hooli_data_ingest
     code_source:
       package_name: hooli_data_ingest
@@ -44,16 +30,9 @@ locations:
       directory: ./hooli-data-ingest
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
-  - location_name: hooli_bi
+  - location_name: hooli_interoperability
     code_source:
-      package_name: hooli_bi
-    build:
-      directory: ./hooli-bi
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
-  - location_name: hooli_airlift
-    code_source:
-      module_name: hooli_airlift.definitions
+      module_name: hooli_interoperability.definitions
     build:
       directory: ./hooli-airlift
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
