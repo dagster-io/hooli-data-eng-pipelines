@@ -1,25 +1,24 @@
 import json
-
-from dagster import (
-    asset,
-    OpExecutionContext,
-    MetadataValue,
-    DynamicOut,
-    op,
-    DynamicOutput,
-    graph_asset,
-    RetryPolicy,
-    Config,
-)
-import pandas as pd
-from pydantic import Field
-import numpy as np
-
-from hooli_batch_enrichment.warehouse import MyWarehouse
-from hooli_batch_enrichment.api import EnrichmentAPI
-
 from datetime import timedelta
+
+import numpy as np
+import pandas as pd
+from dagster import (
+    Config,
+    DynamicOut,
+    DynamicOutput,
+    MetadataValue,
+    OpExecutionContext,
+    RetryPolicy,
+    asset,
+    graph_asset,
+    op,
+)
 from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from pydantic import Field
+
+from hooli_data_eng.batch_enrichment.api import EnrichmentAPI
+from hooli_data_eng.batch_enrichment.warehouse import MyWarehouse
 
 # Define a freshness policy between 7:30PM and 8:30PM Pacific Time
 cron_policy = InternalFreshnessPolicy.cron(
