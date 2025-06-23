@@ -38,6 +38,7 @@ class experimentConfig(Config):
 @asset(
     internal_freshness_policy=cron_policy,
     kinds={"Kubernetes", "S3"},
+    group_name="batch_enrichment",
 )
 def raw_data(
     context: OpExecutionContext,
@@ -116,6 +117,7 @@ def concat_chunk_list(chunks) -> pd.DataFrame:
 
 @graph_asset(
     kinds={"Kubernetes", "S3"},
+    group_name="batch_enrichment",
 )
 def enriched_data(raw_data) -> pd.DataFrame:
     """Full enrichment process"""
