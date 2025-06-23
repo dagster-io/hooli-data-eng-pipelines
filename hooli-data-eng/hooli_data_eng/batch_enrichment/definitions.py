@@ -18,7 +18,7 @@ from hooli_data_eng.batch_enrichment.warehouse import MyWarehouse
 # alternatively could use freshness policies and auto-materialization, partitions, or other ways to orient the schedule
 run_assets_job = define_asset_job(
     name="run_etl_pipeline",
-    selection=AssetSelection.all(),
+    selection=AssetSelection.assets(raw_data, enriched_data),
     tags={"dagster/max_retries": "1"},
 )
 
