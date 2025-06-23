@@ -9,9 +9,10 @@ from dagster import (
     with_source_code_references,
 )
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
-from hooli_batch_enrichment.api import EnrichmentAPI
-from hooli_batch_enrichment.assets import enriched_data, raw_data
-from hooli_batch_enrichment.warehouse import MyWarehouse
+
+from hooli_data_eng.batch_enrichment.api import EnrichmentAPI
+from hooli_data_eng.batch_enrichment.assets import enriched_data, raw_data
+from hooli_data_eng.batch_enrichment.warehouse import MyWarehouse
 
 # define a job and schedule to run the pipeline
 # alternatively could use freshness policies and auto-materialization, partitions, or other ways to orient the schedule
