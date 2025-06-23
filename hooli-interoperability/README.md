@@ -1,11 +1,11 @@
-# hooli_airlift
+# hooli_interoperability
 
 Airlift federation demo.
 
 https://hooli.dagster.cloud/hooli-airlift/deployment/environment
 
 - Ingestion, transformations, and reporting federated across instances:
-    - `hooli-airflow-01` -> Dagster -> `hooli-airflow-02`-> 
+    - `hooli-airflow-01` -> Dagster -> `hooli-airflow-02`->
 - Ingestion and ML modeling federated across instances:
     - Dagster -> `hooli-airflow-02`
 
