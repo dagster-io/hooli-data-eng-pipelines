@@ -88,7 +88,7 @@ def split_rows(context: OpExecutionContext, raw_data, config: ParallelizationCon
 
 @op(retry_policy=RetryPolicy(max_retries=2))
 def process_chunk(
-    context: OpExecutionContext, chunk, api: EnrichmentAPI
+    context: OpExecutionContext, chunk, enrichment_api: EnrichmentAPI
 ) -> pd.DataFrame:
     """
     Process rows in each chunk by calling the enrichment API
@@ -96,7 +96,7 @@ def process_chunk(
         but it could be parallelized with regular python techniques
     """
     chunk["order_center"] = chunk.apply(
-        lambda row: get_order_details(row["order_id"], api), axis=1
+        lambda row: get_order_details(row["order_id"], enrichment_api), axis=1
     )
     return chunk
 
