@@ -34,5 +34,5 @@ locations:
     code_source:
       module_name: hooli_interoperability.definitions
     build:
-      directory: ./hooli-airlift
+      directory: ./hooli-interoperability
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
