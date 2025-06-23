@@ -81,7 +81,7 @@ jobs:
               fi
               if [ "${{ steps.changed-files.outputs.hooli-interoperability_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_interoperability"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
@@ -184,7 +184,7 @@ jobs:
         with:
           context: ./hooli-interoperability
           push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-airlift
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-interoperability
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
