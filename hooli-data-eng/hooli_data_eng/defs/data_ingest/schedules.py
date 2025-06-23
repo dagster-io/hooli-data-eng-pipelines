@@ -1,6 +1,6 @@
 from dagster import ScheduleDefinition
-from hooli_data_ingest.jobs import daily_sling_job
 
+from hooli_data_eng.defs.data_ingest.jobs import daily_sling_job
 
 daily_sling_assets = ScheduleDefinition(
     job=daily_sling_job,

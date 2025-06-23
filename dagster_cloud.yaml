@@ -23,13 +23,6 @@ locations:
       directory: ./hooli-basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
-  - location_name: hooli_data_ingest
-    code_source:
-      package_name: hooli_data_ingest
-    build:
-      directory: ./hooli-data-ingest
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
   - location_name: hooli_interoperability
     code_source:
       module_name: hooli_interoperability.definitions

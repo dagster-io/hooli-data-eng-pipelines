@@ -61,7 +61,7 @@ jobs:
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
-              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }}"
+              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
@@ -74,10 +74,6 @@ jobs:
               if [ "${{ steps.changed-files.outputs.hooli-basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name basics --image-tag=$IMAGE_TAG-basics\n"
-              fi
-              if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true" ]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_data_ingest"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-interoperability_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_interoperability"
@@ -167,15 +163,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
 
-
-      # Build 'hooli_data_ingest' code location
-      - name: Build and upload Docker image for hooli_data_ingest
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-ingest_any_changed == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli-data-ingest
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
 
       # Build 'hooli_interoperability' code location
       - name: Build and upload Docker image for hooli_interoperability
