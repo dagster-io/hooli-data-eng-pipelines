@@ -1,7 +1,7 @@
 from dagster import Definitions
 
-from hooli_bi.powerbi_assets import powerbi_assets  # noqa: TID252
-from hooli_bi.powerbi_workspace import power_bi_workspace
+from hooli_data_eng.bi.powerbi_assets import powerbi_assets  # noqa: TID252
+from hooli_data_eng.bi.powerbi_workspace import power_bi_workspace
 
 defs = Definitions(
     assets=[*powerbi_assets],
