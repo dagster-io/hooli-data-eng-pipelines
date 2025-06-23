@@ -1,17 +1,17 @@
 import os
+
 import boto3
-import dagster as dg
-
-from hooli_airlift import assets  # noqa: TID252
-
 from dagster_airlift.core import (
     AirflowInstance,
-    build_defs_from_airflow_instance,
     assets_with_dag_mappings,
-    load_airflow_dag_asset_specs,
     build_airflow_polling_sensor,
+    build_defs_from_airflow_instance,
+    load_airflow_dag_asset_specs,
 )
 from dagster_airlift.mwaa import MwaaSessionAuthBackend
+
+import dagster as dg
+from hooli_interoperability import assets  # noqa: TID252
 
 all_assets = dg.load_assets_from_modules([assets])
 
