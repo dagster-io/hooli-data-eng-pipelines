@@ -31,6 +31,7 @@ dependencies = [
       "html5lib",
       "scikit-learn",
       "dagster-dg-cli>=1.10.18",
+      "dagster-sling>=0.26.20",
 ]
 
 [project.optional-dependencies]
