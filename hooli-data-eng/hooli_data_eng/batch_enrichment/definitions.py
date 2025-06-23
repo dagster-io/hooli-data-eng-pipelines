@@ -37,7 +37,7 @@ defs = Definitions(
     schedules=[run_assets_30min],
     jobs=[run_assets_job],
     resources={
-        "api": EnrichmentAPI(),
+        "enrichment_api": EnrichmentAPI(),
         # place holder for a real warehouse with required connection config
         "warehouse": MyWarehouse(
             path=str(Path(__file__).parent.joinpath("raw_data.csv"))
