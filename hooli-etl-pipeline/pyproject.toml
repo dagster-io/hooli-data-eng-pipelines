@@ -1,0 +1,33 @@
+[project]
+name = "hooli_etl_pipeline"
+requires-python = ">=3.9,<3.13"
+version = "0.1.0"
+dependencies = [
+    "dagster==1.10.21",
+    "dagster-dbt>=0.26.21",
+    "dagster-duckdb>=0.26.21",
+    "dagster-snowflake>=0.26.21",
+    "dbt-duckdb>=1.9.3",
+    "pandas>=2.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "dagster-webserver",
+    "dagster-dg-cli[local]",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "hooli_etl_pipeline"
+registry_modules = [
+    "hooli_etl_pipeline.components.*",
+]
+
+
