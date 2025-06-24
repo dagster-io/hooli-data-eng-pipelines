@@ -170,7 +170,20 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
         checks = []
         sensors = []
 
-        policies = {}
+        weekly_policy = InternalFreshnessPolicy.time_window(
+            fail_window=timedelta(days=7),
+            warn_window=timedelta(days=2),
+        )
+
+        daily_policy = InternalFreshnessPolicy.time_window(
+            fail_window=timedelta(hours=24),
+            warn_window=timedelta(hours=12),
+        )
+
+        regular_policy = InternalFreshnessPolicy.time_window(
+            fail_window=timedelta(days=7),
+            warn_window=timedelta(days=3),
+        )
 
         for group in self.groups:
             backfill_policy = None
@@ -180,26 +193,11 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
                 name = group.partitioning
                 backfill_policy = dg.BackfillPolicy.single_run()
                 partitions_def = weekly_partitions
-                asset_name = f"{name}_dbt_assets"
-                policies[asset_name] = InternalFreshnessPolicy.time_window(
-                    fail_window=timedelta(days=7),
-                    warn_window=timedelta(days=2),
-                )
+
             if group.partitioning == "daily":
                 name = group.partitioning
                 backfill_policy = dg.BackfillPolicy.single_run()
                 partitions_def = daily_partitions
-                asset_name = f"{name}_dbt_assets"
-                policies[asset_name] = InternalFreshnessPolicy.time_window(
-                    fail_window=timedelta(hours=24),
-                    warn_window=timedelta(hours=12),
-                )
-            # regular dbt assets without partitioning
-            asset_name = f"{name}_dbt_assets"
-            policies[asset_name] = InternalFreshnessPolicy.time_window(
-                fail_window=timedelta(days=7),
-                warn_window=timedelta(days=3),
-            )
 
             @dbt_assets(
                 name=f"{name}_dbt_assets",
@@ -240,12 +238,17 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
             jobs=[get_slim_ci_job()],
         )
 
-        defs = defs.map_asset_specs(
-            func=lambda spec: (
-                attach_internal_freshness_policy(spec, policies[spec.key])
-                if spec.key in policies
-                else spec
-            )
+        defs = defs.map_resolved_asset_specs(
+            func=lambda spec: attach_internal_freshness_policy(spec, daily_policy),
+            selection='key:"ANALYTICS/orders_augmented"or key:"CLEANED/orders_cleaned"or key:"CLEANED/users_cleaned"',
+        )
+        defs = defs.map_resolved_asset_specs(
+            func=lambda spec: attach_internal_freshness_policy(spec, weekly_policy),
+            selection='key:"ANALYTICS/order_stats" or key:"ANALYTICS/weekly_order_summary"',
+        )
+        defs = defs.map_resolved_asset_specs(
+            func=lambda spec: attach_internal_freshness_policy(spec, regular_policy),
+            selection='key:"CLEANED/locations_cleaned" or key:"ANALYTICS/company_stats" or key:"ANALYTICS/company_perf" or key:"ANALYTICS/sku_stats"',
         )
 
         return defs
