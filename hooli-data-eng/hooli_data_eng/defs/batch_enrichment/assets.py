@@ -17,8 +17,8 @@ from dagster import (
 from dagster._core.definitions.freshness import InternalFreshnessPolicy
 from pydantic import Field
 
-from hooli_data_eng.batch_enrichment.api import EnrichmentAPI
-from hooli_data_eng.batch_enrichment.warehouse import MyWarehouse
+from hooli_data_eng.defs.batch_enrichment.api import EnrichmentAPI
+from hooli_data_eng.defs.batch_enrichment.warehouse import MyWarehouse
 
 # Define a freshness policy between 7:30PM and 8:30PM Pacific Time
 cron_policy = InternalFreshnessPolicy.cron(
@@ -38,6 +38,7 @@ class experimentConfig(Config):
 @asset(
     internal_freshness_policy=cron_policy,
     kinds={"Kubernetes", "S3"},
+    group_name="batch_enrichment",
 )
 def raw_data(
     context: OpExecutionContext,
@@ -116,6 +117,7 @@ def concat_chunk_list(chunks) -> pd.DataFrame:
 
 @graph_asset(
     kinds={"Kubernetes", "S3"},
+    group_name="batch_enrichment",
 )
 def enriched_data(raw_data) -> pd.DataFrame:
     """Full enrichment process"""

@@ -6,7 +6,7 @@ from dagster_powerbi import (
 )
 from dagster_powerbi.translator import PowerBIContentData
 
-from hooli_data_eng.bi.powerbi_workspace import power_bi_workspace
+from hooli_data_eng.defs.bi.powerbi_workspace import power_bi_workspace
 
 
 class MyCustomPowerBITranslator(DagsterPowerBITranslator):
