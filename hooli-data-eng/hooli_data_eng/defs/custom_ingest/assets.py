@@ -6,10 +6,10 @@ from hooli_data_eng.defs.custom_ingest.resources import RawDataAPI
 from hooli_data_eng.utils.kind_helpers import get_kind
 from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
-# Define a freshness policy between 7:30PM and 8:30PM Pacific Time
+# Define a freshness policy before 8:30PM Pacific Time
 cron_policy = InternalFreshnessPolicy.cron(
     deadline_cron="30 20 * * *",
-    lower_bound_delta=timedelta(hours=1),
+    lower_bound_delta=timedelta(hours=23),
     timezone="America/Los_Angeles",
 )
 
