@@ -33,6 +33,7 @@ class PineconeResource(dg.ConfigurableResource):
 
 # start_resource_int
 pinecone_resource = PineconeResource(
-    pinecone_api_key=dg.EnvVar("PINECONE_API_KEY"), openai_api_key=dg.EnvVar("OPENAI_API_KEY")
+    pinecone_api_key=dg.EnvVar("PINECONE_API_KEY"),
+    openai_api_key=dg.EnvVar("OPENAI_API_KEY"),
 )
 # end_resource_int

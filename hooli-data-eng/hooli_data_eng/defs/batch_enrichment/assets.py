@@ -36,7 +36,7 @@ class experimentConfig(Config):
 
 
 @asset(
-    internal_freshness_policy=cron_policy,
+    freshness_policy=cron_policy,
     kinds={"Kubernetes", "S3"},
     group_name="batch_enrichment",
 )

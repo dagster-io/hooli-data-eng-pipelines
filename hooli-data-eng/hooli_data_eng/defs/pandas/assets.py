@@ -1,12 +1,13 @@
+from datetime import timedelta
 from typing import Tuple
 
-from datetime import timedelta
+import dagster as dg
 import numpy as np
 import pandas as pd
-import dagster as dg
-from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
-from hooli_data_eng.utils.kind_helpers import get_kind
 from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
+
+from hooli_data_eng.utils.kind_helpers import get_kind
 
 policy = InternalFreshnessPolicy.time_window(fail_window=timedelta(hours=24))
 
@@ -78,7 +79,7 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     owners=["team:programmers"],
     ins={"company_perf": dg.AssetIn(key_prefix=["ANALYTICS"])},
     kinds={"pandas", storage_kind},
-    internal_freshness_policy=policy,
+    freshness_policy=policy,
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""

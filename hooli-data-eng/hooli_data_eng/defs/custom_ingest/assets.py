@@ -1,10 +1,11 @@
 from datetime import timedelta
+
 import dagster as dg
 import pandas as pd
+from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
 from hooli_data_eng.defs.custom_ingest.resources import RawDataAPI
 from hooli_data_eng.utils.kind_helpers import get_kind
-from dagster._core.definitions.freshness import InternalFreshnessPolicy
 
 # Define a freshness policy before 8:30PM Pacific Time
 cron_policy = InternalFreshnessPolicy.cron(
@@ -29,7 +30,7 @@ def _daily_partition_seq(start, end):
 
 
 @dg.asset(
-    internal_freshness_policy=cron_policy,
+    freshness_policy=cron_policy,
     partitions_def=daily_partitions,
     metadata={"partition_expr": "created_at"},
     backfill_policy=dg.BackfillPolicy.single_run(),
@@ -63,7 +64,7 @@ def check_users(context, users: pd.DataFrame):
         metadata={
             "result": dg.MetadataValue.md(
                 f"""
-                Observed the following unexpected companies: 
+                Observed the following unexpected companies:
                 {list(observed_companies - expected_companies)}
             """
             )
@@ -73,7 +74,7 @@ def check_users(context, users: pd.DataFrame):
 
 
 @dg.asset(
-    internal_freshness_policy=cron_policy,
+    freshness_policy=cron_policy,
     partitions_def=daily_partitions,
     metadata={"partition_expr": "DT"},
     retry_policy=dg.RetryPolicy(
