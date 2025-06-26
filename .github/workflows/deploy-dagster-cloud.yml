@@ -51,6 +51,8 @@ jobs:
               - hooli-data-ingest/**
             hooli-interoperability:
               - hooli-interoperability/**
+            hooli-ai:
+              - hooli-ai/**
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -78,6 +80,10 @@ jobs:
               if [ "${{ steps.changed-files.outputs.hooli-interoperability_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_interoperability"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability"
+              fi
+              if [ "${{ steps.changed-files.outputs.hooli-ai_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_ai"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
@@ -172,6 +178,15 @@ jobs:
           context: ./hooli-interoperability
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-interoperability
+
+      # Build 'hooli_ai' code location
+      - name: Build and upload Docker image for hooli_ai
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ai_any_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-ai
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-ai
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
