@@ -1,25 +1,23 @@
 import json
 import textwrap
-from typing import Any, Mapping, Union, Literal, Optional
+from datetime import datetime, timedelta
+from typing import Any, Literal, Mapping, Optional, Union
+
 import dagster as dg
-from hooli_data_eng.utils import get_env
+from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
 from dagster_dbt import (
-    DbtCliResource,
     DagsterDbtTranslator,
-    default_metadata_from_dbt_resource_props,
     DagsterDbtTranslatorSettings,
+    DbtCliResource,
+    default_metadata_from_dbt_resource_props,
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
-from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
-from hooli_data_eng.defs.dbt.resources import dbt_project
-from datetime import datetime
-from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
-from hooli_data_eng.defs.dbt.resources import resource_def
 
-from datetime import timedelta
-from dagster._core.definitions.asset_spec import attach_internal_freshness_policy
-from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
+from hooli_data_eng.defs.dbt.resources import dbt_project, resource_def
+from hooli_data_eng.utils import get_env
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
@@ -242,7 +240,7 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
 
         defs = defs.map_asset_specs(
             func=lambda spec: (
-                attach_internal_freshness_policy(spec, policies[spec.key])
+                spec.replace_attributes(freshness_policy=policies[spec.key])
                 if spec.key in policies
                 else spec
             )

@@ -1,0 +1,31 @@
+type: dagster_powerbi.PowerBIWorkspaceComponent
+
+attributes:
+  workspace:
+    credentials:
+      client_id: "{{ env('AZURE_POWERBI_CLIENT_ID') }}"
+      client_secret: "{{ env('AZURE_POWERBI_CLIENT_SECRET') }}"
+      tenant_id: "{{ env('AZURE_POWERBI_TENANT_ID') }}"
+    workspace_id: "{{ env('AZURE_POWERBI_WORKSPACE_ID') }}"
+
+  enable_semantic_model_refresh: true
+
+  translation:
+    group_name: "BI"
+    for_report:
+      description: "Report link: https://app.powerbi.com/groups/{{ env.AZURE_POWERBI_WORKSPACE_ID }}/reports/{{ data.properties['id'] }}"
+      tags:
+        core_kpis: ''
+    for_semantic_model:
+      description: "Semantic model link: https://app.powerbi.com/groups/{{ env.AZURE_POWERBI_WORKSPACE_ID }}/datasets/{{ data.properties['id'] }}/details"
+      tags:
+        core_kpis: ''
+    for_data_source:
+      key_prefix: 'blah'
+
+requirements:
+  env:
+    - AZURE_POWERBI_CLIENT_ID
+    - AZURE_POWERBI_CLIENT_SECRET
+    - AZURE_POWERBI_TENANT_ID
+    - AZURE_POWERBI_WORKSPACE_ID

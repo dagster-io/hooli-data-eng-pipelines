@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.9,<3.13"
 dependencies = [
-      "dagster",
+      "dagster>=1.11.0",
       "dagster-dbt",
       "pandas",
       "numpy",
@@ -30,7 +30,7 @@ dependencies = [
       "requests-toolbelt",
       "html5lib",
       "scikit-learn",
-      "dagster-dg-cli>=1.10.18",
+      "dagster-dg-cli",
       "dagster-sling>=0.26.20",
 ]
 
