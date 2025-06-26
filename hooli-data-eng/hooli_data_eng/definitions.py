@@ -1,7 +1,7 @@
 import dagster as dg
 from dagster.components import load_defs
-import hooli_data_eng.defs
 
+import hooli_data_eng.defs
 
 # ---------------------------------------------------
 # Definitions

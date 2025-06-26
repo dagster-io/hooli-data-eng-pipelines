@@ -1,0 +1,49 @@
+[project]
+name = "hooli_ai"
+version = "0.1.0"
+description = "RAG example"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "langchain",
+    "langchain-core",
+    "gql",
+    "python-dotenv",
+    "langchain-community",
+    "langchain-openai",
+    "langchain-chroma",
+    "langchain-text-splitters",
+    "dagster",
+    "dagster-webserver",
+    "dagster-openai",
+    "dagster_duckdb",
+    "dagster-cloud",
+    "chromadb",
+    "tokenizers",
+    "tenacity",
+    "tqdm",
+    "bs4",
+    "lxml",
+    "openai",
+    "tiktoken",
+    "pinecone",
+    "universal_pathlib",
+    "fsspec[s3]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.dagster]
+module_name = "hooli_ai.definitions"
+project_name = "hooli_ai"
+
+[tool.setuptools.packages.find]
+exclude=["hooli_ai_tests"]

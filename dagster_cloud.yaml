@@ -23,37 +23,16 @@ locations:
       directory: ./hooli-basics
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
-  - location_name: batch_enrichment
+  - location_name: hooli_interoperability
     code_source:
-      package_name: hooli_batch_enrichment
+      module_name: hooli_interoperability.definitions
     build:
-      directory: ./hooli-batch-enrichment
+      directory: ./hooli-interoperability
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
-  - location_name: snowflake_insights
+  - location_name: hooli_ai
     code_source:
-       module_name: hooli_snowflake_insights.definitions
+      module_name: hooli_ai.definitions
     build:
-      directory: ./hooli-snowflake-insights
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
-  - location_name: hooli_data_ingest
-    code_source:
-      package_name: hooli_data_ingest
-    build:
-      directory: ./hooli-data-ingest
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
-  - location_name: hooli_bi
-    code_source:
-      package_name: hooli_bi
-    build:
-      directory: ./hooli-bi
-      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
-
-  - location_name: hooli_airlift
-    code_source:
-      module_name: hooli_airlift.definitions
-    build:
-      directory: ./hooli-airlift
+      directory: ./hooli-interoperability
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

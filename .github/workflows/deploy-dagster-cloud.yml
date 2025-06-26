@@ -2,8 +2,7 @@ name: Dagster Cloud Hybrid Deployment
 on:
   push: # For full deployment
     branches:
-      - "main"
-      - "master"
+      - "gtm20"
   pull_request:  # For branch deployments
      types: [opened, synchronize, reopened, closed]
 
@@ -48,16 +47,12 @@ jobs:
               - hooli-data-eng/**
             hooli-basics:
               - hooli-basics/**
-            hooli-batch-enrichment:
-              - hooli-batch-enrichment/**
-            hooli-snowflake-insights:
-              - hooli-snowflake-insights/**
             hooli-data-ingest:
               - hooli-data-ingest/**
-            hooli-bi:
-              - hooli-bi/**
-            hooli-airlift:
-              - hooli-airlift/**
+            hooli-interoperability:
+              - hooli-interoperability/**
+            hooli-ai:
+              - hooli-ai/**
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -68,7 +63,7 @@ jobs:
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
-              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-batch-enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli-snowflake-insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-bi_all_changed_files }} ${{ steps.changed-files.outputs.hooli-airlift_all_changed_files }}"
+              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
@@ -82,25 +77,13 @@ jobs:
                 LOCATIONS="$LOCATIONS --location-name basics"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name basics --image-tag=$IMAGE_TAG-basics\n"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli-batch-enrichment_any_changed}}" == "true" ]; then
-                LOCATIONS="$LOCATIONS --location-name batch_enrichment"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name batch_enrichment --image-tag=$IMAGE_TAG-batch-enrichment\n"
+              if [ "${{ steps.changed-files.outputs.hooli-interoperability_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_interoperability"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability"
               fi
-              if [ "${{ steps.changed-files.outputs.hooli-snowflake-insights_any_changed}}" == "true" ]; then
-                LOCATIONS="$LOCATIONS --location-name snowflake_insights"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name snowflake_insights --image-tag=$IMAGE_TAG-snowflake-insights\n"
-              fi
-              if [ "${{ steps.changed-files.outputs.hooli-data-ingest_any_changed}}" == "true" ]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_data_ingest"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_data_ingest --image-tag=$IMAGE_TAG-hooli-data-ingest\n"
-              fi
-              if [ "${{ steps.changed-files.outputs.hooli-bi_any_changed}}" == "true" ]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_bi"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_bi --image-tag=$IMAGE_TAG-hooli-bi\n"
-              fi
-              if [ "${{ steps.changed-files.outputs.hooli-airlift_any_changed}}" == "true" ]; then
-                LOCATIONS="$LOCATIONS --location-name hooli_airlift"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift"
+              if [ "${{ steps.changed-files.outputs.hooli-ai_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_ai"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
@@ -133,7 +116,7 @@ jobs:
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          deployment: 'data-eng-prod'
+          deployment: 'gtm20'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -155,7 +138,7 @@ jobs:
 
       - name: Set Prod Deployment Environment Variable for Push
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
-        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=data-eng-prod" >> $GITHUB_ENV
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=gtm20" >> $GITHUB_ENV
 
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng" >> $GITHUB_ENV
@@ -165,7 +148,7 @@ jobs:
         run: |
           source .venv/bin/activate
           dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
+          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment gtm20
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -187,52 +170,23 @@ jobs:
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-basics
 
 
-      # Build 'batch enrichment' code location
-      - name: Build and upload Docker image for batch enrichment
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-batch-enrichment_any_changed == 'true'
+      # Build 'hooli_interoperability' code location
+      - name: Build and upload Docker image for hooli_interoperability
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-interoperability_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-batch-enrichment
+          context: ./hooli-interoperability
           push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-batch-enrichment
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-interoperability
 
-
-      # Build 'snowflake_insights' code location
-      - name: Build and upload Docker image for snowflake insights
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-snowflake-insights_any_changed == 'true'
+      # Build 'hooli_ai' code location
+      - name: Build and upload Docker image for hooli_ai
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ai_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-snowflake-insights
+          context: ./hooli-ai
           push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-snowflake-insights
-
-
-      # Build 'hooli_data_ingest' code location
-      - name: Build and upload Docker image for hooli_data_ingest
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-ingest_any_changed == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli-data-ingest
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-data-ingest
-
-      # Build 'hooli_bi' code location
-      - name: Build and upload Docker image for hooli_bi
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli-bi
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-bi
-
-      # Build 'hooli_airlift' code location
-      - name: Build and upload Docker image for hooli_airlift
-        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-airlift_any_changed == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./hooli-airlift
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-airlift
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-ai
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
