@@ -19,10 +19,10 @@ from hooli_batch_enrichment.warehouse import MyWarehouse
 from hooli_batch_enrichment.api import EnrichmentAPI
 
 from datetime import timedelta
-from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from dagster.preview.freshness import FreshnessPolicy
 
 # Define a freshness policy for every hour Pacific Time
-cron_policy = InternalFreshnessPolicy.cron(
+cron_policy = FreshnessPolicy.cron(
     deadline_cron="0 * * * *",
     lower_bound_delta=timedelta(hours=1),
     timezone="America/Los_Angeles",
@@ -37,7 +37,7 @@ class experimentConfig(Config):
 
 
 @asset(
-    internal_freshness_policy=cron_policy,
+    freshness_policy=cron_policy,
     kinds={"Kubernetes", "S3"},
 )
 def raw_data(

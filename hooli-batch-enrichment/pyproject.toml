@@ -8,7 +8,10 @@ dependencies = [
     "dagster-duckdb",
     "pandas",
     "responses",
-    "dagster-cloud[insights]"
+    "dagster-cloud[insights]",
+    "dagster>=1.11.0",
+    "dagster-webserver>=1.11.0",
+    "dagster-dg-cli>=1.11.0",
 ]
 
 [project.optional-dependencies]
