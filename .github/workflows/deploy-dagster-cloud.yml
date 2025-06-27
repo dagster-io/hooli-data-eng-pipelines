@@ -154,8 +154,8 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-etl-pipeline_any_changed == 'true'
         run: |
           source .venv/bin/activate
-          dagster-dbt project prepare-and-package --components hooli-etl-pipeline/
-          dagster-cloud ci dagster-dbt project manage-state --components hooli-etl-pipeline/ --source-deployment gtm20
+          dagster-dbt project prepare-and-package --components hooli-etl-pipeline/hooli_etl_pipeline
+          dagster-cloud ci dagster-dbt project manage-state --components hooli-etl-pipeline/hooli_etl_pipeline --source-deployment gtm20
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
