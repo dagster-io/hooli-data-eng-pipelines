@@ -59,6 +59,12 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         run: |
           echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
+      
+      - name: Set branch deployment env variable flag
+        id: set-branch-deployment-env
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        run: |
+          echo "DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT=1 >> $GITHUB_ENV && echo $DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT
 
       - name: Get Code locations that changed
         id: extract-changed-dirs
