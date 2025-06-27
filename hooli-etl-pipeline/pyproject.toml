@@ -4,6 +4,7 @@ requires-python = ">=3.9,<3.13"
 version = "0.1.0"
 dependencies = [
     "dagster==1.10.21",
+    "dagster-cloud",
     "dagster-dbt>=0.26.21",
     "dagster-duckdb>=0.26.21",
     "dagster-snowflake>=0.26.21",
