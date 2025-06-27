@@ -30,6 +30,7 @@ dependencies = [
       "html5lib",
       "scikit-learn",
       "dagster-dg-cli>=1.10.18",
+      "dagster-webserver>=1.11.0",
 ]
 
 [project.optional-dependencies]
