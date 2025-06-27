@@ -45,6 +45,8 @@ jobs:
             hooli-data-eng:
               - dbt_project/**
               - hooli-data-eng/**
+            hooli-etl-pipeline:
+              - hooli-etl-pipeline/**
             hooli-basics:
               - hooli-basics/**
             hooli-data-ingest:
@@ -59,11 +61,17 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         run: |
           echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
+      
+      - name: Set branch deployment env variable flag
+        id: set-branch-deployment-env
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
+        run: |
+          echo "DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT=1" >> $GITHUB_ENV && echo $DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT
 
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
-              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }}"
+              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }} ${{ steps.changed-files.outputs.hooli-etl-pipeline_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
@@ -72,6 +80,10 @@ jobs:
               if [ "${{ steps.changed-files.outputs.hooli-data-eng_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
+              fi
+              if [ "${{ steps.changed-files.outputs.hooli-etl-pipeline_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_etl_pipeline"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_etl_pipeline --image-tag=$IMAGE_TAG-hooli-etl-pipeline\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics"
@@ -100,7 +112,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster --upgrade;
 
       - name: Validate configuration
         id: ci-validate
@@ -141,14 +153,21 @@ jobs:
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=gtm20" >> $GITHUB_ENV
 
       - name: Set PYTHONPATH
-        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng" >> $GITHUB_ENV
+        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng:$(pwd)/hooli-etl-pipeline/src/" >> $GITHUB_ENV
 
-      - name: Prepare dbt project
+      - name: Prepare dbt project for hooli-data-eng
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         run: |
           source .venv/bin/activate
           dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py
           dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/defs/dbt/resources.py --source-deployment gtm20
+
+      - name: Prepare dbt project for hooli-etl-pipeline
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-etl-pipeline_any_changed == 'true'
+        run: |
+          source .venv/bin/activate
+          dagster-dbt project prepare-and-package --components hooli-etl-pipeline
+          dagster-cloud ci dagster-dbt project manage-state --components hooli-etl-pipeline --source-deployment gtm20
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -159,6 +178,14 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
 
+      # Build 'hooli etl pipeline' code location
+      - name: Build and upload Docker image for etl pipeline
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-etl-pipeline_any_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-etl-pipeline
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-etl-pipeline
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
