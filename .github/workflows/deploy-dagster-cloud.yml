@@ -45,6 +45,8 @@ jobs:
             hooli-data-eng:
               - dbt_project/**
               - hooli-data-eng/**
+            hooli-etl-pipeline:
+              - hooli-etl-pipeline/**
             hooli-basics:
               - hooli-basics/**
             hooli-data-ingest:
@@ -61,7 +63,7 @@ jobs:
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
-              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }}"
+              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-interoperability_all_changed_files }} ${{ steps.changed-files.outputs.hooli-etl-pipeline_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
@@ -70,6 +72,10 @@ jobs:
               if [ "${{ steps.changed-files.outputs.hooli-data-eng_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name data-eng-pipeline"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name data-eng-pipeline --image-tag=$IMAGE_TAG-data-eng-pipeline\n"
+              fi
+              if [ "${{ steps.changed-files.outputs.hooli-etl-pipeline_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_etl_pipeline"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_etl_pipeline --image-tag=$IMAGE_TAG-hooli-etl-pipeline\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-basics_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name basics"
@@ -153,6 +159,14 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-data-eng-pipeline
 
+      # Build 'hooli etl pipeline' code location
+      - name: Build and upload Docker image for etl pipeline
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-etl-pipeline_any_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-etl-pipeline
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-etl-pipeline
 
       # Build 'basics' code location
       - name: Build and upload Docker image for basics
