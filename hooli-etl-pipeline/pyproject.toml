@@ -7,7 +7,9 @@ dependencies = [
     "dagster-dbt>=0.26.21",
     "dagster-duckdb>=0.26.21",
     "dagster-snowflake>=0.26.21",
+    "snowflake-connector-python[pandas]",
     "dbt-duckdb>=1.9.3",
+    "dbt-snowflake",
     "pandas>=2.3.0",
 ]
 

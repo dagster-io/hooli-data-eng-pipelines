@@ -1,12 +1,21 @@
 directory_type = "workspace"
 
-# currently failing bc of strange import error or package versions
-#[[workspace.projects]]
-#path = "hooli-interoperability"
+[workspace]
+[[workspace.projects]]
+path = "hooli-data-eng"
 
+[[workspace.projects]]
+path = "hooli-data-ingest"
+
+[[workspace.projects]]
+path = "hooli-basics"
 
 [[workspace.projects]]
 path = "hooli-etl-pipeline"
+
+# currently failing bc of strange import error or package versions
+#[[workspace.projects]]
+#path = "hooli-interoperability"
 
 [cli]
 suppress_warnings = [

@@ -1,5 +1,6 @@
 sources:
   - name: main
+    schema: "{{'main' if target.name == 'LOCAL' else 'analytics'}}"
     tables:
       - name: raw_orders
       - name: raw_customers
