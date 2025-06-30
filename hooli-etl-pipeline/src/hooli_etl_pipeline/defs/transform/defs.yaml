@@ -1,0 +1,8 @@
+type: dagster_dbt.DbtProjectComponent
+
+attributes:
+  project: 
+    project_dir: '{{ project_root }}/transform/jdbt' 
+    target: "{{'BRANCH' if env('DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT','') == '1' else 'PROD' if env('DAGSTER_CLOUD_DEPLOYMENT_NAME','') == 'gtm20' else 'LOCAL'}}"
+  translation:
+    key: "target/main/{{ node.name }}"
