@@ -6,7 +6,7 @@ import pandas as pd
 
 
 def get_env():
-    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
+    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "gtm20":
         return "PROD"
     if os.getenv("DAGSTER_IS_DEV_CLI"):
         return "LOCAL"
