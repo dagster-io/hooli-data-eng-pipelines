@@ -95,5 +95,3 @@ def resources():
     return dg.Definitions(
         resources=resource_def[get_env()],
     )
-
-print(get_env())
