@@ -8,12 +8,12 @@ dependencies = [
     "dagster-duckdb",
     "dagster-sling",
     "dagster-cloud[insights]",
-    "dagster-dg-cli>=1.11.0",
 ]
 
-[project.optional-dependencies]
+[project.optional-dependencies]11.
 dev = [
-    "dagster-webserver>=1.11.0", 
+    "dagster-webserver>=1.11.0",
+    "dagster-dg-cli>=1.11.0",
     "pytest",
 ]
 
