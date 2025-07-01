@@ -10,7 +10,7 @@ dependencies = [
     "dagster-cloud[insights]",
 ]
 
-[project.optional-dependencies]11.
+[project.optional-dependencies]
 dev = [
     "dagster-webserver>=1.11.0",
     "dagster-dg-cli>=1.11.0",
