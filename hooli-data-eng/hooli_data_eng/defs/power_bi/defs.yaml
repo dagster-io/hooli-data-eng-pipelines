@@ -18,10 +18,18 @@ attributes:
         core_kpis: ''
     for_semantic_model:
       description: "Semantic model link: https://app.powerbi.com/groups/{{ env.AZURE_POWERBI_WORKSPACE_ID }}/datasets/{{ data.properties['id'] }}/details"
+      deps: >-
+        {%- set upstream_deps = [] -%}
+        {%- for dep in spec.deps -%}
+          {%- set parts = dep.asset_key.path -%}
+          {%- set new_key = [parts[1] | upper] + parts[2:] -%}
+          {%- set _ = upstream_deps.append(new_key) -%}
+        {%- endfor -%}
+        {{ upstream_deps }}
       tags:
         core_kpis: ''
     for_data_source:
-      key_prefix: 'blah'
+      key_prefix: 'ANALYTICS'
 
 requirements:
   env:
