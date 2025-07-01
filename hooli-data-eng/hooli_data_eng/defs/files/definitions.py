@@ -23,7 +23,7 @@ defs = dg.Definitions(
         ),
         file_path_mapping=dg.AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli_data_eng/files/definitions.py",
+            file_anchor_path_in_repository="hooli_data_eng/defs/files/definitions.py",
         ),
     ),
     resources=resource_def[get_env()],
