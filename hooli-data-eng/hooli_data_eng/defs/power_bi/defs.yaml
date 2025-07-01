@@ -1,4 +1,5 @@
 type: dagster_powerbi.PowerBIWorkspaceComponent
+template_vars_module: .custom_column_transform
 
 attributes:
   workspace:
@@ -28,6 +29,8 @@ attributes:
         {{ upstream_deps }}
       tags:
         core_kpis: ''
+      metadata:
+        "dagster/column_schema": "{{ customized_column_schema(data) }}"
     for_data_source:
       key_prefix: 'ANALYTICS'
 
