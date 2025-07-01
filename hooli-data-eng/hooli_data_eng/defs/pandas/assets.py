@@ -6,9 +6,9 @@ import pandas as pd
 import dagster as dg
 from dagster_cloud.anomaly_detection import build_anomaly_detection_freshness_checks
 from hooli_data_eng.utils.kind_helpers import get_kind
-from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from dagster.preview.freshness import FreshnessPolicy
 
-policy = InternalFreshnessPolicy.time_window(fail_window=timedelta(hours=24))
+policy = FreshnessPolicy.time_window(fail_window=timedelta(hours=24))
 
 # dynamically determine storage_kind based on environment
 storage_kind = get_kind()
@@ -78,7 +78,7 @@ def check_avg_orders(context, avg_orders: pd.DataFrame):
     owners=["team:programmers"],
     ins={"company_perf": dg.AssetIn(key_prefix=["ANALYTICS"])},
     kinds={"pandas", storage_kind},
-    internal_freshness_policy=policy,
+    freshness_policy=policy,
 )
 def min_order(context, company_perf: pd.DataFrame) -> pd.DataFrame:
     """Computes min order KPI"""

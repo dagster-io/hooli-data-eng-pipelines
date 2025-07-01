@@ -18,8 +18,8 @@ from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_versio
 from hooli_data_eng.defs.dbt.resources import resource_def
 
 from datetime import timedelta
-from dagster._core.definitions.asset_spec import attach_internal_freshness_policy
-from dagster._core.definitions.freshness import InternalFreshnessPolicy
+from dagster.preview.freshness import apply_freshness_policy
+from dagster.preview.freshness import FreshnessPolicy
 
 # many dbt assets use an incremental approach to avoid
 # re-processing all data on each run
@@ -170,17 +170,17 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
         checks = []
         sensors = []
 
-        weekly_policy = InternalFreshnessPolicy.time_window(
+        weekly_policy = FreshnessPolicy.time_window(
             fail_window=timedelta(days=7),
             warn_window=timedelta(days=2),
         )
 
-        daily_policy = InternalFreshnessPolicy.time_window(
+        daily_policy = FreshnessPolicy.time_window(
             fail_window=timedelta(hours=24),
             warn_window=timedelta(hours=12),
         )
 
-        regular_policy = InternalFreshnessPolicy.time_window(
+        regular_policy = FreshnessPolicy.time_window(
             fail_window=timedelta(days=7),
             warn_window=timedelta(days=3),
         )
@@ -239,15 +239,15 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
         )
 
         defs = defs.map_resolved_asset_specs(
-            func=lambda spec: attach_internal_freshness_policy(spec, daily_policy),
+            func=lambda spec: apply_freshness_policy(spec, daily_policy),
             selection='key:"ANALYTICS/orders_augmented"or key:"CLEANED/orders_cleaned"or key:"CLEANED/users_cleaned"',
         )
         defs = defs.map_resolved_asset_specs(
-            func=lambda spec: attach_internal_freshness_policy(spec, weekly_policy),
+            func=lambda spec: apply_freshness_policy(spec, weekly_policy),
             selection='key:"ANALYTICS/order_stats" or key:"ANALYTICS/weekly_order_summary"',
         )
         defs = defs.map_resolved_asset_specs(
-            func=lambda spec: attach_internal_freshness_policy(spec, regular_policy),
+            func=lambda spec: apply_freshness_policy(spec, regular_policy),
             selection='key:"CLEANED/locations_cleaned" or key:"ANALYTICS/company_stats" or key:"ANALYTICS/company_perf" or key:"ANALYTICS/sku_stats"',
         )
 
