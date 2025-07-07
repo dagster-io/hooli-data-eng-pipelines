@@ -5,9 +5,6 @@ directory_type = "workspace"
 path = "hooli-data-eng"
 
 [[workspace.projects]]
-path = "hooli-data-ingest"
-
-[[workspace.projects]]
 path = "hooli-basics"
 
 [[workspace.projects]]
