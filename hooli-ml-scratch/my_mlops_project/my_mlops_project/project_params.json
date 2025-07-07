@@ -1,0 +1,4 @@
+{
+  "input_cloud": "aws",
+  "input_include_feature_store": "yes"
+}
