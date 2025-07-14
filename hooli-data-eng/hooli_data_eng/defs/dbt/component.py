@@ -123,10 +123,15 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 def _process_partitioned_dbt_assets(
     context: dg.AssetExecutionContext, dbt: DbtCliResource
 ):
-    # map partition key range to dbt vars
-    first_partition, last_partition = context.partition_time_window
-    dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
-    dbt_args = ["build", "--vars", json.dumps(dbt_vars)]
+    # Check if the asset is partitioned
+    if context.has_partition_key:
+        # map partition key range to dbt vars
+        first_partition, last_partition = context.partition_time_window
+        dbt_vars = {"min_date": str(first_partition), "max_date": str(last_partition)}
+        dbt_args = ["build", "--vars", json.dumps(dbt_vars)]
+    else:
+        # if not partitioned, use default dbt build command
+        dbt_args = ["build"]
 
     # Invoke dbt CLI
     dbt_cli_task = dbt.cli(dbt_args, context=context)
