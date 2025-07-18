@@ -20,7 +20,7 @@ defs = dg.Definitions(
         ),
         file_path_mapping=dg.AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli_data_eng/notebooks/definitions.py",
+            file_anchor_path_in_repository="hooli-data-eng/hooli_data_eng/defs/notebooks/definitions.py",
         ),
     ),
     resources=resource_def[get_env()],
