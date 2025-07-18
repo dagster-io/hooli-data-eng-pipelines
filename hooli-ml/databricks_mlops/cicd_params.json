@@ -1,0 +1,13 @@
+{
+  "input_root_dir": "databricks_mlops",
+  "input_cloud": "aws",
+  "input_cicd_platform": "github_actions",
+  "input_default_branch": "master",
+  "input_release_branch": "release",
+  "cloud_specific_node_type_id": "v0.236.0",
+  "input_cli_version": "v0.236.0",
+  "test_catalog_name": "test",
+  "staging_catalog_name": "staging",
+  "prod_catalog_name": "workspace",
+  "input_docker_image": "databricksfieldeng/mlopsstacks:latest"
+}

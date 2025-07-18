@@ -1,3 +1,0 @@
-mlflow
-scikit-learn
-databricks-feature-store
