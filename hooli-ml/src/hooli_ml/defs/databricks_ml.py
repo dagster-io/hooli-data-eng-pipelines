@@ -176,102 +176,102 @@ def monitoring(context: dg.AssetExecutionContext, config: DatabricksMetricsMonit
     context.log.info(f"Monitoring notebook submitted. Run ID: {run_id}")
 
 
-@dg.multi_asset(
-    specs=[
-        dg.AssetSpec(
-            key="feature_engineering_pickup_task", 
-            kinds={"databricks", "feature_engineering"}
-        ),
-        dg.AssetSpec(
-            key="feature_engineering_dropoff_task", 
-            kinds={"databricks", "feature_engineering"}
-        )
-    ]
-)
-def feature_engineering_job_multi_asset(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource):
-    """Multi-asset that runs both pickup and dropoff feature engineering as a single Databricks job."""
+# @dg.multi_asset(
+#     specs=[
+#         dg.AssetSpec(
+#             key="feature_engineering_pickup_task", 
+#             kinds={"databricks", "feature_engineering"}
+#         ),
+#         dg.AssetSpec(
+#             key="feature_engineering_dropoff_task", 
+#             kinds={"databricks", "feature_engineering"}
+#         )
+#     ]
+# )
+# def feature_engineering_job_multi_asset(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource):
+#     """Multi-asset that runs both pickup and dropoff feature engineering as a single Databricks job."""
     
-    # Create proper Databricks SDK task objects
-    pickup_task = jobs.SubmitTask(
-        task_key="pickup_features",
-        notebook_task=jobs.NotebookTask(
-            notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
-            base_parameters={
-                "model_type": "RandomForest",
-                "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-                "timestamp_column": "tpep_pickup_datetime",
-                "output_table_name": f"{get_env()}.databricks_mlops.trip_pickup_features",
-                "features_transform_module": "pickup_features",
-                "primary_keys": "zip"
-            }
-        ),
-        # serverless so ignore this
-        # new_cluster=jobs.ClusterSpec(
-        #     spark_version="13.3.x-scala2.12",
-        #     node_type_id="i3.xlarge",
-        #     num_workers=1
-        # )
-    )
+#     # Create proper Databricks SDK task objects
+#     pickup_task = jobs.SubmitTask(
+#         task_key="pickup_features",
+#         notebook_task=jobs.NotebookTask(
+#             notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
+#             base_parameters={
+#                 "model_type": "RandomForest",
+#                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+#                 "timestamp_column": "tpep_pickup_datetime",
+#                 "output_table_name": f"{get_env()}.databricks_mlops.trip_pickup_features",
+#                 "features_transform_module": "pickup_features",
+#                 "primary_keys": "zip"
+#             }
+#         ),
+#         # serverless so ignore this
+#         # new_cluster=jobs.ClusterSpec(
+#         #     spark_version="13.3.x-scala2.12",
+#         #     node_type_id="i3.xlarge",
+#         #     num_workers=1
+#         # )
+#     )
     
-    dropoff_task = jobs.SubmitTask(
-        task_key="dropoff_features",
-        notebook_task=jobs.NotebookTask(
-            notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
-            base_parameters={
-                "model_type": "RandomForest",
-                "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-                "timestamp_column": "tpep_dropoff_datetime",
-                "output_table_name": f"{get_env()}.databricks_mlops.trip_dropoff_features",
-                "features_transform_module": "dropoff_features",
-                "primary_keys": "zip"
-            }
-        ),
-        # serverless so ignore this
-        # new_cluster=jobs.ClusterSpec(
-        #     spark_version="13.3.x-scala2.12",
-        #     node_type_id="i3.xlarge",
-        #     num_workers=1
-        # )
-    )
+#     dropoff_task = jobs.SubmitTask(
+#         task_key="dropoff_features",
+#         notebook_task=jobs.NotebookTask(
+#             notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
+#             base_parameters={
+#                 "model_type": "RandomForest",
+#                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+#                 "timestamp_column": "tpep_dropoff_datetime",
+#                 "output_table_name": f"{get_env()}.databricks_mlops.trip_dropoff_features",
+#                 "features_transform_module": "dropoff_features",
+#                 "primary_keys": "zip"
+#             }
+#         ),
+#         # serverless so ignore this
+#         # new_cluster=jobs.ClusterSpec(
+#         #     spark_version="13.3.x-scala2.12",
+#         #     node_type_id="i3.xlarge",
+#         #     num_workers=1
+#         # )
+#     )
     
-    client = databricks_resource.workspace_client()
-    # Submit the job using the workspace client directly
-    job_run = client.jobs.submit(
-        run_name=f"feature_engineering_job_{context.run_id}",
-        tasks=[pickup_task, dropoff_task]
-    )
+#     client = databricks_resource.workspace_client()
+#     # Submit the job using the workspace client directly
+#     job_run = client.jobs.submit(
+#         run_name=f"feature_engineering_job_{context.run_id}",
+#         tasks=[pickup_task, dropoff_task]
+#     )
     
-    context.log.info(f"Submitted Databricks job with run ID: {job_run.run_id}")
+#     context.log.info(f"Submitted Databricks job with run ID: {job_run.run_id}")
     
-    # Wait for job completion and stream logs
-    client.jobs.wait_get_run_job_terminated_or_skipped(job_run.run_id)
+#     # Wait for job completion and stream logs
+#     client.jobs.wait_get_run_job_terminated_or_skipped(job_run.run_id)
     
-    # Get final job status
-    final_run = client.jobs.get_run(job_run.run_id)
+#     # Get final job status
+#     final_run = client.jobs.get_run(job_run.run_id)
     
-    if final_run.state.result_state.value == "SUCCESS":
-        context.log.info("Both pickup and dropoff feature engineering tasks completed successfully")
+#     if final_run.state.result_state.value == "SUCCESS":
+#         context.log.info("Both pickup and dropoff feature engineering tasks completed successfully")
         
-        # Report materialization for both assets
-        yield dg.MaterializeResult(
-            asset_key="feature_engineering_pickup_task",
-            metadata={
-                "job_run_id": job_run.run_id,
-                "task_key": "pickup_features",
-                "status": "completed"
-            }
-        )
+#         # Report materialization for both assets
+#         yield dg.MaterializeResult(
+#             asset_key="feature_engineering_pickup_task",
+#             metadata={
+#                 "job_run_id": job_run.run_id,
+#                 "task_key": "pickup_features",
+#                 "status": "completed"
+#             }
+#         )
         
-        yield dg.MaterializeResult(
-            asset_key="feature_engineering_dropoff_task", 
-            metadata={
-                "job_run_id": job_run.run_id,
-                "task_key": "dropoff_features",
-                "status": "completed"
-            }
-        )
-    else:
-        raise Exception(f"Job failed with state: {final_run.state.result_state}")
+#         yield dg.MaterializeResult(
+#             asset_key="feature_engineering_dropoff_task", 
+#             metadata={
+#                 "job_run_id": job_run.run_id,
+#                 "task_key": "dropoff_features",
+#                 "status": "completed"
+#             }
+#         )
+#     else:
+#         raise Exception(f"Job failed with state: {final_run.state.result_state}")
 
 
 # Example of using the DatabricksMultiNotebookJobComponent
@@ -351,7 +351,7 @@ batch_inference_schedule = dg.ScheduleDefinition(
 
 
 defs = dg.Definitions(
-    assets=[feature_engineering_job_multi_asset, feature_engineering_pickup, feature_engineering_dropoff, feature_engineering_job_multi_asset, model_training, model_validation, model_deploy, batch_inference, monitoring],
+    assets=[feature_engineering_pickup, feature_engineering_dropoff, model_training, model_validation, model_deploy, batch_inference, monitoring],
     schedules=[monitoring_schedule, feature_engineering_schedule, batch_inference_schedule],
     jobs=[monitoring_job]
 )

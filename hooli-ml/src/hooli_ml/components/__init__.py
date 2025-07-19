@@ -1,3 +1,3 @@
-from .databricks_notebook_component import DatabricksMultiNotebookJobComponent, DatabricksNotebookComponent
+from .databricks_notebook_component import DatabricksMultiNotebookJobComponent
 
-__all__ = ["DatabricksMultiNotebookJobComponent", "DatabricksNotebookComponent"]
+__all__ = ["DatabricksMultiNotebookJobComponent"]

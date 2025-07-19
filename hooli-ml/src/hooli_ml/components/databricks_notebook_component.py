@@ -3,12 +3,6 @@ from typing import List, Dict, Any, Optional
 from pydantic import field_validator
 from hooli_ml.defs.resources import DatabricksResource
 
-class DatabricksNotebookComponent(dg.Component, dg.Model, dg.Resolvable):
-    # ...existing code...
-    def build_defs(self, context: dg.ComponentLoadContext) -> dg.Definitions:
-        # ...existing code...
-        return dg.Definitions()
-
 class DatabricksMultiNotebookJobComponent(dg.Component, dg.Model, dg.Resolvable):
     """
     A Databricks component that runs multiple notebooks as tasks in a single Databricks job.
@@ -62,17 +56,16 @@ class DatabricksMultiNotebookJobComponent(dg.Component, dg.Model, dg.Resolvable)
         def multi_notebook_job_asset(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource):
             """Multi-asset that runs multiple notebooks as a single Databricks job."""
             
-            # Get selected output names (asset keys that are being materialized)
-            selected_outputs = context.selected_output_names
-            context.log.info(f"Selected outputs: {selected_outputs}")
-            context.log.info(f"All available outputs: {[spec.key for spec in asset_specs]}")
+            # Get selected asset keys that are being materialized
+            selected_assets = context.selected_asset_keys
+            context.log.info(f"Selected assets: {selected_assets}")
             
             # Filter tasks to only include those that correspond to selected assets
             selected_tasks = []
             for task in self.tasks:
                 asset_key = task.get("asset_key", task["task_key"])
-                context.log.info(f"Checking task with asset_key: {asset_key}")
-                if asset_key in selected_outputs:
+                # Convert to AssetKey for proper comparison
+                if dg.AssetKey(asset_key) in selected_assets:
                     selected_tasks.append(task)
                     context.log.info(f"Task {task['task_key']} with asset_key {asset_key} is selected")
                 else:
@@ -90,7 +83,7 @@ class DatabricksMultiNotebookJobComponent(dg.Component, dg.Model, dg.Resolvable)
             for task in selected_tasks:
                 # Configure cluster based on serverless setting
                 if self.serverless:
-                    cluster_spec = jobs.ClusterSpec(serverless=True)
+                    cluster_spec = {}
                 else:
                     cluster_spec = jobs.ClusterSpec(
                         spark_version=self.spark_version,
@@ -126,39 +119,20 @@ class DatabricksMultiNotebookJobComponent(dg.Component, dg.Model, dg.Resolvable)
             if final_run.state.result_state.value == "SUCCESS":
                 context.log.info(f"All {len(selected_tasks)} selected notebook tasks completed successfully")
                 
-                # Report materialization for ALL assets in the spec, but mark which ones were actually executed
-                for task in self.tasks:
+                for task in selected_tasks:
                     asset_key = task.get("asset_key", task["task_key"])
-                    
-                    if asset_key in selected_outputs:
-                        # This asset was selected and executed
-                        context.log.info(f"Yielding MaterializeResult for EXECUTED asset: {asset_key}")
-                        yield dg.MaterializeResult(
-                            asset_key=asset_key,
-                            metadata={
-                                "job_run_id": job_run.run_id,
-                                "task_key": task["task_key"],
-                                "notebook_path": task["notebook_path"],
-                                "serverless": self.serverless,
-                                "executed_in_subset": True,
-                                "total_tasks_in_job": len(selected_tasks),
-                                "status": "completed"
-                            }
-                        )
-                    else:
-                        # This asset was NOT selected, yield a result but mark it as skipped
-                        context.log.info(f"Yielding MaterializeResult for SKIPPED asset: {asset_key}")
-                        yield dg.MaterializeResult(
-                            asset_key=asset_key,
-                            metadata={
-                                "task_key": task["task_key"],
-                                "notebook_path": task["notebook_path"],
-                                "serverless": self.serverless,
-                                "executed_in_subset": False,
-                                "skipped_reason": "not selected in subset",
-                                "status": "skipped"
-                            }
-                        )
+                    yield dg.MaterializeResult(
+                        asset_key=asset_key,
+                        metadata={
+                            "job_run_id": job_run.run_id,
+                            "task_key": task["task_key"],
+                            "notebook_path": task["notebook_path"],
+                            "serverless": self.serverless,
+                            "executed_in_subset": True,
+                            "total_tasks_in_job": len(selected_tasks),
+                            "status": "completed"
+                        }
+                    )
             else:
                 raise Exception(f"Job failed with state: {final_run.state.result_state}")
         
