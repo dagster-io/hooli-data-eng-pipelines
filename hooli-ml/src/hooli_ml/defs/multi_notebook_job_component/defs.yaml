@@ -31,13 +31,14 @@ attributes:
             - "feature_engineering"
             - "notebook"
         
-        # - key: pickup_feature_summary
-        #   description: "Summary statistics for pickup features"
-        #   kinds:
-        #     - databricks
-        #     - analytics
-        #     - feature_engineering
-        #   # skippable defaults to true (not specified)
+        - key: pickup_feature_summary
+          description: "Summary statistics for pickup features"
+          deps: ["feature_engineering_pickup"]
+          kinds:
+            - databricks
+            - analytics
+            - feature_engineering
+          # skippable defaults to true (not specified)
         
       #   - key: pickup_feature_metrics
       #     description: "Quality metrics for pickup features"
@@ -46,7 +47,6 @@ attributes:
       #       - metrics
       #     skippable: false  # Override default
     
-    # Task 2: Single asset spec with minimal overrides
     - task_key: "feature_engineering_dropoff"
       notebook_path: "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/dev/files/feature_engineering/notebooks/GenerateAndWriteFeatures"
       asset_specs:
