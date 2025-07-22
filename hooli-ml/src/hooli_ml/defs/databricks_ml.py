@@ -79,101 +79,101 @@ class DatabricksMetricsMonitoringConfig(dg.Config):
 
 NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/dev/files/"
 
-@dg.asset(kinds={"databricks", "feature_engineering"})
-def feature_engineering_pickup(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringDropOffConfig):
-    run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
-        parameters={"model_type": config.model_type,
-                    "training_data_path": config.input_table_path,
-                    "model_name": config.model_name,
-                    "pickup_features_table": config.pickup_features_table,
-                    "dropoff_features_table": config.dropoff_features_table,
-        },
-    )
-    context.log.info(f"Feature engineering notebook submitted. Run ID: {run_id}")
+# @dg.asset(kinds={"databricks", "feature_engineering"})
+# def feature_engineering_pickup(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringDropOffConfig):
+#     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
+#         parameters={"model_type": config.model_type,
+#                     "training_data_path": config.input_table_path,
+#                     "model_name": config.model_name,
+#                     "pickup_features_table": config.pickup_features_table,
+#                     "dropoff_features_table": config.dropoff_features_table,
+#         },
+#     )
+#     context.log.info(f"Feature engineering notebook submitted. Run ID: {run_id}")
 
-@dg.asset(kinds={"databricks", "feature_engineering"})
-def feature_engineering_dropoff(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringPickUpConfig):
-    run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
-        parameters={"model_type": config.model_type,
-                    "training_data_path": config.input_table_path,
-                    "model_name": config.model_name,
-                    "pickup_features_table": config.pickup_features_table,
-                    "dropoff_features_table": config.dropoff_features_table,
-        },
-    )
-    context.log.info(f"Feature engineering notebook submitted. Run ID: {run_id}")
+# @dg.asset(kinds={"databricks", "feature_engineering"})
+# def feature_engineering_dropoff(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringPickUpConfig):
+#     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
+#         parameters={"model_type": config.model_type,
+#                     "training_data_path": config.input_table_path,
+#                     "model_name": config.model_name,
+#                     "pickup_features_table": config.pickup_features_table,
+#                     "dropoff_features_table": config.dropoff_features_table,
+#         },
+#     )
+#     context.log.info(f"Feature engineering notebook submitted. Run ID: {run_id}")
 
-@dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff],
-       kinds={"databricks", "training"})
-def model_training(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelTrainingConfig):
-    run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "training/notebooks/TrainWithFeatureStore",
-        parameters={"model_type": config.model_type,
-                    "training_data_path": config.input_table_path,
-                    "model_name": config.model_name,
-                    "experiment_name": config.experiment_name,
-                    "pickup_features_table": config.pickup_features_table,
-                    "dropoff_features_table": config.dropoff_features_table,
-        }
-    )
-    context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
+# @dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff],
+#        kinds={"databricks", "training"})
+# def model_training(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelTrainingConfig):
+#     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "training/notebooks/TrainWithFeatureStore",
+#         parameters={"model_type": config.model_type,
+#                     "training_data_path": config.input_table_path,
+#                     "model_name": config.model_name,
+#                     "experiment_name": config.experiment_name,
+#                     "pickup_features_table": config.pickup_features_table,
+#                     "dropoff_features_table": config.dropoff_features_table,
+#         }
+#     )
+#     context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
 
-@dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff, model_training],
-       kinds={"databricks", "training"})
-def model_validation(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelValidationConfig):
-    run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "validation/ModelValidation/",
-        parameters={"run_mode": config.run_mode,
-                    "enable_baseline_comparison": config.enable_baseline_comparison,
-                    "validation_input": config.validation_input,
-                    "model_type": config.model_type,
-                    "targets": config.targets,
-                    "custom_metrics_loader_function": config.dropofcustom_metrics_loader_functionf_features_table,
-                    "validation_thresholds_loader_function": config.validation_thresholds_loader_function,
-                    "evaluator_config_loader_function": config.evaluator_config_loader_function
-        }
-    )
-    context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
+# @dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff, model_training],
+#        kinds={"databricks", "training"})
+# def model_validation(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelValidationConfig):
+#     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "validation/ModelValidation/",
+#         parameters={"run_mode": config.run_mode,
+#                     "enable_baseline_comparison": config.enable_baseline_comparison,
+#                     "validation_input": config.validation_input,
+#                     "model_type": config.model_type,
+#                     "targets": config.targets,
+#                     "custom_metrics_loader_function": config.dropofcustom_metrics_loader_functionf_features_table,
+#                     "validation_thresholds_loader_function": config.validation_thresholds_loader_function,
+#                     "evaluator_config_loader_function": config.evaluator_config_loader_function
+#         }
+#     )
+#     context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
 
-@dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff, model_training, model_validation],
-       kinds={"databricks", "training"})
-def model_deploy(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelDeploymentConfig):
-    run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "deployment/model_deployment/notebooks/ModelDeployment.py",
-        parameters={"env":config.env
-        }
-    )
-    context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
+# @dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff, model_training, model_validation],
+#        kinds={"databricks", "training"})
+# def model_deploy(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelDeploymentConfig):
+#     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "deployment/model_deployment/notebooks/ModelDeployment.py",
+#         parameters={"env":config.env
+#         }
+#     )
+#     context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
 
-@dg.asset(deps=[model_training, feature_engineering_dropoff, feature_engineering_pickup, model_deploy],
-       kinds={"databricks", "training"})
-def batch_inference(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksBatchInferenceConfig):
-    run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "deployment/batch_inference/notebooks/BatchInference",
-        parameters={"model_type": config.model_type,
-                    "input_table_name": config.input_table,
-                    "output_table_name": config.output_table},
-    )
-    context.log.info(f"Batch inference notebook submitted. Run ID: {run_id}")
+# @dg.asset(deps=[model_training, feature_engineering_dropoff, feature_engineering_pickup, model_deploy],
+#        kinds={"databricks", "training"})
+# def batch_inference(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksBatchInferenceConfig):
+#     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "deployment/batch_inference/notebooks/BatchInference",
+#         parameters={"model_type": config.model_type,
+#                     "input_table_name": config.input_table,
+#                     "output_table_name": config.output_table},
+#     )
+#     context.log.info(f"Batch inference notebook submitted. Run ID: {run_id}")
 
 
-# TODO add logic to check the results of the notebook and then to decide whether it's in violation or not
-@dg.asset(deps=[batch_inference], kinds={"databricks", "inference"})
-def monitoring(context: dg.AssetExecutionContext, config: DatabricksMetricsMonitoringConfig):
-    run_id = dg.run_and_stream_notebook_logs_sdk(
-        notebook_path=NOTEBOOK_ROOT_PATH + "monitoring/notebooks/MonitoredMetricViolationCheck",
-        parameters={
-            "env": config.env,
-            "table_name_under_monitor": config.table_name_under_monitor,
-            "metric_to_monitor": config.metric_to_monitor,
-            "metric_violation_threshold": config.metric_violation_threshold,
-            "num_evaluation_windows": config.num_evaluation_windows,
-            "num_violation_windows": config.num_violation_windows
-        },
-    )
-    context.log.info(f"Monitoring notebook submitted. Run ID: {run_id}")
+# # TODO add logic to check the results of the notebook and then to decide whether it's in violation or not
+# @dg.asset(deps=[batch_inference], kinds={"databricks", "inference"})
+# def monitoring(context: dg.AssetExecutionContext, config: DatabricksMetricsMonitoringConfig):
+#     run_id = dg.run_and_stream_notebook_logs_sdk(
+#         notebook_path=NOTEBOOK_ROOT_PATH + "monitoring/notebooks/MonitoredMetricViolationCheck",
+#         parameters={
+#             "env": config.env,
+#             "table_name_under_monitor": config.table_name_under_monitor,
+#             "metric_to_monitor": config.metric_to_monitor,
+#             "metric_violation_threshold": config.metric_violation_threshold,
+#             "num_evaluation_windows": config.num_evaluation_windows,
+#             "num_violation_windows": config.num_violation_windows
+#         },
+#     )
+#     context.log.info(f"Monitoring notebook submitted. Run ID: {run_id}")
 
 
 # @dg.multi_asset(
@@ -351,7 +351,7 @@ batch_inference_schedule = dg.ScheduleDefinition(
 
 
 defs = dg.Definitions(
-    assets=[feature_engineering_pickup, feature_engineering_dropoff, model_training, model_validation, model_deploy, batch_inference, monitoring],
+    #assets=[feature_engineering_pickup, feature_engineering_dropoff, model_training, model_validation, model_deploy, batch_inference, monitoring],
     schedules=[monitoring_schedule, feature_engineering_schedule, batch_inference_schedule],
     jobs=[monitoring_job]
 )
