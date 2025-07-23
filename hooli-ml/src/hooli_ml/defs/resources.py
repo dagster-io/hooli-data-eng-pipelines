@@ -100,6 +100,7 @@ class DatabricksResource(dg.ConfigurableResource):
         databricks_host = databricks_host or os.getenv("DATABRICKS_HOST")
         databricks_token = databricks_token or os.getenv("DATABRICKS_TOKEN")
         w = WorkspaceClient(host=databricks_host, token=databricks_token)
+        
         run = w.jobs.submit(
             tasks=[
                 jobs.SubmitTask(
@@ -112,27 +113,10 @@ class DatabricksResource(dg.ConfigurableResource):
                 )
             ],
             run_name="notebook-task",
-        )
+        ).result()
         run_id = run.run_id
-        print(f"Submitted run {run_id}. Polling for completion and streaming logs...")
-        while True:
-            run_info = w.jobs.get_run(run_id=run_id)
-            state = run_info.state
-            life_cycle = str(state.life_cycle_state)
-            result_state = str(state.result_state)
-            print(f"Run state: {life_cycle}")
-            # Stream logs/output if available
-            if run_info.tasks:
-                for task in run_info.tasks:
-                    task_run_id = task.run_id
-                    output = w.jobs.get_run_output(run_id=task_run_id)
-                    if output and output.notebook_output and output.notebook_output.result:
-                        print(f"Notebook output:\n{output.notebook_output.result}")
-            # Ensure we break on INTERNAL_ERROR as a string
-            if life_cycle in ("TERMINATED", "SKIPPED", "INTERNAL_ERROR"):
-                print(f"Run finished with state: {result_state}")
-                break
-            time.sleep(10)
+        output = w.jobs.get_run_output(run_id=run.tasks[0].run_id)
+        print(f"Submitted run {run_id}. output: {output}")
         return run_id
 
 @dg.definitions
