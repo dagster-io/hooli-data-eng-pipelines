@@ -79,12 +79,12 @@ class DatabricksMetricsMonitoringConfig(dg.Config):
 
 NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/dev/files/"
 
-# @dg.asset(kinds={"databricks", "feature_engineering"})
-# def feature_engineering_pickup(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringDropOffConfig):
+# @dg.asset(name = "succeed", kinds={"databricks", "feature_engineering"})
+# def feature_engineering_pickup(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringPickUpConfig):
 #     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
 #         notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
 #         parameters={"model_type": config.model_type,
-#                     "training_data_path": config.input_table_path,
+#                     "training_data_path": config.training_data_path,
 #                     "model_name": config.model_name,
 #                     "pickup_features_table": config.pickup_features_table,
 #                     "dropoff_features_table": config.dropoff_features_table,
@@ -105,13 +105,12 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #     )
 #     context.log.info(f"Feature engineering notebook submitted. Run ID: {run_id}")
 
-# @dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff],
+# @dg.asset(name = "fail", deps=[feature_engineering_pickup, "feature_engineering_dropoff"],
 #        kinds={"databricks", "training"})
 # def model_training(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelTrainingConfig):
 #     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
 #         notebook_path=NOTEBOOK_ROOT_PATH + "training/notebooks/TrainWithFeatureStore",
-#         parameters={"model_type": config.model_type,
-#                     "training_data_path": config.input_table_path,
+#         parameters={"training_data_path": config.training_data_path,
 #                     "model_name": config.model_name,
 #                     "experiment_name": config.experiment_name,
 #                     "pickup_features_table": config.pickup_features_table,
@@ -120,7 +119,7 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #     )
 #     context.log.info(f"Model training notebook submitted. Run ID: {run_id}")
 
-# @dg.asset(deps=[feature_engineering_pickup, feature_engineering_dropoff, model_training],
+# @dg.asset(name="real_fail",deps=[feature_engineering_pickup, "feature_engineering_dropoff", model_training],
 #        kinds={"databricks", "training"})
 # def model_validation(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksModelValidationConfig):
 #     run_id = databricks_resource.run_and_stream_notebook_logs_sdk(
@@ -130,7 +129,7 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #                     "validation_input": config.validation_input,
 #                     "model_type": config.model_type,
 #                     "targets": config.targets,
-#                     "custom_metrics_loader_function": config.dropofcustom_metrics_loader_functionf_features_table,
+#                     "custom_metrics_loader_function": config.custom_metrics_loader_function,
 #                     "validation_thresholds_loader_function": config.validation_thresholds_loader_function,
 #                     "evaluator_config_loader_function": config.evaluator_config_loader_function
 #         }
@@ -274,84 +273,106 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #         raise Exception(f"Job failed with state: {final_run.state.result_state}")
 
 
-# Example of using the DatabricksMultiNotebookJobComponent
-# from hooli_ml.components.databricks_notebook_component import DatabricksMultiNotebookJobComponent, NotebookTask, ClusterConfig
+# Example of using the DatabricksMultiNotebookJobComponent with databricks_config
+# from hooli_ml.components.databricks_notebook_component import DatabricksMultiNotebookJobComponent
 
-# # Create component instance
-# feature_engineering_component = DatabricksMultiNotebookJobComponent(
-#     job_name_prefix="feature_engineering_multi_job",
-#     cluster_config=ClusterConfig(
-#         spark_version="13.3.x-scala2.12",
-#         node_type_id="i3.xlarge",
-#         num_workers=1
-#     ),
-#     tasks=[
-#         NotebookTask(
-#             task_key="pickup_features",
-#             notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
-#             asset_key="feature_engineering_pickup_job",
-#             kinds=["databricks", "feature_engineering"],
-#             parameters={
-#                 "model_type": "RandomForest",
-#                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-#                 "timestamp_column": "tpep_pickup_datetime",
-#                 "output_table_name": f"{get_env()}.databricks_mlops.trip_pickup_features",
-#                 "features_transform_module": "pickup_features",
-#                 "primary_keys": "zip"
-#             }
-#         ),
-#         NotebookTask(
-#             task_key="dropoff_features",
-#             notebook_path=NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
-#             asset_key="feature_engineering_dropoff_job",
-#             kinds=["databricks", "feature_engineering"],
-#             parameters={
-#                 "model_type": "RandomForest",
-#                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-#                 "timestamp_column": "tpep_dropoff_datetime",
-#                 "output_table_name": f"{get_env()}.databricks_mlops.trip_dropoff_features",
-#                 "features_transform_module": "dropoff_features",
-#                 "primary_keys": "zip"
-#             }
-#         )
-#     ]
+# # Option 1: Use databricks_config parameter to auto-generate from bundle
+# databricks_mlops_component = DatabricksMultiNotebookJobComponent(
+#     job_name_prefix="databricks_mlops_pipeline",
+#     serverless=True,  # Use serverless compute
+#     databricks_config="databricks_mlops/databricks_mlops/databricks.yml"
 # )
 
+# # Option 2: Explicit task configuration (current approach)
+# # feature_engineering_component = DatabricksMultiNotebookJobComponent(
+# #     job_name_prefix="feature_engineering_multi_job",
+# #     serverless=True,
+# #     tasks=[
+# #         {
+# #             "task_key": "pickup_features",
+# #             "notebook_path": NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
+# #             "asset_specs": [
+# #                 {
+# #                     "key": "feature_engineering_pickup",
+# #                     "description": "Pickup location feature engineering from taxi data",
+# #                     "kinds": ["databricks", "feature_engineering"]
+# #                 }
+# #             ],
+# #             "parameters": {
+# #                 "model_type": "RandomForest",
+# #                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+# #                 "timestamp_column": "tpep_pickup_datetime",
+# #                 "output_table_name": f"{get_env()}.databricks_mlops.trip_pickup_features",
+# #                 "features_transform_module": "pickup_features",
+# #                 "primary_keys": "zip"
+# #             }
+# #         },
+# #         {
+# #             "task_key": "dropoff_features", 
+# #             "notebook_path": NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
+# #             "asset_specs": [
+# #                 {
+# #                     "key": "feature_engineering_dropoff",
+# #                     "description": "Dropoff location feature engineering from taxi data",
+# #                     "kinds": ["databricks", "feature_engineering"]
+# #                 }
+# #             ],
+# #             "parameters": {
+# #                 "model_type": "RandomForest",
+# #                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+# #                 "timestamp_column": "tpep_dropoff_datetime", 
+# #                 "output_table_name": f"{get_env()}.databricks_mlops.trip_dropoff_features",
+# #                 "features_transform_module": "dropoff_features",
+# #                 "primary_keys": "zip"
+# #             }
+# #         }
+# #     ]
+# # )
+
 # # Build component definitions
-# component_defs = feature_engineering_component.build_defs(None)
+# component_defs = databricks_mlops_component.build_defs(None)
 
-monitoring_job = dg.define_asset_job(
-    name="monitoring_job",
-    selection=["monitoring"],
-)
+# monitoring_job = dg.define_asset_job(
+#     name="monitoring_job",
+#     selection=["monitoring"],
+# )
 
-feature_engineering_schedule = dg.ScheduleDefinition(
-    name="feature_engineering_schedule",
-    target=["feature_engineering_pickup", "feature_engineering_pickup"],
-    cron_schedule="0 0 7 * *"
-)
+# feature_engineering_schedule = dg.ScheduleDefinition(
+#     name="feature_engineering_schedule",
+#     target=["feature_engineering_pickup", "feature_engineering_pickup"],
+#     cron_schedule="0 0 7 * *"
+# )
 
-feature_engineering_schedule = dg.ScheduleDefinition(
-    name="training_and_deployment_schedule",
-    target=["model_training", "model_validation", "model_deploy"],
-    cron_schedule="0 0 9 * *"
-)
+# feature_engineering_schedule = dg.ScheduleDefinition(
+#     name="training_and_deployment_schedule",
+#     target=["model_training", "model_validation", "model_deploy"],
+#     cron_schedule="0 0 9 * *"
+# )
 
-monitoring_schedule = dg.ScheduleDefinition(
-    job=monitoring_job,
-    cron_schedule="18 * * * *",  # every 30 minutes
-)
+# monitoring_schedule = dg.ScheduleDefinition(
+#     job=monitoring_job,
+#     cron_schedule="18 * * * *",  # every 30 minutes
+# )
 
-batch_inference_schedule = dg.ScheduleDefinition(
-    name="batch_inference_schedule",
-    target=["batch_inference",],
-    cron_schedule="0 0 11 * *"
-)
+# batch_inference_schedule = dg.ScheduleDefinition(
+#     name="batch_inference_schedule",
+#     target=["batch_inference",],
+#     cron_schedule="0 0 11 * *"
+# )
 
 
 
-defs = dg.Definitions(
-    #assets=[feature_engineering_pickup, feature_engineering_dropoff, model_training, model_validation, model_deploy, batch_inference, monitoring],
-    schedules=[monitoring_schedule, feature_engineering_schedule, batch_inference_schedule],
-    jobs=[monitoring_job]
-)
+# defs = dg.Definitions(
+#     assets=[
+#         # Individual assets (commented out in favor of component)
+#         # feature_engineering_pickup,
+#         # model_training,
+#         # model_validation
+#         # model_validation,  # Uncomment if validation is implemented
+#         # model_deploy,  # Uncomment if deployment is implemented
+#         # batch_inference,  # Uncomment if batch inference is implemented
+#         # monitoring,  # Uncomment if monitoring is implemented
+#     ] + component_defs.assets,  # Add component-generated assets
+#     schedules=[monitoring_schedule, feature_engineering_schedule, batch_inference_schedule],
+#     jobs=[monitoring_job] + component_defs.jobs  # Add component-generated jobs
+# )

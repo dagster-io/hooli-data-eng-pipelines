@@ -1,0 +1,120 @@
+type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+template_vars_module: .template_vars
+
+attributes:
+  job_name_prefix: databricks_mlops_pipeline
+  serverless: true
+  tasks:
+    - task_key: batch_inference_job
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/deployment/batch_inference/notebooks/BatchInference
+      asset_specs:
+        - key: batch_inference_job
+          description: batch_inference_job from batch_inference_job job
+          kinds:
+            - databricks
+            - notebook
+          deps:
+            - "train"
+            - "model_validation"
+            - "model_deployment"
+            - "pickup_features"
+            - "dropoff_features"
+      parameters:
+        env: '{{ env }}'
+        input_table_name: '{{ env }}.databricks_mlops.feature_store_inference_input'
+        output_table_name: '{{ catalog_name }}.databricks_mlops.predictions'
+        model_name: '{{ catalog_name }}.databricks_mlops.{{ model_name }}'
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
+    - task_key: Train
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/training/notebooks/TrainWithFeatureStore
+      asset_specs:
+        - key: train
+          description: Train from model_training_job job
+          kinds:
+            - databricks
+            - notebook
+          deps:
+            - "pickup_features"
+            - "dropoff_features"
+      parameters:
+        env: '{{ env }}'
+        training_data_path: /databricks-datasets/nyctaxi-with-zipcodes/subsampled
+        experiment_name: '{{ experiment_name }}'
+        model_name: '{{ catalog_name }}.databricks_mlops.{{ model_name }}'
+        pickup_features_table: '{{ catalog_name }}.databricks_mlops.trip_pickup_features'
+        dropoff_features_table: '{{ catalog_name }}.databricks_mlops.trip_dropoff_features'
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
+    - task_key: ModelValidation
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/validation/notebooks/ModelValidation
+      asset_specs:
+        - key: model_validation
+          description: ModelValidation from model_training_job job
+          kinds:
+            - databricks
+            - notebook
+          deps:
+            - train
+      parameters:
+        experiment_name: '{{ experiment_name }}'
+        run_mode: dry_run
+        enable_baseline_comparison: 'false'
+        validation_input: SELECT * FROM delta.`dbfs:/databricks-datasets/nyctaxi-with-zipcodes/subsampled`
+        model_type: regressor
+        targets: fare_amount
+        custom_metrics_loader_function: custom_metrics
+        validation_thresholds_loader_function: validation_thresholds
+        evaluator_config_loader_function: evaluator_config
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
+    - task_key: ModelDeployment
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/deployment/model_deployment/notebooks/ModelDeployment
+      asset_specs:
+        - key: model_deployment
+          description: ModelDeployment from model_training_job job
+          kinds:
+            - databricks
+            - notebook
+          deps:
+            - model_validation
+      parameters:
+        env: '{{ env }}'
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
+    - task_key: PickupFeatures
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/feature_engineering/notebooks/GenerateAndWriteFeatures
+      asset_specs:
+        - key: pickup_features
+          description: PickupFeatures from write_feature_table_job job
+          kinds:
+            - databricks
+            - notebook
+      parameters:
+        input_table_path: /databricks-datasets/nyctaxi-with-zipcodes/subsampled
+        input_start_date: ''
+        input_end_date: ''
+        timestamp_column: tpep_pickup_datetime
+        output_table_name: '{{ catalog_name }}.databricks_mlops.trip_pickup_features'
+        features_transform_module: pickup_features
+        primary_keys: zip
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
+    - task_key: DropoffFeatures
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/feature_engineering/notebooks/GenerateAndWriteFeatures
+      asset_specs:
+        - key: dropoff_features
+          description: DropoffFeatures from write_feature_table_job job
+          kinds:
+            - databricks
+            - notebook
+      parameters:
+        input_table_path: /databricks-datasets/nyctaxi-with-zipcodes/subsampled
+        input_start_date: ''
+        input_end_date: ''
+        timestamp_column: tpep_dropoff_datetime
+        output_table_name: '{{ catalog_name }}.databricks_mlops.trip_dropoff_features'
+        features_transform_module: dropoff_features
+        primary_keys: zip
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
