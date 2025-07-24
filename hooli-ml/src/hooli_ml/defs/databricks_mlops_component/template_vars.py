@@ -221,3 +221,20 @@ def workspace_user(context):
     
     # Final fallback - use a placeholder that should be replaced
     return "${workspace.current_user.userName}"
+
+
+@dg.template_var
+def databricks_task_value(context):
+    """
+    Template function to pass Databricks runtime expressions through without resolution.
+    
+    This allows Databricks task runtime expressions like:
+    {{tasks.monitored_metric_violation_check.values.is_metric_violated}}
+    
+    To be passed through to Databricks without being processed by Dagster's template system.
+    """
+    def _pass_through(expression: str) -> str:
+        """Return the expression as-is for Databricks runtime evaluation."""
+        return f"{{{expression}}}"
+    
+    return _pass_through
