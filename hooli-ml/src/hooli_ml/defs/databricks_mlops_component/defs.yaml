@@ -139,7 +139,7 @@ attributes:
         }}/files/monitoring/notebooks/MonitoredMetricViolationCheck
       parameters:
         env: '{{ env }}'
-        table_name_under_monitor: dev.databricks_mlops.predictions
+        table_name_under_monitor: "{{ env }}.databricks_mlops.predictions"
         metric_to_monitor: root_mean_squared_error
         metric_violation_threshold: 100
         num_evaluation_windows: 5
