@@ -93,11 +93,11 @@ jobs:
               fi
               if [ "${{ steps.changed-files.outputs.hooli-interoperability_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_interoperability"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-ai_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_ai"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-ml_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_ml"
