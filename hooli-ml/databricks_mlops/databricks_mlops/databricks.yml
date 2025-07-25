@@ -24,7 +24,8 @@ include:
   - ./resources/model-workflow-resource.yml
   - ./resources/feature-engineering-workflow-resource.yml
   # TODO: uncomment once monitoring inference table has been created
-  - ./resources/monitoring-resource.yml
+  # Temporarily commented out until predictions table exists
+  # - ./resources/monitoring-resource.yml
 
 # Deployment Target specific values for workspace
 targets:
