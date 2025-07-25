@@ -2,7 +2,7 @@
 
 ## Goals
 
-* Demonstrate how to create a re-usable Dagster component that can translate Databricks concepts into Dagster concepts, and have Dagster orchestrate those Databricks concepts.
+* Demonstrate how to create a re-usable Dagster component that can translate Databricks concepts into Dagster concepts, and have Dagster orchestrate those Databricks concepts. I used the [mlops stack databricks asset bundle](https://docs.databricks.com/aws/en/dev-tools/bundles/mlops-stacks) as a great jumping off point.
 * Demonstrate how to scaffold this re-usable component from exsiting databricks config (in this case, from a databricks asset bundle).
 * Demonstrate how Dagster can create and submit ad hoc Databricks jobs (whether to an existing cluster, a new cluster, or serverless) that are comprised of individual databricks tasks that can be selected either for ad hoc materializations or via schedule Dagster jobs.
 
