@@ -6,6 +6,6 @@ from .databricks_notebook_component import (
 
 __all__ = [
     "DatabricksMultiNotebookJobComponent",
-    "NotebookTaskConfig", 
+    "NotebookTaskConfig",
     "MultiNotebookJobConfig",
 ]

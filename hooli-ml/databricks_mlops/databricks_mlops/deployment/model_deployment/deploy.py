@@ -22,18 +22,14 @@ def deploy(model_uri, env):
     target_alias = "champion"
     if target_alias not in mv.aliases:
         client.set_registered_model_alias(
-            name=model_name,
-            alias=target_alias, 
-            version=version)
+            name=model_name, alias=target_alias, version=version
+        )
         print(f"Assigned alias '{target_alias}' to model version {model_uri}.")
-        
+
         # remove "challenger" alias if assigning "champion" alias
         if target_alias == "champion" and "challenger" in mv.aliases:
             print(f"Removing 'challenger' alias from model version {model_uri}.")
-            client.delete_registered_model_alias(
-                name=model_name,
-                alias="challenger")
-
+            client.delete_registered_model_alias(name=model_name, alias="challenger")
 
 
 if __name__ == "__main__":

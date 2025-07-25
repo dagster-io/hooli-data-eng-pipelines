@@ -1,23 +1,22 @@
 # hooli-ml/databricks_mlops/dagster_pipeline.py
 import dagster as dg
-from hooli_ml.defs.resources import get_env, MLWorkflowConfig, DatabricksResource
-from databricks.sdk.service import jobs
-
+from hooli_ml.defs.resources import get_env
 
 
 # TODO show how you could create "jobs" in databricks based on collections of notebook tasks here for a Job Cluster
 # make Notebooks into components
 # show how you could make a DatabricksJobComponent
 
-class DatabricksBatchInferenceConfig(dg.Config):
 
+class DatabricksBatchInferenceConfig(dg.Config):
     model_type: str = "RandomForest"
-    input_table_name: str = f"{get_env()}.databricks_mlops.feature_store_inference_input"
+    input_table_name: str = (
+        f"{get_env()}.databricks_mlops.feature_store_inference_input"
+    )
     output_table_name: str = f"{get_env()}.databricks_mlops.predictions"
 
 
 class DatabricksFeatureEngineeringDropOffConfig(dg.Config):
-
     model_type: str = "RandomForest"
     training_data_path: str = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
     experiment_name: str = f"/{get_env()}-databricks_mlops-experiment"
@@ -31,8 +30,8 @@ class DatabricksFeatureEngineeringDropOffConfig(dg.Config):
     features_transform_module: str = "dropoff_features"
     primary_keys: str = "zip"
 
-class DatabricksFeatureEngineeringPickUpConfig(dg.Config):
 
+class DatabricksFeatureEngineeringPickUpConfig(dg.Config):
     model_type: str = "RandomForest"
     training_data_path: str = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
     experiment_name: str = f"/{get_env()}-databricks_mlops-experiment"
@@ -45,6 +44,7 @@ class DatabricksFeatureEngineeringPickUpConfig(dg.Config):
     output_table_name: str = f"{get_env()}.databricks_mlops.trip_pickup_features"
     features_transform_module: str = "pickup_features"
     primary_keys: str = "zip"
+
 
 class DatabricksModelTrainingConfig(dg.Config):
     training_data_path: str = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
@@ -65,6 +65,7 @@ class DatabricksModelValidationConfig(dg.Config):
     validation_thresholds_loader_function: str = "validation_thresholds"
     evaluator_config_loader_function: str = "evaluator_config"
 
+
 class DatabricksModelDeploymentConfig(dg.Config):
     env: str = get_env()
 
@@ -77,7 +78,10 @@ class DatabricksMetricsMonitoringConfig(dg.Config):
     num_evaluation_windows: int = 5
     num_violation_windows: int = 2
 
-NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/dev/files/"
+
+NOTEBOOK_ROOT_PATH = (
+    "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/dev/files/"
+)
 
 # @dg.asset(name = "succeed", kinds={"databricks", "feature_engineering"})
 # def feature_engineering_pickup(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource, config: DatabricksFeatureEngineeringPickUpConfig):
@@ -178,18 +182,18 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 # @dg.multi_asset(
 #     specs=[
 #         dg.AssetSpec(
-#             key="feature_engineering_pickup_task", 
+#             key="feature_engineering_pickup_task",
 #             kinds={"databricks", "feature_engineering"}
 #         ),
 #         dg.AssetSpec(
-#             key="feature_engineering_dropoff_task", 
+#             key="feature_engineering_dropoff_task",
 #             kinds={"databricks", "feature_engineering"}
 #         )
 #     ]
 # )
 # def feature_engineering_job_multi_asset(context: dg.AssetExecutionContext, databricks_resource: DatabricksResource):
 #     """Multi-asset that runs both pickup and dropoff feature engineering as a single Databricks job."""
-    
+
 #     # Create proper Databricks SDK task objects
 #     pickup_task = jobs.SubmitTask(
 #         task_key="pickup_features",
@@ -211,7 +215,7 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #         #     num_workers=1
 #         # )
 #     )
-    
+
 #     dropoff_task = jobs.SubmitTask(
 #         task_key="dropoff_features",
 #         notebook_task=jobs.NotebookTask(
@@ -232,25 +236,25 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #         #     num_workers=1
 #         # )
 #     )
-    
+
 #     client = databricks_resource.workspace_client()
 #     # Submit the job using the workspace client directly
 #     job_run = client.jobs.submit(
 #         run_name=f"feature_engineering_job_{context.run_id}",
 #         tasks=[pickup_task, dropoff_task]
 #     )
-    
+
 #     context.log.info(f"Submitted Databricks job with run ID: {job_run.run_id}")
-    
+
 #     # Wait for job completion and stream logs
 #     client.jobs.wait_get_run_job_terminated_or_skipped(job_run.run_id)
-    
+
 #     # Get final job status
 #     final_run = client.jobs.get_run(job_run.run_id)
-    
+
 #     if final_run.state.result_state.value == "SUCCESS":
 #         context.log.info("Both pickup and dropoff feature engineering tasks completed successfully")
-        
+
 #         # Report materialization for both assets
 #         yield dg.MaterializeResult(
 #             asset_key="feature_engineering_pickup_task",
@@ -260,9 +264,9 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #                 "status": "completed"
 #             }
 #         )
-        
+
 #         yield dg.MaterializeResult(
-#             asset_key="feature_engineering_dropoff_task", 
+#             asset_key="feature_engineering_dropoff_task",
 #             metadata={
 #                 "job_run_id": job_run.run_id,
 #                 "task_key": "dropoff_features",
@@ -308,7 +312,7 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 # #             }
 # #         },
 # #         {
-# #             "task_key": "dropoff_features", 
+# #             "task_key": "dropoff_features",
 # #             "notebook_path": NOTEBOOK_ROOT_PATH + "feature_engineering/notebooks/GenerateAndWriteFeatures",
 # #             "asset_specs": [
 # #                 {
@@ -320,7 +324,7 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 # #             "parameters": {
 # #                 "model_type": "RandomForest",
 # #                 "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-# #                 "timestamp_column": "tpep_dropoff_datetime", 
+# #                 "timestamp_column": "tpep_dropoff_datetime",
 # #                 "output_table_name": f"{get_env()}.databricks_mlops.trip_dropoff_features",
 # #                 "features_transform_module": "dropoff_features",
 # #                 "primary_keys": "zip"
@@ -359,7 +363,6 @@ NOTEBOOK_ROOT_PATH = "/Users/christian@dagsterlabs.com/.bundle/databricks_mlops/
 #     target=["batch_inference",],
 #     cron_schedule="0 0 11 * *"
 # )
-
 
 
 # defs = dg.Definitions(

@@ -11,15 +11,16 @@ import dagster as dg
 def get_env() -> str:
     """Get current environment based on Dagster deployment context."""
     import os
+
     if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "gtm20":
         # PROD
-        return 'prod'
+        return "prod"
     elif os.getenv("DAGSTER_IS_DEV_CLI"):
         # LOCAL
-        return 'dev'
+        return "dev"
     else:
         # BRANCH
-        return 'staging'
+        return "staging"
 
 
 def get_catalog_name() -> str:
@@ -76,57 +77,41 @@ def _get_git_info():
             if (git_dir / ".git").exists():
                 break
             git_dir = git_dir.parent
-        
+
         if (git_dir / ".git").exists():
             # Get git origin URL
             try:
                 origin_url = subprocess.check_output(
                     ["git", "config", "--get", "remote.origin.url"],
                     cwd=git_dir,
-                    text=True
+                    text=True,
                 ).strip()
             except subprocess.CalledProcessError:
                 origin_url = "unknown"
-            
+
             # Get current branch
             try:
                 branch = subprocess.check_output(
-                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                    cwd=git_dir,
-                    text=True
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=git_dir, text=True
                 ).strip()
             except subprocess.CalledProcessError:
                 branch = "unknown"
-            
+
             # Get current commit
             try:
                 commit = subprocess.check_output(
-                    ["git", "rev-parse", "HEAD"],
-                    cwd=git_dir,
-                    text=True
+                    ["git", "rev-parse", "HEAD"], cwd=git_dir, text=True
                 ).strip()
             except subprocess.CalledProcessError:
                 commit = "unknown"
-            
-            return {
-                "origin_url": origin_url,
-                "branch": branch,
-                "commit": commit
-            }
+
+            return {"origin_url": origin_url, "branch": branch, "commit": commit}
         else:
             # No git repo found, return defaults
-            return {
-                "origin_url": "unknown",
-                "branch": "main",
-                "commit": "unknown"
-            }
+            return {"origin_url": "unknown", "branch": "main", "commit": "unknown"}
     except Exception:
         # Fallback if git commands fail
-        return {
-            "origin_url": "unknown",
-            "branch": "main", 
-            "commit": "unknown"
-        }
+        return {"origin_url": "unknown", "branch": "main", "commit": "unknown"}
 
 
 @dg.template_var
@@ -136,7 +121,7 @@ def bundle_git(context):
 
 
 # Individual git template variables for easier access in YAML
-@dg.template_var  
+@dg.template_var
 def bundle_git_origin_url(context):
     """Git origin URL."""
     return _get_git_info()["origin_url"]
@@ -161,45 +146,47 @@ def workspace_user(context):
     import subprocess
     import json
     from pathlib import Path
-    
+
     # Option 1: Try to get from environment variable
     if os.getenv("DATABRICKS_WORKSPACE_USER"):
         return os.getenv("DATABRICKS_WORKSPACE_USER")
-    
+
     # Option 2: Try to get from Databricks CLI configuration
     try:
         # Try to get from ~/.databrickscfg
         config_path = Path.home() / ".databrickscfg"
         if config_path.exists():
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config_content = f.read()
                 # Look for username pattern in config
                 import re
-                username_match = re.search(r'username\\s*=\\s*(.+)', config_content)
+
+                username_match = re.search(r"username\\s*=\\s*(.+)", config_content)
                 if username_match:
                     return username_match.group(1).strip()
     except Exception:
         pass
-    
+
     # Option 3: Try to get from Databricks CLI profile
     try:
         result = subprocess.check_output(
             ["databricks", "auth", "describe", "--profile", "DEFAULT"],
             text=True,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
         auth_info = json.loads(result)
-        if 'username' in auth_info:
-            return auth_info['username']
+        if "username" in auth_info:
+            return auth_info["username"]
     except Exception:
         pass
-    
+
     # Option 4: Try to infer from system user (as email)
     try:
         import getpass
+
         system_user = getpass.getuser()
         # If it looks like an email, use it; otherwise append a domain
-        if '@' in system_user:
+        if "@" in system_user:
             return system_user
         else:
             # Try to get from git config as fallback
@@ -207,18 +194,18 @@ def workspace_user(context):
                 git_email = subprocess.check_output(
                     ["git", "config", "--get", "user.email"],
                     text=True,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
                 ).strip()
-                if git_email and '@' in git_email:
+                if git_email and "@" in git_email:
                     return git_email
             except Exception:
                 pass
-            
+
             # Last resort: use system user with a generic domain
             return system_user + "@company.com"
     except Exception:
         pass
-    
+
     # Final fallback - use a placeholder that should be replaced
     return "${workspace.current_user.userName}"
 
@@ -227,17 +214,20 @@ def workspace_user(context):
 def databricks_task_value(context):
     """
     Template function to pass Databricks runtime expressions through without resolution.
-    
+
     This allows Databricks task runtime expressions like:
     tasks.monitored_metric_violation_check.values.is_metric_violated
-    
+
     To be passed through to Databricks without being processed by Dagster's template system.
     """
+
     def _pass_through(expression: str) -> str:
         """Return the expression as-is for Databricks runtime evaluation."""
         # Use string concatenation to avoid Dagster template resolution
         left_brace = "{"
         right_brace = "}"
-        return "{}{}{}{}{}".format(left_brace, left_brace, expression, right_brace, right_brace)
-    
+        return "{}{}{}{}{}".format(
+            left_brace, left_brace, expression, right_brace, right_brace
+        )
+
     return _pass_through

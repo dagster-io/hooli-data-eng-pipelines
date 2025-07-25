@@ -19,9 +19,10 @@ from pydantic import BaseModel, Field
 
 class DatabricksScaffoldParams(BaseModel):
     """Parameters for scaffolding DatabricksMultiNotebookJobComponent from Databricks bundle."""
+
     databricks_config: Optional[str] = Field(
         default=None,
-        description="Path to the databricks.yml file. If not provided, will auto-discover in current directory and parents."
+        description="Path to the databricks.yml file. If not provided, will auto-discover in current directory and parents.",
     )
 
 
@@ -30,18 +31,21 @@ def snake_case(name: str) -> str:
     # Remove file extension if present
     name = Path(name).stem
     # Replace special characters and spaces with underscores
-    name = re.sub(r'[^a-zA-Z0-9]+', '_', name)
+    name = re.sub(r"[^a-zA-Z0-9]+", "_", name)
     # Convert CamelCase to snake_case
-    name = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', name)
-    return name.lower().strip('_')
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
+    return name.lower().strip("_")
 
 
 @dataclass
 class DatabricksTask:
     """Represents a Databricks task with its configuration."""
+
     task_key: str
     task_type: str  # 'notebook', 'job', 'python_wheel', 'spark_jar', 'condition'
-    task_config: Dict[str, Any]  # The actual task configuration (notebook_path, job_id, etc.)
+    task_config: Dict[
+        str, Any
+    ]  # The actual task configuration (notebook_path, job_id, etc.)
     base_parameters: Dict[str, Any]
     depends_on: List[str]
     job_name: str
@@ -49,33 +53,33 @@ class DatabricksTask:
 
 class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
     """Scaffolds DatabricksMultiNotebookJobComponent from Databricks bundle configuration."""
-    
+
     @classmethod
     def get_scaffold_params(cls) -> type[DatabricksScaffoldParams]:
         """Return the parameter model for this scaffolder."""
         return DatabricksScaffoldParams
-    
+
     def scaffold(self, request: ScaffoldRequest[DatabricksScaffoldParams]) -> None:
         """Generate the component YAML from Databricks bundle configuration."""
-        
+
         # Check if a specific databricks config path was provided via the parameters
         databricks_config_path = self._get_databricks_config_path(request)
-        
+
         if not databricks_config_path:
             # Create a basic template if no Databricks config found
             self._create_basic_template(request)
             return
-        
+
         # Parse Databricks configuration
         databricks_config = self._load_yaml(databricks_config_path)
         bundle_dir = databricks_config_path.parent
-        
+
         # Extract variables and includes
-        variables = databricks_config.get('variables', {})
-        includes = databricks_config.get('include', [])
-        targets = databricks_config.get('targets', {})
-        bundle_info = databricks_config.get('bundle', {})
-        
+        variables = databricks_config.get("variables", {})
+        includes = databricks_config.get("include", [])
+        targets = databricks_config.get("targets", {})
+        bundle_info = databricks_config.get("bundle", {})
+
         # Parse all included resource files
         all_tasks = []
         for include_path in includes:
@@ -83,32 +87,38 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
             if resource_path.exists():
                 tasks = self._extract_tasks_from_resource(resource_path, variables)
                 all_tasks.extend(tasks)
-        
+
         if not all_tasks:
             self._create_basic_template(request)
             return
-            
+
         # Build dependency graph
         task_dependencies = self._build_dependency_graph(all_tasks)
-        
+
         # Generate component YAML
-        component_config = self._generate_component_config(all_tasks, task_dependencies, variables, targets, bundle_info)
-        
+        component_config = self._generate_component_config(
+            all_tasks, task_dependencies, variables, targets, bundle_info
+        )
+
         # Scaffold the component
         dg.scaffold_component(request, component_config)
-        
+
         # Add template_vars_module to the generated YAML
         self._add_template_vars_module_to_yaml(request.target_path)
-        
+
         # Create template_vars.py file for resolving Databricks variables
         self._create_template_vars(request.target_path, variables, targets)
-        
+
         # Create additional documentation
-        self._create_documentation(request.target_path, databricks_config_path, all_tasks)
-    
-    def _get_databricks_config_path(self, request: ScaffoldRequest[DatabricksScaffoldParams]) -> Optional[Path]:
+        self._create_documentation(
+            request.target_path, databricks_config_path, all_tasks
+        )
+
+    def _get_databricks_config_path(
+        self, request: ScaffoldRequest[DatabricksScaffoldParams]
+    ) -> Optional[Path]:
         """Get the databricks config path from request parameters or auto-discovery."""
-        
+
         # Check if databricks_config was provided as a parameter
         if request.params and request.params.databricks_config:
             config_path = Path(request.params.databricks_config)
@@ -117,139 +127,139 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                 return config_path
             else:
                 print(f"Warning: Specified databricks config not found: {config_path}")
-        
+
         # Fall back to auto-discovery
         print("No --databricks_config specified, attempting auto-discovery...")
         return self._find_databricks_config(request.target_path)
-    
+
     def _find_databricks_config(self, start_path: Path) -> Optional[Path]:
         """Find databricks.yml or databricks.yaml file."""
         current_path = Path(start_path)
-        
+
         # Search up the directory tree
         for _ in range(10):  # Limit search depth
-            for filename in ['databricks.yml', 'databricks.yaml']:
+            for filename in ["databricks.yml", "databricks.yaml"]:
                 config_path = current_path / filename
                 if config_path.exists():
                     return config_path
-            
+
             parent = current_path.parent
             if parent == current_path:  # Reached root
                 break
             current_path = parent
-        
+
         return None
-    
+
     def _load_yaml(self, path: Path) -> Dict[str, Any]:
         """Load YAML file with error handling."""
         try:
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 return yaml.safe_load(f) or {}
         except Exception as e:
             print(f"Warning: Could not load {path}: {e}")
             return {}
-    
-    def _extract_tasks_from_resource(self, resource_path: Path, variables: Dict[str, Any]) -> List[DatabricksTask]:
+
+    def _extract_tasks_from_resource(
+        self, resource_path: Path, variables: Dict[str, Any]
+    ) -> List[DatabricksTask]:
         """Extract Databricks tasks from a resource YAML file."""
         resource_config = self._load_yaml(resource_path)
         tasks = []
-        
+
         # Navigate to jobs section
-        resources = resource_config.get('resources', {})
-        jobs = resources.get('jobs', {})
-        
+        resources = resource_config.get("resources", {})
+        jobs = resources.get("jobs", {})
+
         for job_name, job_config in jobs.items():
-            job_tasks = job_config.get('tasks', [])
-            
+            job_tasks = job_config.get("tasks", [])
+
             for task_config in job_tasks:
-                task_key = task_config.get('task_key', '')
+                task_key = task_config.get("task_key", "")
                 if not task_key:
                     continue
-                
+
                 # Extract dependencies
-                depends_on = task_config.get('depends_on', [])
+                depends_on = task_config.get("depends_on", [])
                 dependency_keys = []
                 if depends_on:
                     for dep in depends_on:
-                        if isinstance(dep, dict) and 'task_key' in dep:
-                            dependency_keys.append(dep['task_key'])
+                        if isinstance(dep, dict) and "task_key" in dep:
+                            dependency_keys.append(dep["task_key"])
                         elif isinstance(dep, str):
                             dependency_keys.append(dep)
-                
+
                 # Determine task type and extract configuration
                 task_type = None
                 task_specific_config = {}
                 base_parameters = {}
-                
-                if 'notebook_task' in task_config:
-                    task_type = 'notebook'
-                    notebook_task = task_config['notebook_task']
+
+                if "notebook_task" in task_config:
+                    task_type = "notebook"
+                    notebook_task = task_config["notebook_task"]
                     task_specific_config = {
-                        'notebook_path': notebook_task.get('notebook_path', '')
+                        "notebook_path": notebook_task.get("notebook_path", "")
                     }
-                    base_parameters = notebook_task.get('base_parameters', {})
-                
-                elif 'run_job_task' in task_config:
-                    task_type = 'job'
-                    run_job_task = task_config['run_job_task']
+                    base_parameters = notebook_task.get("base_parameters", {})
+
+                elif "run_job_task" in task_config:
+                    task_type = "job"
+                    run_job_task = task_config["run_job_task"]
                     task_specific_config = {
-                        'job_id': run_job_task.get('job_id'),
-                        'job_parameters': run_job_task.get('job_parameters', {})
+                        "job_id": run_job_task.get("job_id"),
+                        "job_parameters": run_job_task.get("job_parameters", {}),
                     }
                     # For job tasks, parameters are in job_parameters
-                    base_parameters = run_job_task.get('job_parameters', {})
-                
-                elif 'python_wheel_task' in task_config:
-                    task_type = 'python_wheel'
-                    python_wheel_task = task_config['python_wheel_task']
-                    task_specific_config = {
-                        'python_wheel_task': python_wheel_task
-                    }
+                    base_parameters = run_job_task.get("job_parameters", {})
+
+                elif "python_wheel_task" in task_config:
+                    task_type = "python_wheel"
+                    python_wheel_task = task_config["python_wheel_task"]
+                    task_specific_config = {"python_wheel_task": python_wheel_task}
                     # Python wheel tasks use parameters differently
-                    base_parameters = python_wheel_task.get('parameters', [])
-                
-                elif 'spark_jar_task' in task_config:
-                    task_type = 'spark_jar'
-                    spark_jar_task = task_config['spark_jar_task']
-                    task_specific_config = {
-                        'spark_jar_task': spark_jar_task
-                    }
+                    base_parameters = python_wheel_task.get("parameters", [])
+
+                elif "spark_jar_task" in task_config:
+                    task_type = "spark_jar"
+                    spark_jar_task = task_config["spark_jar_task"]
+                    task_specific_config = {"spark_jar_task": spark_jar_task}
                     # Spark JAR tasks use parameters differently
-                    base_parameters = spark_jar_task.get('parameters', [])
-                
-                elif 'condition_task' in task_config:
-                    task_type = 'condition'
-                    condition_task = task_config['condition_task']
-                    task_specific_config = {
-                        'condition_task': condition_task
-                    }
+                    base_parameters = spark_jar_task.get("parameters", [])
+
+                elif "condition_task" in task_config:
+                    task_type = "condition"
+                    condition_task = task_config["condition_task"]
+                    task_specific_config = {"condition_task": condition_task}
                     # Condition tasks don't have traditional parameters
                     base_parameters = {}
-                
+
                 else:
                     # Skip unknown task types
                     print(f"Warning: Unknown task type for task {task_key}, skipping")
                     continue
-                
-                tasks.append(DatabricksTask(
-                    task_key=task_key,
-                    task_type=task_type,
-                    task_config=task_specific_config,
-                    base_parameters=base_parameters,
-                    depends_on=dependency_keys,
-                    job_name=job_name
-                ))
-        
+
+                tasks.append(
+                    DatabricksTask(
+                        task_key=task_key,
+                        task_type=task_type,
+                        task_config=task_specific_config,
+                        base_parameters=base_parameters,
+                        depends_on=dependency_keys,
+                        job_name=job_name,
+                    )
+                )
+
         return tasks
-    
-    def _build_dependency_graph(self, tasks: List[DatabricksTask]) -> Dict[str, List[str]]:
+
+    def _build_dependency_graph(
+        self, tasks: List[DatabricksTask]
+    ) -> Dict[str, List[str]]:
         """Build dependency graph mapping task keys to their dependencies."""
         # Create mapping from task_key to asset_key (snake_case)
         task_to_asset = {}
         for task in tasks:
             asset_key = snake_case(task.task_key)
             task_to_asset[task.task_key] = asset_key
-        
+
         # Build dependency graph using asset keys
         dependencies = {}
         for task in tasks:
@@ -259,42 +269,45 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                 if dep_task_key in task_to_asset:
                     deps.append(task_to_asset[dep_task_key])
             dependencies[asset_key] = deps
-        
+
         return dependencies
-    
-    def _generate_component_config(self, tasks: List[DatabricksTask], 
-                                 dependencies: Dict[str, List[str]], 
-                                 variables: Dict[str, Any],
-                                 targets: Dict[str, Any],
-                                 bundle_info: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _generate_component_config(
+        self,
+        tasks: List[DatabricksTask],
+        dependencies: Dict[str, List[str]],
+        variables: Dict[str, Any],
+        targets: Dict[str, Any],
+        bundle_info: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Generate the component configuration dictionary."""
-        
+
         # Group tasks by job name
         jobs_tasks = {}
         for task in tasks:
             if task.job_name not in jobs_tasks:
                 jobs_tasks[task.job_name] = []
             jobs_tasks[task.job_name].append(task)
-        
+
         # Determine default target (usually 'dev')
         default_target = None
         for target_name, target_config in targets.items():
-            if target_config.get('default', False):
+            if target_config.get("default", False):
                 default_target = target_name
                 break
         if not default_target and targets:
             default_target = list(targets.keys())[0]
-        
+
         # Build component tasks
         component_tasks = []
-        
+
         # Create a mapping from task_key to task_type for dependency lookup
         task_key_to_type = {task.task_key: task.task_type for task in tasks}
-        
+
         for job_name, job_tasks in jobs_tasks.items():
             for task in job_tasks:
                 asset_key = snake_case(task.task_key)
-                
+
                 # Create asset spec with appropriate kinds based on task type
                 task_kinds = ["databricks"]
                 if task.task_type == "notebook":
@@ -307,200 +320,292 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                     task_kinds.extend(["spark", "jar"])
                 elif task.task_type == "condition":
                     task_kinds.append("condition")
-                
+
                 asset_spec = {
                     "key": asset_key,
                     "description": f"{task.task_key} from {job_name} job ({task.task_type} task)",
-                    "kinds": task_kinds
+                    "kinds": task_kinds,
                 }
-                
+
                 # Add dependencies if they exist
                 if asset_key in dependencies and dependencies[asset_key]:
                     asset_spec["deps"] = dependencies[asset_key]
-                
+
                 # Create task configuration based on task type
                 task_config = {
                     "task_key": task.task_key,  # Keep original task_key, asset key will be snake_case
-                    "asset_specs": [asset_spec]
+                    "asset_specs": [asset_spec],
                 }
-                
+
                 # Add Databricks-specific depends_on field if this task depends on condition tasks
                 databricks_depends_on = []
                 for dep_task_key in task.depends_on:
-                    if dep_task_key in task_key_to_type and task_key_to_type[dep_task_key] == "condition":
+                    if (
+                        dep_task_key in task_key_to_type
+                        and task_key_to_type[dep_task_key] == "condition"
+                    ):
                         # Add depends_on entry for condition task dependency
-                        databricks_depends_on.append({
-                            "task_key": dep_task_key,
-                            "outcome": "true"  # Use string format as expected by Databricks
-                        })
-                
+                        databricks_depends_on.append(
+                            {
+                                "task_key": dep_task_key,
+                                "outcome": "true",  # Use string format as expected by Databricks
+                            }
+                        )
+
                 if databricks_depends_on:
                     task_config["depends_on"] = databricks_depends_on
-                
+
                 # Add task-specific configuration
                 if task.task_type == "notebook":
-                    task_config["notebook_path"] = self._process_notebook_path(task.task_config["notebook_path"])
-                    task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
-                
+                    task_config["notebook_path"] = self._process_notebook_path(
+                        task.task_config["notebook_path"]
+                    )
+                    task_config["parameters"] = self._process_parameters(
+                        task.base_parameters, variables, default_target
+                    )
+
                 elif task.task_type == "job":
-                    task_config["job_id"] = self._process_job_id(task.task_config["job_id"])
+                    task_config["job_id"] = self._process_job_id(
+                        task.task_config["job_id"]
+                    )
                     if task.task_config.get("job_parameters"):
-                        task_config["job_parameters"] = self._process_parameters(task.task_config["job_parameters"], variables, default_target)
+                        task_config["job_parameters"] = self._process_parameters(
+                            task.task_config["job_parameters"],
+                            variables,
+                            default_target,
+                        )
                     if task.base_parameters:
-                        task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
-                
+                        task_config["parameters"] = self._process_parameters(
+                            task.base_parameters, variables, default_target
+                        )
+
                 elif task.task_type == "python_wheel":
-                    task_config["python_wheel_task"] = task.task_config["python_wheel_task"]
+                    task_config["python_wheel_task"] = task.task_config[
+                        "python_wheel_task"
+                    ]
                     # Python wheel parameters are handled differently (list format)
                     if isinstance(task.base_parameters, list):
                         task_config["parameters"] = task.base_parameters
                     elif isinstance(task.base_parameters, dict):
-                        task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
-                
+                        task_config["parameters"] = self._process_parameters(
+                            task.base_parameters, variables, default_target
+                        )
+
                 elif task.task_type == "spark_jar":
                     task_config["spark_jar_task"] = task.task_config["spark_jar_task"]
                     # Spark JAR parameters are handled differently (list format)
                     if isinstance(task.base_parameters, list):
                         task_config["parameters"] = task.base_parameters
                     elif isinstance(task.base_parameters, dict):
-                        task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
-                
+                        task_config["parameters"] = self._process_parameters(
+                            task.base_parameters, variables, default_target
+                        )
+
                 elif task.task_type == "condition":
                     condition_config = task.task_config["condition_task"]
                     task_config["condition_task"] = {
                         "op": condition_config.get("op", "EQUAL_TO"),
                         "left": condition_config.get("left", ""),
-                        "right": condition_config.get("right", "")
+                        "right": condition_config.get("right", ""),
                     }
                     # Process template variables in condition expressions
                     if isinstance(task_config["condition_task"]["left"], str):
-                        task_config["condition_task"]["left"] = self._process_condition_expression(
-                            task_config["condition_task"]["left"], variables, default_target
+                        task_config["condition_task"]["left"] = (
+                            self._process_condition_expression(
+                                task_config["condition_task"]["left"],
+                                variables,
+                                default_target,
+                            )
                         )
                     if isinstance(task_config["condition_task"]["right"], str):
-                        task_config["condition_task"]["right"] = self._process_condition_expression(
-                            task_config["condition_task"]["right"], variables, default_target
+                        task_config["condition_task"]["right"] = (
+                            self._process_condition_expression(
+                                task_config["condition_task"]["right"],
+                                variables,
+                                default_target,
+                            )
                         )
-                
+
                 component_tasks.append(task_config)
-        
+
         # Generate job name prefix from bundle name or use default
-        bundle_name = bundle_info.get('name', 'databricks_mlops')
+        bundle_name = bundle_info.get("name", "databricks_mlops")
         job_name_prefix = f"{bundle_name}_pipeline"
-        
+
         return {
             "job_name_prefix": job_name_prefix,
             "serverless": True,
-            "tasks": component_tasks
+            "tasks": component_tasks,
         }
-    
-    def _process_parameters(self, parameters: Dict[str, Any], 
-                          variables: Dict[str, Any], 
-                          default_target: Optional[str]) -> Dict[str, Any]:
+
+    def _process_parameters(
+        self,
+        parameters: Dict[str, Any],
+        variables: Dict[str, Any],
+        default_target: Optional[str],
+    ) -> Dict[str, Any]:
         """Process parameters, converting Databricks variables to Dagster template syntax."""
         processed = {}
-        
+
         for key, value in parameters.items():
             if isinstance(value, str):
                 # Convert Databricks variable syntax to Dagster template syntax
                 processed_value = value
-                
+
                 # Handle specific Databricks bundle variables
-                processed_value = re.sub(r'\$\{var\.([^}]+)\}', r'{{ \1 }}', processed_value)
-                processed_value = re.sub(r'\$\{bundle\.target\}', r'{{ env }}', processed_value)
-                processed_value = re.sub(r'\$\{bundle\.name\}', r'{{ bundle_name }}', processed_value)
-                
+                processed_value = re.sub(
+                    r"\$\{var\.([^}]+)\}", r"{{ \1 }}", processed_value
+                )
+                processed_value = re.sub(
+                    r"\$\{bundle\.target\}", r"{{ env }}", processed_value
+                )
+                processed_value = re.sub(
+                    r"\$\{bundle\.name\}", r"{{ bundle_name }}", processed_value
+                )
+
                 # Handle bundle.git variables - convert dots to underscores for template var names
-                processed_value = re.sub(r'\$\{bundle\.git\.origin_url\}', r'{{ bundle_git_origin_url }}', processed_value)
-                processed_value = re.sub(r'\$\{bundle\.git\.branch\}', r'{{ bundle_git_branch }}', processed_value)
-                processed_value = re.sub(r'\$\{bundle\.git\.commit\}', r'{{ bundle_git_commit }}', processed_value)
-                
+                processed_value = re.sub(
+                    r"\$\{bundle\.git\.origin_url\}",
+                    r"{{ bundle_git_origin_url }}",
+                    processed_value,
+                )
+                processed_value = re.sub(
+                    r"\$\{bundle\.git\.branch\}",
+                    r"{{ bundle_git_branch }}",
+                    processed_value,
+                )
+                processed_value = re.sub(
+                    r"\$\{bundle\.git\.commit\}",
+                    r"{{ bundle_git_commit }}",
+                    processed_value,
+                )
+
                 # General fallback for any other bundle variables
-                processed_value = re.sub(r'\$\{bundle\.([^}]+)\}', r'{{ bundle_\1 }}', processed_value)
-                
+                processed_value = re.sub(
+                    r"\$\{bundle\.([^}]+)\}", r"{{ bundle_\1 }}", processed_value
+                )
+
                 processed[key] = processed_value
             else:
                 processed[key] = value
-        
+
         return processed
-    
-    def _process_condition_expression(self, expression: str, 
-                                    variables: Dict[str, Any], 
-                                    default_target: Optional[str]) -> str:
+
+    def _process_condition_expression(
+        self, expression: str, variables: Dict[str, Any], default_target: Optional[str]
+    ) -> str:
         """Process condition expressions, converting Databricks variables to Dagster template syntax."""
         if not isinstance(expression, str):
             return expression
-        
+
         processed_expression = expression
-        
+
         # IMPORTANT: Wrap Databricks runtime expressions like {{tasks.*.values.*}} in databricks_task_value
         # These should be evaluated by Databricks at runtime, not by Dagster template system
-        databricks_runtime_match = re.search(r'\{\{(tasks\.[^}]+)\}\}', processed_expression)
+        databricks_runtime_match = re.search(
+            r"\{\{(tasks\.[^}]+)\}\}", processed_expression
+        )
         if databricks_runtime_match:
             # Extract the inner expression (without the outer braces)
             inner_expression = databricks_runtime_match.group(1)
             # Wrap it in the databricks_task_value template function
             return f'{{{{ databricks_task_value("{inner_expression}") }}}}'
-        
+
         # Handle specific Databricks bundle variables (only if not a runtime expression)
-        processed_expression = re.sub(r'\$\{var\.([^}]+)\}', r'{{ \1 }}', processed_expression)
-        processed_expression = re.sub(r'\$\{bundle\.target\}', r'{{ env }}', processed_expression)
-        processed_expression = re.sub(r'\$\{bundle\.name\}', r'{{ bundle_name }}', processed_expression)
-        
+        processed_expression = re.sub(
+            r"\$\{var\.([^}]+)\}", r"{{ \1 }}", processed_expression
+        )
+        processed_expression = re.sub(
+            r"\$\{bundle\.target\}", r"{{ env }}", processed_expression
+        )
+        processed_expression = re.sub(
+            r"\$\{bundle\.name\}", r"{{ bundle_name }}", processed_expression
+        )
+
         # Handle bundle.git variables - convert dots to underscores for template var names
-        processed_expression = re.sub(r'\$\{bundle\.git\.origin_url\}', r'{{ bundle_git_origin_url }}', processed_expression)
-        processed_expression = re.sub(r'\$\{bundle\.git\.branch\}', r'{{ bundle_git_branch }}', processed_expression)
-        processed_expression = re.sub(r'\$\{bundle\.git\.commit\}', r'{{ bundle_git_commit }}', processed_expression)
-        
+        processed_expression = re.sub(
+            r"\$\{bundle\.git\.origin_url\}",
+            r"{{ bundle_git_origin_url }}",
+            processed_expression,
+        )
+        processed_expression = re.sub(
+            r"\$\{bundle\.git\.branch\}",
+            r"{{ bundle_git_branch }}",
+            processed_expression,
+        )
+        processed_expression = re.sub(
+            r"\$\{bundle\.git\.commit\}",
+            r"{{ bundle_git_commit }}",
+            processed_expression,
+        )
+
         # General fallback for any other bundle variables
-        processed_expression = re.sub(r'\$\{bundle\.([^}]+)\}', r'{{ bundle_\1 }}', processed_expression)
-        
+        processed_expression = re.sub(
+            r"\$\{bundle\.([^}]+)\}", r"{{ bundle_\1 }}", processed_expression
+        )
+
         return processed_expression
-    
+
     def _process_notebook_path(self, notebook_path: str) -> str:
         """Process notebook path to convert Databricks variables to Dagster template variables."""
         processed_path = notebook_path
-        
+
         # Remove .py extension if present (Databricks notebooks don't use file extensions)
-        if processed_path.endswith('.py'):
+        if processed_path.endswith(".py"):
             processed_path = processed_path[:-3]
-        
+
         # Convert Databricks bundle variables to Dagster template variables
-        processed_path = re.sub(r'\$\{workspace\.current_user\.userName\}', '{{ workspace_user }}', processed_path)
-        processed_path = re.sub(r'\$\{bundle\.name\}', '{{ bundle_name }}', processed_path)
-        processed_path = re.sub(r'\$\{bundle\.target\}', '{{ env }}', processed_path)
-        
+        processed_path = re.sub(
+            r"\$\{workspace\.current_user\.userName\}",
+            "{{ workspace_user }}",
+            processed_path,
+        )
+        processed_path = re.sub(
+            r"\$\{bundle\.name\}", "{{ bundle_name }}", processed_path
+        )
+        processed_path = re.sub(r"\$\{bundle\.target\}", "{{ env }}", processed_path)
+
         # Handle relative paths
         if notebook_path.startswith("../"):
             # Convert relative path to bundle absolute path with template variables
             relative_path = notebook_path[3:]  # Remove ../
-            if relative_path.endswith('.py'):
+            if relative_path.endswith(".py"):
                 relative_path = relative_path[:-3]
-            return "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/" + relative_path
+            return (
+                "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/"
+                + relative_path
+            )
         elif not notebook_path.startswith("/"):
             # If it's a relative path without ../, assume it's from files directory
-            clean_path = notebook_path[:-3] if notebook_path.endswith('.py') else notebook_path
-            return "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/" + clean_path
+            clean_path = (
+                notebook_path[:-3] if notebook_path.endswith(".py") else notebook_path
+            )
+            return (
+                "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/"
+                + clean_path
+            )
         else:
             # Already an absolute path, process any variables
             return processed_path
-    
+
     def _process_job_id(self, job_id: str) -> str:
         """Process job_id to replace Databricks bundle resource references with placeholders."""
         if not job_id:
             return job_id
-            
+
         # Replace any Databricks bundle resource references with placeholder
         # Pattern to match ${resources.jobs.job_name.id} or similar resource references
-        resource_pattern = r'\$\{resources\.jobs\.[^}]+\}'
-        
+        resource_pattern = r"\$\{resources\.jobs\.[^}]+\}"
+
         if re.search(resource_pattern, job_id):
             return "put job id here."
-        
+
         # If it's not a resource reference, return as-is
         return job_id
-    
-    def _create_basic_template(self, request: ScaffoldRequest[DatabricksScaffoldParams]) -> None:
+
+    def _create_basic_template(
+        self, request: ScaffoldRequest[DatabricksScaffoldParams]
+    ) -> None:
         """Create a basic template when no Databricks config is found."""
         basic_config = {
             "job_name_prefix": "databricks_pipeline",
@@ -513,31 +618,34 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                         {
                             "key": "example_asset",
                             "description": "Example Databricks notebook asset",
-                            "kinds": ["databricks", "notebook"]
+                            "kinds": ["databricks", "notebook"],
                         }
                     ],
-                    "parameters": {
-                        "param1": "value1",
-                        "env": "{{ env }}"
-                    }
+                    "parameters": {"param1": "value1", "env": "{{ env }}"},
                 }
-            ]
+            ],
         }
-        
+
         dg.scaffold_component(request, basic_config)
-    
-    def _create_documentation(self, target_path: Path, databricks_config_path: Path, 
-                            tasks: List[DatabricksTask]) -> None:
+
+    def _create_documentation(
+        self,
+        target_path: Path,
+        databricks_config_path: Path,
+        tasks: List[DatabricksTask],
+    ) -> None:
         """Create documentation about the scaffolded component."""
-        
+
         # Handle relative path safely - if it's not in a subpath, just use the absolute path
         try:
-            relative_config_path = databricks_config_path.relative_to(target_path.parent)
+            relative_config_path = databricks_config_path.relative_to(
+                target_path.parent
+            )
             config_path_display = f"`{relative_config_path}`"
         except ValueError:
             # If not in subpath, use absolute path
             config_path_display = f"`{databricks_config_path}` (absolute path)"
-        
+
         readme_content = f"""# DatabricksMultiNotebookJobComponent
 
 This component was automatically generated from Databricks bundle configuration.
@@ -549,9 +657,9 @@ This component was automatically generated from Databricks bundle configuration.
 ## Generated Tasks
 
 """
-        
+
         for task in tasks:
-            task_type_display = task.task_type.upper().replace('_', ' ')
+            task_type_display = task.task_type.upper().replace("_", " ")
             if task.task_type == "notebook":
                 task_path = task.task_config.get("notebook_path", "")
             elif task.task_type == "job":
@@ -567,16 +675,16 @@ This component was automatically generated from Databricks bundle configuration.
                 task_path = f"Condition: {condition_config.get('left', '')} {condition_config.get('op', 'EQUAL_TO')} {condition_config.get('right', '')}"
             else:
                 task_path = "Unknown task type"
-                
+
             readme_content += f"""### {task.task_key}
 - **Job**: {task.job_name}
 - **Type**: {task_type_display}
 - **Config**: `{task_path}`
 - **Asset Key**: `{snake_case(task.task_key)}`
-- **Dependencies**: {', '.join(task.depends_on) if task.depends_on else 'None'}
+- **Dependencies**: {", ".join(task.depends_on) if task.depends_on else "None"}
 
 """
-        
+
         readme_content += """
 ## Usage
 
@@ -608,28 +716,30 @@ dg scaffold defs hooli_ml.components.DatabricksMultiNotebookJobComponent my_comp
   - If not provided, the scaffolder will search for databricks.yml in the current directory and parent directories
   - Useful when your databricks.yml is in a non-standard location
 """
-        
+
         readme_path = target_path / "README.md"
         readme_path.write_text(readme_content)
-    
-    def _create_template_vars(self, target_path: Path, variables: Dict[str, Any], targets: Dict[str, Any]) -> None:
+
+    def _create_template_vars(
+        self, target_path: Path, variables: Dict[str, Any], targets: Dict[str, Any]
+    ) -> None:
         """Create template_vars.py file for resolving Databricks variables."""
-        
+
         # Extract variable names and default values from Databricks config
         var_defaults = {}
         for var_name, var_config in variables.items():
             if isinstance(var_config, dict):
-                var_defaults[var_name] = var_config.get('default', 'unknown')
+                var_defaults[var_name] = var_config.get("default", "unknown")
             else:
                 var_defaults[var_name] = var_config
-        
+
         # Determine catalog names for different environments from targets
         env_catalogs = {}
         for target_name, target_config in targets.items():
-            target_vars = target_config.get('variables', {})
-            if 'catalog_name' in target_vars:
-                env_catalogs[target_name] = target_vars['catalog_name']
-        
+            target_vars = target_config.get("variables", {})
+            if "catalog_name" in target_vars:
+                env_catalogs[target_name] = target_vars["catalog_name"]
+
         template_vars_content = '''"""
 Template variables for Databricks MLOps component.
 Auto-generated by DatabricksBundleScaffolder.
@@ -657,13 +767,13 @@ def get_env() -> str:
 def get_catalog_name() -> str:
     """Get catalog name based on environment."""
     env_val = get_env()'''
-        
+
         # Add environment-specific catalog mappings
         for env_name, catalog in env_catalogs.items():
             template_vars_content += f'''
     if env_val == "{env_name}":
         return "{catalog}"'''
-        
+
         template_vars_content += '''
     # Default fallback
     return env_val
@@ -874,37 +984,37 @@ def databricks_task_value(context):
     
     return _pass_through
 '''
-        
+
         template_vars_path = target_path / "template_vars.py"
         template_vars_path.write_text(template_vars_content)
-    
+
     def _add_template_vars_module_to_yaml(self, target_path: Path) -> None:
         """Add template_vars_module to the generated YAML configuration."""
         yaml_path = target_path / "defs.yaml"
-        
+
         if not yaml_path.exists():
             print(f"Warning: YAML file not found for modification: {yaml_path}")
             return
-        
+
         # Read the YAML file as text to preserve formatting
         try:
-            with open(yaml_path, 'r') as f:
+            with open(yaml_path, "r") as f:
                 yaml_lines = f.readlines()
         except Exception as e:
             print(f"Warning: Could not read YAML file {yaml_path}: {e}")
             return
-        
+
         # Find the first line after 'type:' and insert template_vars_module
         for i, line in enumerate(yaml_lines):
-            if line.strip().startswith('type:'):
+            if line.strip().startswith("type:"):
                 # Insert template_vars_module after the type line
-                yaml_lines.insert(i + 1, 'template_vars_module: .template_vars\n')
-                yaml_lines.insert(i + 2, '\n')  # Add blank line for readability
+                yaml_lines.insert(i + 1, "template_vars_module: .template_vars\n")
+                yaml_lines.insert(i + 2, "\n")  # Add blank line for readability
                 break
-        
+
         # Write back the modified YAML
         try:
-            with open(yaml_path, 'w') as f:
+            with open(yaml_path, "w") as f:
                 f.writelines(yaml_lines)
             print(f"Updated YAML configuration with template_vars_module: {yaml_path}")
         except Exception as e:

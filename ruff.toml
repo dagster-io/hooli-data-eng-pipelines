@@ -1,0 +1,42 @@
+# Ruff configuration for the entire workspace
+[lint]
+# Exclude Databricks notebook files which contain magic commands and notebook-specific syntax
+exclude = [
+    # Databricks notebooks in hooli-ml
+    "hooli-ml/databricks_mlops/databricks_mlops/**/notebooks/*.py",
+    "hooli-ml/databricks_mlops/databricks_mlops/**/*Notebook*.py",
+    "hooli-ml/databricks_mlops/databricks_mlops/**/*notebook*.py",
+    
+    # Any other Databricks notebook patterns
+    "**/databricks_*/**/*.py",
+    "**/*Notebook.py",
+    "**/*notebook.py",
+    
+    # Additional common excludes
+    ".git",
+    ".venv",
+    ".pytest_cache",
+    ".ruff_cache",
+    "**/__pycache__",
+    "**/build",
+    "**/dist",
+    "**/target",
+]
+
+# Common rules to ignore for data/ML projects
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "F401",  # Unused import (common in notebooks)
+    "F841",  # Unused variable (common in data exploration)
+]
+
+[format]
+# Same exclusions for formatting
+exclude = [
+    "hooli-ml/databricks_mlops/databricks_mlops/**/notebooks/*.py",
+    "hooli-ml/databricks_mlops/databricks_mlops/**/*Notebook*.py",
+    "hooli-ml/databricks_mlops/databricks_mlops/**/*notebook*.py",
+    "**/databricks_*/**/*.py",
+    "**/*Notebook.py",
+    "**/*notebook.py",
+]
