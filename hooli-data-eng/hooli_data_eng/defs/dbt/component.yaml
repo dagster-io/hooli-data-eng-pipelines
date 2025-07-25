@@ -21,7 +21,6 @@ attributes:
   cron_schedule: "0 8 * * *"
   asset_selection: tag:"all_cleaned_models"
 
-
 ---
 
 type: hooli_data_eng.components.ScheduledPartitionedJobComponent

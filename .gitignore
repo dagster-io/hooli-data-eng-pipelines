@@ -179,3 +179,4 @@ dbt_project/logs
 .DS_Store
 /dagster-data
 hooli-etl-pipeline/transform/jdbt/.user.yml
+/hooli-ml/my_mlops_project
