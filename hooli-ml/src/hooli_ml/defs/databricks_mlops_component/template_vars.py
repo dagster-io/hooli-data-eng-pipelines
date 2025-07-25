@@ -64,7 +64,7 @@ def model_name(context):
 @dg.template_var
 def experiment_name(context):
     """Experiment name for the current environment."""
-    return "/Users/${workspace.current_user.userName}/${bundle.target}-databricks_mlops-experiment"
+    return "/Users/user/dev-databricks_mlops-experiment"
 
 
 def _get_git_info():
@@ -175,7 +175,7 @@ def workspace_user(context):
                 config_content = f.read()
                 # Look for username pattern in config
                 import re
-                username_match = re.search(r'username\s*=\s*(.+)', config_content)
+                username_match = re.search(r'username\\s*=\\s*(.+)', config_content)
                 if username_match:
                     return username_match.group(1).strip()
     except Exception:
@@ -215,7 +215,7 @@ def workspace_user(context):
                 pass
             
             # Last resort: use system user with a generic domain
-            return f"{system_user}@company.com"
+            return system_user + "@company.com"
     except Exception:
         pass
     
@@ -229,12 +229,15 @@ def databricks_task_value(context):
     Template function to pass Databricks runtime expressions through without resolution.
     
     This allows Databricks task runtime expressions like:
-    {{tasks.monitored_metric_violation_check.values.is_metric_violated}}
+    tasks.monitored_metric_violation_check.values.is_metric_violated
     
     To be passed through to Databricks without being processed by Dagster's template system.
     """
     def _pass_through(expression: str) -> str:
         """Return the expression as-is for Databricks runtime evaluation."""
-        return f"{{{expression}}}"
+        # Use string concatenation to avoid Dagster template resolution
+        left_brace = "{"
+        right_brace = "}"
+        return "{}{}{}{}{}".format(left_brace, left_brace, expression, right_brace, right_brace)
     
     return _pass_through

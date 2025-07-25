@@ -22,10 +22,17 @@ try:
     @scaffold_with(DatabricksBundleScaffolder)
     class DatabricksMultiNotebookJobComponent(dg.Component, dg.Model, dg.Resolvable):
         """
-        A Databricks component that runs multiple notebooks as tasks in a single Databricks job.
+        A Databricks component that runs multiple tasks in a single Databricks job.
         
-        This component creates a multi-asset that submits all notebook tasks as a single job,
+        This component creates a multi-asset that submits all tasks as a single job,
         allowing for better resource utilization and coordination between related tasks.
+        
+        Supported Task Types:
+        - Notebook tasks (notebook_path)
+        - Run existing job tasks (job_id)  
+        - Python wheel tasks (python_wheel_task)
+        - Spark JAR tasks (spark_jar_task)
+        - Condition tasks (condition_task)
         
         Features:
         - Multiple asset specs per task
@@ -34,27 +41,10 @@ try:
         - Asset subsetting support
         - Scaffolding from Databricks bundle configurations
         - Automatic task generation from databricks.yml
-        - Flexible cluster configuration options
-        
-        Cluster Configuration Options:
-        1. Serverless (serverless=True): No cluster configuration needed
-        2. Existing Cluster (existing_cluster_id): Use a pre-existing Databricks cluster
-        3. New Cluster: Specify spark_version, node_type_id, and num_workers
-        
-        Task Dependencies:
-        - Asset dependencies (deps) are automatically mapped to Databricks task dependencies
-        - Tasks will execute in the correct order based on their asset dependencies
-        - Only selected tasks and their dependencies are included in the job
         """
         
         job_name_prefix: str = "dagster_multi_notebook_job"
         serverless: bool = False
-        
-        # Cluster configuration options (when serverless=False)
-        # Option 1: Use existing cluster
-        existing_cluster_id: Optional[str] = None
-        
-        # Option 2: Create new cluster (required if existing_cluster_id not provided and serverless=False)
         spark_version: Optional[str] = "13.3.x-scala2.12"
         node_type_id: Optional[str] = "i3.xlarge"
         num_workers: Optional[int] = 1
@@ -72,16 +62,13 @@ try:
         @field_validator('spark_version', 'node_type_id', 'num_workers')
         @classmethod
         def validate_cluster_fields(cls, v, info):
-            """Validate that cluster fields are provided when not using serverless and not using existing cluster."""
+            """Validate that cluster fields are provided when not using serverless."""
             if info.data.get('serverless', False):
-                return v  # Serverless mode, cluster fields not needed
-            elif info.data.get('existing_cluster_id'):
-                return v  # Using existing cluster, new cluster fields not needed
+                return v
             else:
-                # Not serverless and no existing cluster, new cluster fields required
                 if v is None:
                     field_name = info.field_name
-                    raise ValueError(f"{field_name} is required when serverless=False and existing_cluster_id is not provided")
+                    raise ValueError(f"{field_name} is required when serverless=False")
                 return v
         
         def _load_tasks_from_databricks_config(self) -> List[Dict[str, Any]]:
@@ -265,6 +252,34 @@ try:
                     
                     # Collect task dependencies from asset specs
                     task_dependencies = set()
+                    condition_dependencies = []  # For condition tasks with outcomes
+                    condition_task_keys = set()  # Track which tasks are condition dependencies
+                    
+                    # First pass: collect explicit condition dependencies to avoid duplicates
+                    if "depends_on" in task:
+                        for dep_config in task["depends_on"]:
+                            dep_task_key = dep_config["task_key"]
+                            outcome = dep_config.get("outcome")
+                            
+                            # Only add dependency if the dependent task is also selected
+                            if any(t["task_key"] == dep_task_key for t in selected_tasks):
+                                if outcome:
+                                    # This is a condition dependency with an outcome
+                                    # Keep outcome as string - Databricks expects string format
+                                    outcome_value = str(outcome) if outcome is not None else outcome
+                                    
+                                    condition_dependencies.append({
+                                        "task_key": dep_task_key,
+                                        "outcome": outcome_value
+                                    })
+                                    condition_task_keys.add(dep_task_key)
+                                    context.log.info(f"Task {task_key} depends on condition task {dep_task_key} with outcome '{outcome_value}'")
+                                else:
+                                    # Regular dependency
+                                    task_dependencies.add(dep_task_key)
+                                    context.log.info(f"Task {task_key} depends on task {dep_task_key} (explicit)")
+                    
+                    # Second pass: collect asset dependencies, but skip those already handled as condition dependencies
                     for asset_spec_config in asset_specs_config:
                         asset_deps = asset_spec_config.get("deps", [])
                         for dep in asset_deps:
@@ -279,50 +294,122 @@ try:
                             # Map asset dependency to task dependency
                             if dep_key_str in asset_to_task_map:
                                 dependent_task_key = asset_to_task_map[dep_key_str]
-                                # Only add dependency if the dependent task is also selected
-                                if any(t["task_key"] == dependent_task_key for t in selected_tasks):
+                                # Only add dependency if the dependent task is also selected AND not already a condition dependency
+                                if (any(t["task_key"] == dependent_task_key for t in selected_tasks) and 
+                                    dependent_task_key not in condition_task_keys):
                                     task_dependencies.add(dependent_task_key)
                                     context.log.info(f"Task {task_key} depends on task {dependent_task_key} (via asset {dep_key_str})")
                     
-                    # Configure cluster - serverless, existing cluster, or new cluster
                     if self.serverless:
                         cluster_spec = {}
-                        existing_cluster_spec = None
-                    elif self.existing_cluster_id:
-                        cluster_spec = None
-                        existing_cluster_spec = self.existing_cluster_id
-                        context.log.info(f"Task {task_key} will use existing cluster: {self.existing_cluster_id}")
                     else:
                         cluster_spec = jobs.ClusterSpec(
                             spark_version=self.spark_version,
                             node_type_id=self.node_type_id,
                             num_workers=self.num_workers
                         )
-                        existing_cluster_spec = None
-                        context.log.info(f"Task {task_key} will create new cluster with {self.num_workers} workers")
                     
                     # Create SubmitTask with dependencies if any exist
                     submit_task_params = {
-                        "task_key": task_key,
-                        "notebook_task": jobs.NotebookTask(
+                        "task_key": task_key
+                    }
+                    
+                    # Determine task type and create appropriate task configuration
+                    if "notebook_path" in task:
+                        # Notebook task
+                        submit_task_params["notebook_task"] = jobs.NotebookTask(
                             notebook_path=task["notebook_path"],
                             base_parameters=final_parameters
                         )
-                    }
+                    elif "job_id" in task:
+                        # Run existing job task
+                        job_parameters = task.get("job_parameters", {})
+                        # Merge final_parameters into job_parameters
+                        merged_job_params = {**job_parameters, **final_parameters}
+                        submit_task_params["run_job_task"] = jobs.RunJobTask(
+                            job_id=task["job_id"],
+                            job_parameters=merged_job_params if merged_job_params else None
+                        )
+                        context.log.info(f"Task {task_key} will run existing job ID: {task['job_id']}")
+                    elif "python_wheel_task" in task:
+                        # Python wheel task
+                        wheel_config = task["python_wheel_task"]
+                        submit_task_params["python_wheel_task"] = jobs.PythonWheelTask(
+                            package_name=wheel_config["package_name"],
+                            entry_point=wheel_config["entry_point"],
+                            parameters=list(final_parameters.values()) if final_parameters else None
+                        )
+                    elif "spark_jar_task" in task:
+                        # Spark JAR task
+                        jar_config = task["spark_jar_task"]
+                        submit_task_params["spark_jar_task"] = jobs.SparkJarTask(
+                            main_class_name=jar_config["main_class_name"],
+                            parameters=list(final_parameters.values()) if final_parameters else None
+                        )
+                    elif "condition_task" in task:
+                        # Condition task
+                        condition_config = task["condition_task"]
+                        submit_task_params["condition_task"] = jobs.ConditionTask(
+                            left=condition_config.get("left", ""),
+                            op=getattr(jobs.ConditionTaskOp, condition_config.get("op", "EQUAL_TO")),
+                            right=condition_config.get("right", "")
+                        )
+                        context.log.info(f"Task {task_key} is a condition task: {condition_config.get('left')} {condition_config.get('op')} {condition_config.get('right')}")
+                    else:
+                        raise ValueError(f"Task {task_key} must specify one of: notebook_path, job_id, python_wheel_task, spark_jar_task, or condition_task")
                     
                     # Add cluster configuration
-                    if cluster_spec is not None:
+                    if self.serverless:
+                        pass  # No cluster spec needed for serverless
+                    else:
                         submit_task_params["new_cluster"] = cluster_spec
-                    elif existing_cluster_spec is not None:
-                        submit_task_params["existing_cluster_id"] = existing_cluster_spec
                     
                     # Add depends_on if there are dependencies
+                    all_dependencies = []
+                    
+                    # Add regular task dependencies
                     if task_dependencies:
-                        submit_task_params["depends_on"] = [
+                        all_dependencies.extend([
                             jobs.TaskDependency(task_key=dep_task_key) 
                             for dep_task_key in sorted(task_dependencies)
-                        ]
-                        context.log.info(f"Task {task_key} has dependencies: {sorted(task_dependencies)}")
+                        ])
+                        context.log.info(f"Task {task_key} has regular dependencies: {sorted(task_dependencies)}")
+                    
+                    # Add condition dependencies (mix of TaskDependency objects and raw dicts)
+                    if condition_dependencies:
+                        for dep in condition_dependencies:
+                            if isinstance(dep, dict):
+                                # Raw dict format - convert to TaskDependency
+                                all_dependencies.append(jobs.TaskDependency(
+                                    task_key=dep["task_key"],
+                                    outcome=dep["outcome"]
+                                ))
+                            else:
+                                # Already a TaskDependency object
+                                all_dependencies.append(dep)
+                        
+                        # Log condition dependencies
+                        dep_info = []
+                        for dep in condition_dependencies:
+                            if isinstance(dep, dict):
+                                dep_info.append((dep["task_key"], dep["outcome"]))
+                            else:
+                                dep_info.append((dep.task_key, dep.outcome))
+                        context.log.info(f"Task {task_key} has condition dependencies: {dep_info}")
+                    
+                    if all_dependencies:
+                        submit_task_params["depends_on"] = all_dependencies
+                        
+                        # Debug logging for dependencies
+                        context.log.info(f"Task {task_key} final dependencies:")
+                        for i, dep in enumerate(all_dependencies):
+                            if hasattr(dep, 'task_key'):
+                                dep_info = f"  {i}: task_key={dep.task_key}"
+                                if hasattr(dep, 'outcome') and dep.outcome is not None:
+                                    dep_info += f", outcome={dep.outcome} (type: {type(dep.outcome)})"
+                                context.log.info(dep_info)
+                            else:
+                                context.log.info(f"  {i}: {dep}")
                     
                     databricks_task = jobs.SubmitTask(**submit_task_params)
                     databricks_tasks.append(databricks_task)
@@ -334,7 +421,18 @@ try:
                     tasks=databricks_tasks
                 )
                 
+                # Build Databricks job run URL
+                workspace_url = databricks_resource.databricks_host.rstrip('/')
+                
+                # Extract the run_id from the job_run object
+                run_id = job_run.run_id
+                run_details = client.jobs.get_run(run_id=run_id)
+
+
+                job_run_url = f"{workspace_url}/jobs/{run_details.job_id}/runs/{job_run.run_id}"
+                
                 context.log.info(f"Submitted Databricks job with run ID: {job_run.run_id}")
+                context.log.info(f"Databricks job run URL: {job_run_url}")
                 
                 # Wait for job completion
                 client.jobs.wait_get_run_job_terminated_or_skipped(job_run.run_id)
@@ -343,6 +441,7 @@ try:
                 final_run = client.jobs.get_run(job_run.run_id)
                 
                 context.log.info(f"Job completed with overall state: {final_run.state.result_state}")
+                context.log.info(f"View job details: {job_run_url}")
                 
                 # Check individual task statuses and yield results for successful tasks
                 successful_tasks = []
@@ -353,7 +452,11 @@ try:
                     task_key = task_run.task_key
                     task_state = task_run.state.result_state.value if task_run.state.result_state else "UNKNOWN"
                     
+                    # Build task-specific URL (task tab within the job run)
+                    task_url = f"{job_run_url}#task/{task_key}"
+                    
                     context.log.info(f"Task {task_key} completed with state: {task_state}")
+                    context.log.info(f"Task {task_key} details: {task_url}")
                     
                     if task_state == "SUCCESS":
                         successful_tasks.append(task_key)
@@ -373,28 +476,44 @@ try:
                                 config_overrides = asset_config.parameters if asset_config else {}
                                 final_parameters = {**base_parameters, **config_overrides}
                                 
+                                # Get task-specific metadata
+                                task_metadata = {
+                                    "job_run_id": job_run.run_id,
+                                    "databricks_job_url": dg.MetadataValue.url(job_run_url),
+                                    "databricks_task_url": dg.MetadataValue.url(task_url),
+                                    "task_key": task_key,
+                                    "task_state": task_state,
+                                    "serverless": self.serverless,
+                                    "executed_in_subset": True,
+                                    "total_tasks_in_job": len(selected_tasks),
+                                    "successful_tasks": len(successful_tasks),
+                                    "failed_tasks": len(failed_tasks),
+                                    "status": "completed",
+                                    "base_parameters": base_parameters,
+                                    "config_overrides": config_overrides,
+                                    "final_parameters": final_parameters,
+                                    "has_config_overrides": bool(config_overrides),
+                                    "asset_spec_defaults_applied": {
+                                        "skippable": asset_spec_config.get("skippable", True),
+                                        "kinds": asset_spec_config.get("kinds", ["databricks"])
+                                    }
+                                }
+                                
+                                # Add task-type specific metadata
+                                if "notebook_path" in task_config:
+                                    task_metadata["notebook_path"] = task_config["notebook_path"]
+                                elif "job_id" in task_config:
+                                    task_metadata["job_id"] = task_config["job_id"]
+                                elif "python_wheel_task" in task_config:
+                                    task_metadata["python_wheel_task"] = task_config["python_wheel_task"]
+                                elif "spark_jar_task" in task_config:
+                                    task_metadata["spark_jar_task"] = task_config["spark_jar_task"]
+                                elif "condition_task" in task_config:
+                                    task_metadata["condition_task"] = task_config["condition_task"]
+                                
                                 yield dg.MaterializeResult(
                                     asset_key=asset_key,
-                                    metadata={
-                                        "job_run_id": job_run.run_id,
-                                        "task_key": task_key,
-                                        "task_state": task_state,
-                                        "notebook_path": task_config["notebook_path"],
-                                        "serverless": self.serverless,
-                                        "executed_in_subset": True,
-                                        "total_tasks_in_job": len(selected_tasks),
-                                        "successful_tasks": len(successful_tasks),
-                                        "failed_tasks": len(failed_tasks),
-                                        "status": "completed",
-                                        "base_parameters": base_parameters,
-                                        "config_overrides": config_overrides,
-                                        "final_parameters": final_parameters,
-                                        "has_config_overrides": bool(config_overrides),
-                                        "asset_spec_defaults_applied": {
-                                            "skippable": asset_spec_config.get("skippable", True),
-                                            "kinds": asset_spec_config.get("kinds", ["databricks"])
-                                        }
-                                    }
+                                    metadata=task_metadata
                                 )
                     else:
                         failed_tasks.append(task_key)
@@ -428,30 +547,13 @@ except ImportError:
         
         Features:
         - Multiple asset specs per task
-        - Asset dependencies mapped to task dependencies
+        - Asset dependencies 
         - Config overrides per asset
         - Asset subsetting support
-        - Flexible cluster configuration options
-        
-        Cluster Configuration Options:
-        1. Serverless (serverless=True): No cluster configuration needed
-        2. Existing Cluster (existing_cluster_id): Use a pre-existing Databricks cluster
-        3. New Cluster: Specify spark_version, node_type_id, and num_workers
-        
-        Task Dependencies:
-        - Asset dependencies (deps) are automatically mapped to Databricks task dependencies
-        - Tasks will execute in the correct order based on their asset dependencies
-        - Only selected tasks and their dependencies are included in the job
         """
         
         job_name_prefix: str = "dagster_multi_notebook_job"
         serverless: bool = False
-        
-        # Cluster configuration options (when serverless=False)
-        # Option 1: Use existing cluster
-        existing_cluster_id: Optional[str] = None
-        
-        # Option 2: Create new cluster (required if existing_cluster_id not provided and serverless=False)
         spark_version: Optional[str] = "13.3.x-scala2.12"
         node_type_id: Optional[str] = "i3.xlarge"
         num_workers: Optional[int] = 1
@@ -460,16 +562,13 @@ except ImportError:
         @field_validator('spark_version', 'node_type_id', 'num_workers')
         @classmethod
         def validate_cluster_fields(cls, v, info):
-            """Validate that cluster fields are provided when not using serverless and not using existing cluster."""
+            """Validate that cluster fields are provided when not using serverless."""
             if info.data.get('serverless', False):
-                return v  # Serverless mode, cluster fields not needed
-            elif info.data.get('existing_cluster_id'):
-                return v  # Using existing cluster, new cluster fields not needed
+                return v
             else:
-                # Not serverless and no existing cluster, new cluster fields required
                 if v is None:
                     field_name = info.field_name
-                    raise ValueError(f"{field_name} is required when serverless=False and existing_cluster_id is not provided")
+                    raise ValueError(f"{field_name} is required when serverless=False")
                 return v
         
         def build_defs(self, context: dg.ComponentLoadContext) -> dg.Definitions:

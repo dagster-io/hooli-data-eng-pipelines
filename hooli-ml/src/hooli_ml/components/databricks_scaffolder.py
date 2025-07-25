@@ -40,7 +40,8 @@ def snake_case(name: str) -> str:
 class DatabricksTask:
     """Represents a Databricks task with its configuration."""
     task_key: str
-    notebook_path: str
+    task_type: str  # 'notebook', 'job', 'python_wheel', 'spark_jar', 'condition'
+    task_config: Dict[str, Any]  # The actual task configuration (notebook_path, job_id, etc.)
     base_parameters: Dict[str, Any]
     depends_on: List[str]
     job_name: str
@@ -165,11 +166,6 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                 if not task_key:
                     continue
                 
-                # Extract notebook task info
-                notebook_task = task_config.get('notebook_task', {})
-                notebook_path = notebook_task.get('notebook_path', '')
-                base_parameters = notebook_task.get('base_parameters', {})
-                
                 # Extract dependencies
                 depends_on = task_config.get('depends_on', [])
                 dependency_keys = []
@@ -180,9 +176,65 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                         elif isinstance(dep, str):
                             dependency_keys.append(dep)
                 
+                # Determine task type and extract configuration
+                task_type = None
+                task_specific_config = {}
+                base_parameters = {}
+                
+                if 'notebook_task' in task_config:
+                    task_type = 'notebook'
+                    notebook_task = task_config['notebook_task']
+                    task_specific_config = {
+                        'notebook_path': notebook_task.get('notebook_path', '')
+                    }
+                    base_parameters = notebook_task.get('base_parameters', {})
+                
+                elif 'run_job_task' in task_config:
+                    task_type = 'job'
+                    run_job_task = task_config['run_job_task']
+                    task_specific_config = {
+                        'job_id': run_job_task.get('job_id'),
+                        'job_parameters': run_job_task.get('job_parameters', {})
+                    }
+                    # For job tasks, parameters are in job_parameters
+                    base_parameters = run_job_task.get('job_parameters', {})
+                
+                elif 'python_wheel_task' in task_config:
+                    task_type = 'python_wheel'
+                    python_wheel_task = task_config['python_wheel_task']
+                    task_specific_config = {
+                        'python_wheel_task': python_wheel_task
+                    }
+                    # Python wheel tasks use parameters differently
+                    base_parameters = python_wheel_task.get('parameters', [])
+                
+                elif 'spark_jar_task' in task_config:
+                    task_type = 'spark_jar'
+                    spark_jar_task = task_config['spark_jar_task']
+                    task_specific_config = {
+                        'spark_jar_task': spark_jar_task
+                    }
+                    # Spark JAR tasks use parameters differently
+                    base_parameters = spark_jar_task.get('parameters', [])
+                
+                elif 'condition_task' in task_config:
+                    task_type = 'condition'
+                    condition_task = task_config['condition_task']
+                    task_specific_config = {
+                        'condition_task': condition_task
+                    }
+                    # Condition tasks don't have traditional parameters
+                    base_parameters = {}
+                
+                else:
+                    # Skip unknown task types
+                    print(f"Warning: Unknown task type for task {task_key}, skipping")
+                    continue
+                
                 tasks.append(DatabricksTask(
                     task_key=task_key,
-                    notebook_path=notebook_path,
+                    task_type=task_type,
+                    task_config=task_specific_config,
                     base_parameters=base_parameters,
                     depends_on=dependency_keys,
                     job_name=job_name
@@ -236,28 +288,99 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
         # Build component tasks
         component_tasks = []
         
+        # Create a mapping from task_key to task_type for dependency lookup
+        task_key_to_type = {task.task_key: task.task_type for task in tasks}
+        
         for job_name, job_tasks in jobs_tasks.items():
             for task in job_tasks:
                 asset_key = snake_case(task.task_key)
                 
-                # Create asset spec
+                # Create asset spec with appropriate kinds based on task type
+                task_kinds = ["databricks"]
+                if task.task_type == "notebook":
+                    task_kinds.append("notebook")
+                elif task.task_type == "job":
+                    task_kinds.append("job")
+                elif task.task_type == "python_wheel":
+                    task_kinds.extend(["python", "wheel"])
+                elif task.task_type == "spark_jar":
+                    task_kinds.extend(["spark", "jar"])
+                elif task.task_type == "condition":
+                    task_kinds.append("condition")
+                
                 asset_spec = {
                     "key": asset_key,
-                    "description": f"{task.task_key} from {job_name} job",
-                    "kinds": ["databricks", "notebook"]
+                    "description": f"{task.task_key} from {job_name} job ({task.task_type} task)",
+                    "kinds": task_kinds
                 }
                 
                 # Add dependencies if they exist
                 if asset_key in dependencies and dependencies[asset_key]:
                     asset_spec["deps"] = dependencies[asset_key]
                 
-                # Create task configuration
+                # Create task configuration based on task type
                 task_config = {
                     "task_key": task.task_key,  # Keep original task_key, asset key will be snake_case
-                    "notebook_path": self._process_notebook_path(task.notebook_path),
-                    "asset_specs": [asset_spec],
-                    "parameters": self._process_parameters(task.base_parameters, variables, default_target)
+                    "asset_specs": [asset_spec]
                 }
+                
+                # Add Databricks-specific depends_on field if this task depends on condition tasks
+                databricks_depends_on = []
+                for dep_task_key in task.depends_on:
+                    if dep_task_key in task_key_to_type and task_key_to_type[dep_task_key] == "condition":
+                        # Add depends_on entry for condition task dependency
+                        databricks_depends_on.append({
+                            "task_key": dep_task_key,
+                            "outcome": "true"  # Use string format as expected by Databricks
+                        })
+                
+                if databricks_depends_on:
+                    task_config["depends_on"] = databricks_depends_on
+                
+                # Add task-specific configuration
+                if task.task_type == "notebook":
+                    task_config["notebook_path"] = self._process_notebook_path(task.task_config["notebook_path"])
+                    task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
+                
+                elif task.task_type == "job":
+                    task_config["job_id"] = self._process_job_id(task.task_config["job_id"])
+                    if task.task_config.get("job_parameters"):
+                        task_config["job_parameters"] = self._process_parameters(task.task_config["job_parameters"], variables, default_target)
+                    if task.base_parameters:
+                        task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
+                
+                elif task.task_type == "python_wheel":
+                    task_config["python_wheel_task"] = task.task_config["python_wheel_task"]
+                    # Python wheel parameters are handled differently (list format)
+                    if isinstance(task.base_parameters, list):
+                        task_config["parameters"] = task.base_parameters
+                    elif isinstance(task.base_parameters, dict):
+                        task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
+                
+                elif task.task_type == "spark_jar":
+                    task_config["spark_jar_task"] = task.task_config["spark_jar_task"]
+                    # Spark JAR parameters are handled differently (list format)
+                    if isinstance(task.base_parameters, list):
+                        task_config["parameters"] = task.base_parameters
+                    elif isinstance(task.base_parameters, dict):
+                        task_config["parameters"] = self._process_parameters(task.base_parameters, variables, default_target)
+                
+                elif task.task_type == "condition":
+                    condition_config = task.task_config["condition_task"]
+                    task_config["condition_task"] = {
+                        "op": condition_config.get("op", "EQUAL_TO"),
+                        "left": condition_config.get("left", ""),
+                        "right": condition_config.get("right", "")
+                    }
+                    # Process template variables in condition expressions
+                    if isinstance(task_config["condition_task"]["left"], str):
+                        task_config["condition_task"]["left"] = self._process_condition_expression(
+                            task_config["condition_task"]["left"], variables, default_target
+                        )
+                    if isinstance(task_config["condition_task"]["right"], str):
+                        task_config["condition_task"]["right"] = self._process_condition_expression(
+                            task_config["condition_task"]["right"], variables, default_target
+                        )
                 
                 component_tasks.append(task_config)
         
@@ -301,6 +424,39 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
         
         return processed
     
+    def _process_condition_expression(self, expression: str, 
+                                    variables: Dict[str, Any], 
+                                    default_target: Optional[str]) -> str:
+        """Process condition expressions, converting Databricks variables to Dagster template syntax."""
+        if not isinstance(expression, str):
+            return expression
+        
+        processed_expression = expression
+        
+        # IMPORTANT: Wrap Databricks runtime expressions like {{tasks.*.values.*}} in databricks_task_value
+        # These should be evaluated by Databricks at runtime, not by Dagster template system
+        databricks_runtime_match = re.search(r'\{\{(tasks\.[^}]+)\}\}', processed_expression)
+        if databricks_runtime_match:
+            # Extract the inner expression (without the outer braces)
+            inner_expression = databricks_runtime_match.group(1)
+            # Wrap it in the databricks_task_value template function
+            return f'{{{{ databricks_task_value("{inner_expression}") }}}}'
+        
+        # Handle specific Databricks bundle variables (only if not a runtime expression)
+        processed_expression = re.sub(r'\$\{var\.([^}]+)\}', r'{{ \1 }}', processed_expression)
+        processed_expression = re.sub(r'\$\{bundle\.target\}', r'{{ env }}', processed_expression)
+        processed_expression = re.sub(r'\$\{bundle\.name\}', r'{{ bundle_name }}', processed_expression)
+        
+        # Handle bundle.git variables - convert dots to underscores for template var names
+        processed_expression = re.sub(r'\$\{bundle\.git\.origin_url\}', r'{{ bundle_git_origin_url }}', processed_expression)
+        processed_expression = re.sub(r'\$\{bundle\.git\.branch\}', r'{{ bundle_git_branch }}', processed_expression)
+        processed_expression = re.sub(r'\$\{bundle\.git\.commit\}', r'{{ bundle_git_commit }}', processed_expression)
+        
+        # General fallback for any other bundle variables
+        processed_expression = re.sub(r'\$\{bundle\.([^}]+)\}', r'{{ bundle_\1 }}', processed_expression)
+        
+        return processed_expression
+    
     def _process_notebook_path(self, notebook_path: str) -> str:
         """Process notebook path to convert Databricks variables to Dagster template variables."""
         processed_path = notebook_path
@@ -328,6 +484,21 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
         else:
             # Already an absolute path, process any variables
             return processed_path
+    
+    def _process_job_id(self, job_id: str) -> str:
+        """Process job_id to replace Databricks bundle resource references with placeholders."""
+        if not job_id:
+            return job_id
+            
+        # Replace any Databricks bundle resource references with placeholder
+        # Pattern to match ${resources.jobs.job_name.id} or similar resource references
+        resource_pattern = r'\$\{resources\.jobs\.[^}]+\}'
+        
+        if re.search(resource_pattern, job_id):
+            return "put job id here."
+        
+        # If it's not a resource reference, return as-is
+        return job_id
     
     def _create_basic_template(self, request: ScaffoldRequest[DatabricksScaffoldParams]) -> None:
         """Create a basic template when no Databricks config is found."""
@@ -380,9 +551,27 @@ This component was automatically generated from Databricks bundle configuration.
 """
         
         for task in tasks:
+            task_type_display = task.task_type.upper().replace('_', ' ')
+            if task.task_type == "notebook":
+                task_path = task.task_config.get("notebook_path", "")
+            elif task.task_type == "job":
+                task_path = f"Job ID: {task.task_config.get('job_id', 'N/A')}"
+            elif task.task_type == "python_wheel":
+                wheel_config = task.task_config.get("python_wheel_task", {})
+                task_path = f"Package: {wheel_config.get('package_name', 'N/A')}, Entry: {wheel_config.get('entry_point', 'N/A')}"
+            elif task.task_type == "spark_jar":
+                jar_config = task.task_config.get("spark_jar_task", {})
+                task_path = f"Main Class: {jar_config.get('main_class_name', 'N/A')}"
+            elif task.task_type == "condition":
+                condition_config = task.task_config.get("condition_task", {})
+                task_path = f"Condition: {condition_config.get('left', '')} {condition_config.get('op', 'EQUAL_TO')} {condition_config.get('right', '')}"
+            else:
+                task_path = "Unknown task type"
+                
             readme_content += f"""### {task.task_key}
 - **Job**: {task.job_name}
-- **Notebook**: `{task.notebook_path}`
+- **Type**: {task_type_display}
+- **Config**: `{task_path}`
 - **Asset Key**: `{snake_case(task.task_key)}`
 - **Dependencies**: {', '.join(task.depends_on) if task.depends_on else 'None'}
 
@@ -475,7 +664,7 @@ def get_catalog_name() -> str:
     if env_val == "{env_name}":
         return "{catalog}"'''
         
-        template_vars_content += f'''
+        template_vars_content += '''
     # Default fallback
     return env_val
 
@@ -501,13 +690,13 @@ def catalog_name(context):
 @dg.template_var
 def model_name(context):
     """Model name for MLOps pipeline."""
-    return "{var_defaults.get('model_name', 'databricks_mlops-model')}"
+    return "databricks_mlops-model"
 
 
 @dg.template_var
 def experiment_name(context):
     """Experiment name for the current environment."""
-    return "{var_defaults.get('experiment_name', '/Users/user/{{env}}-databricks_mlops-experiment').replace('${{bundle.target}}', '{{env}}').replace('${{workspace.current_user.userName}}', 'user')}"
+    return "/Users/user/dev-databricks_mlops-experiment"
 
 
 def _get_git_info():
@@ -551,25 +740,25 @@ def _get_git_info():
             except subprocess.CalledProcessError:
                 commit = "unknown"
             
-            return {{
+            return {
                 "origin_url": origin_url,
                 "branch": branch,
                 "commit": commit
-            }}
+            }
         else:
             # No git repo found, return defaults
-            return {{
+            return {
                 "origin_url": "unknown",
                 "branch": "main",
                 "commit": "unknown"
-            }}
+            }
     except Exception:
         # Fallback if git commands fail
-        return {{
+        return {
             "origin_url": "unknown",
             "branch": "main", 
             "commit": "unknown"
-        }}
+        }
 
 
 @dg.template_var
@@ -618,7 +807,7 @@ def workspace_user(context):
                 config_content = f.read()
                 # Look for username pattern in config
                 import re
-                username_match = re.search(r'username\\s*=\\s*(.+)', config_content)
+                username_match = re.search(r'username\\\\s*=\\\\s*(.+)', config_content)
                 if username_match:
                     return username_match.group(1).strip()
     except Exception:
@@ -658,12 +847,32 @@ def workspace_user(context):
                 pass
             
             # Last resort: use system user with a generic domain
-            return f"{{system_user}}@company.com"
+            return system_user + "@company.com"
     except Exception:
         pass
     
     # Final fallback - use a placeholder that should be replaced
-    return "${{workspace.current_user.userName}}"
+    return "${workspace.current_user.userName}"
+
+
+@dg.template_var
+def databricks_task_value(context):
+    """
+    Template function to pass Databricks runtime expressions through without resolution.
+    
+    This allows Databricks task runtime expressions like:
+    tasks.monitored_metric_violation_check.values.is_metric_violated
+    
+    To be passed through to Databricks without being processed by Dagster's template system.
+    """
+    def _pass_through(expression: str) -> str:
+        """Return the expression as-is for Databricks runtime evaluation."""
+        # Use string concatenation to avoid Dagster template resolution
+        left_brace = "{"
+        right_brace = "}"
+        return "{}{}{}{}{}".format(left_brace, left_brace, expression, right_brace, right_brace)
+    
+    return _pass_through
 '''
         
         template_vars_path = target_path / "template_vars.py"

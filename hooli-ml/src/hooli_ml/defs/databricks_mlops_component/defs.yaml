@@ -125,3 +125,51 @@ attributes:
         primary_keys: zip
         git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
           }}; commit:{{ bundle_git_commit }}
+    - task_key: monitored_metric_violation_check
+      asset_specs:
+        - key: monitored_metric_violation_check
+          description: monitored_metric_violation_check from retraining_job job (notebook
+            task)
+          kinds:
+            - databricks
+            - notebook
+          deps:
+            - model_deployment
+      notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env
+        }}/files/monitoring/notebooks/MonitoredMetricViolationCheck
+      parameters:
+        env: '{{ env }}'
+        table_name_under_monitor: dev.databricks_mlops.predictions
+        metric_to_monitor: root_mean_squared_error
+        metric_violation_threshold: 100
+        num_evaluation_windows: 5
+        num_violation_windows: 2
+        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
+          }}; commit:{{ bundle_git_commit }}
+    - task_key: is_metric_violated
+      asset_specs:
+        - key: is_metric_violated
+          description: is_metric_violated from retraining_job job (condition task)
+          kinds:
+            - databricks
+            - condition
+          deps:
+            - monitored_metric_violation_check
+      condition_task:
+        op: EQUAL_TO
+        left: '{{ databricks_task_value("tasks.monitored_metric_violation_check.values.is_metric_violated")
+          }}'
+        right: 'true'
+    - task_key: trigger_retraining
+      asset_specs:
+        - key: trigger_retraining
+          description: trigger_retraining from retraining_job job (job task)
+          kinds:
+            - databricks
+            - job
+          deps:
+            - is_metric_violated
+      depends_on:
+        - task_key: is_metric_violated
+          outcome: 'true'
+      job_id: 1047061115106673
