@@ -55,6 +55,8 @@ jobs:
               - hooli-interoperability/**
             hooli-ai:
               - hooli-ai/**
+            hooli-ml:
+              - hooli-ml/**
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -96,6 +98,10 @@ jobs:
               if [ "${{ steps.changed-files.outputs.hooli-ai_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_ai"
                 LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai"
+              fi
+              if [ "${{ steps.changed-files.outputs.hooli-ml_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_ml"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ml --image-tag=$IMAGE_TAG-hooli-ml"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
@@ -215,6 +221,15 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-ai
 
+      # Build 'hooli_ml' code location
+      - name: Build and upload Docker image for hooli_ml
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-ml
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-ml
+
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -223,6 +238,31 @@ jobs:
           context: ./hooli-data-eng/hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
+
+      # Install Databricks CLI and deploy bundle for hooli-ml
+      - name: Install Databricks CLI
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true'
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          echo "$HOME/.databricks/bin" >> $GITHUB_PATH
+
+      - name: Deploy Databricks Bundle (Staging)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'pull_request'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks bundle deploy -t staging
+
+      - name: Deploy Databricks Bundle (Production)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/gtm20'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks bundle deploy -t prod
 
       #set build output
       - name: Set build output for Dagster Cloud
