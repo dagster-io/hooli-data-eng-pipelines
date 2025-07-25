@@ -26,8 +26,11 @@ directory_type = "project"
 
 [tool.dg.project]
 root_module = "hooli_ml"
-registry_modules = [
-    "hooli_ml.components.*",
-]
+
+[tool.dg.project.python_environment]
+uv_managed = true
+
+[project.entry-points]
+"dagster_dg.plugin" = { hooli_ml = "hooli_ml.components" }
 
 
