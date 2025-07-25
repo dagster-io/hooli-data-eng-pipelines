@@ -6,6 +6,7 @@ dependencies = [
     "dagster==1.11.0",
     "dagster-databricks>=0.27.0",
     "dagster-dg-cli>=1.11.0",
+    "dagster-cloud",
     "dagster-webserver>=1.11.0",
     "databricks>=0.2",
     "requests>=2.32.4",
