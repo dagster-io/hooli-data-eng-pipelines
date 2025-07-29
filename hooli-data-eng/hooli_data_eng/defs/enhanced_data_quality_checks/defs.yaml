@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════════════════════
+# REAL ASSET DATA QUALITY CHECKS
+# Checks for assets that actually exist in the Dagster instance
+# ═══════════════════════════════════════════════════════════════
+
+type: hooli_data_eng.components.enhanced_data_quality_checks.EnhancedDataQualityChecks
+attributes:
+  assets:
+    RAW_DATA.users:
+      row_count_check:
+        min_rows: 10
+        max_rows: 1000000
+        blocking: true
+      data_type_check:
+        columns:
+          - column: "is_test_user"
+            expected_type: "bool"
+        blocking: true
+    RAW_DATA.orders:
+      database_resource_key: "db_resource"                      
+      row_count_check:
+        min_rows: 10
+        max_rows: 1000000
+        blocking: true
+      range_check:
+        columns:
+          - column: "purchase_price"
+            min_value: 0
+            max_value: 1000
+        blocking: false
+      custom_sql_check:
+        - query: "SELECT COUNT(*) as total_rows FROM RAW_DATA.orders"
+          expected_result: 1000
+          comparison: "greater_than"
+          description: "Ensure we have at least 1000 rows"
+          blocking: true
+      custom_dataframe_check:
+        - query: "len(df) > 0"  # Check if dataframe has rows
+          expected_result: True
+          comparison: "equals"
+          description: "Ensure dataframe has at least one row"
+          blocking: true
