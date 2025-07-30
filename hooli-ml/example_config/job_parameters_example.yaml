@@ -1,0 +1,166 @@
+# Example: Using job parameters in DatabricksMultiNotebookJobComponent
+# This shows how to configure job parameters for individual tasks
+
+type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+template_vars_module: .template_vars
+
+attributes:
+  job_name_prefix: "job_parameters_example"
+  serverless: false
+  spark_version: "13.3.x-scala2.12"
+  node_type_id: "i3.xlarge"
+  num_workers: 2
+  
+  tasks:
+    # Example 1: Notebook task with job parameters (list format)
+    - task_key: "notebook_with_job_params"
+      notebook_path: "/Users/{{ workspace_user }}/ml_pipelines/data_processing"
+      parameters:
+        input_table: "{{ env }}.raw.customer_data"
+        output_table: "{{ env }}.processed.customer_data"
+        processing_date: "{{ ds }}"
+      job_parameters:
+        - name: orchestrator_job_run_id
+          default: "{{ run_id }}"
+        - name: environment
+          default: "{{ env }}"
+        - name: output_bucket_name
+          default: "{{ var.output_bucket_name }}"
+        - name: profiler_enabled
+          default: false
+        - name: debug_mode
+          default: true
+      asset_specs:
+        - key: processed_customer_data
+          description: "Processed customer data with job parameters"
+          kinds: ["databricks", "notebook", "processing"]
+    
+    # Example 2: Python wheel task with job parameters (dict format)
+    - task_key: "wheel_task_with_job_params"
+      python_wheel_task:
+        package_name: "ml_processing_package"
+        entry_point: "process_data"
+      parameters:
+        input_path: "/dbfs/data/raw/"
+        output_path: "/dbfs/data/processed/"
+        config_file: "/dbfs/config/processing_config.json"
+      job_parameters:
+        orchestrator_job_run_id: "{{ run_id }}"
+        environment: "{{ env }}"
+        output_bucket_name: "{{ var.output_bucket_name }}"
+        profiler_enabled: false
+        debug_mode: true
+        batch_size: 1000
+        timeout_minutes: 30
+      asset_specs:
+        - key: processed_data
+          description: "Data processed with wheel task and job parameters"
+          kinds: ["databricks", "wheel", "processing"]
+    
+    # Example 3: Spark JAR task with job parameters
+    - task_key: "spark_jar_with_job_params"
+      spark_jar_task:
+        main_class_name: "com.company.etl.DataProcessor"
+      parameters:
+        input_table: "{{ env }}.raw.transactions"
+        output_table: "{{ env }}.processed.transactions"
+        processing_date: "{{ ds }}"
+      job_parameters:
+        - name: orchestrator_job_run_id
+          default: "{{ run_id }}"
+        - name: environment
+          default: "{{ env }}"
+        - name: output_bucket_name
+          default: "{{ var.output_bucket_name }}"
+        - name: profiler_enabled
+          default: false
+        - name: spark_executor_memory
+          default: "4g"
+        - name: spark_driver_memory
+          default: "2g"
+        - name: spark_executor_cores
+          default: 2
+      asset_specs:
+        - key: processed_transactions
+          description: "Processed transaction data with Spark job parameters"
+          kinds: ["databricks", "jar", "etl"]
+    
+    # Example 4: Mixed job parameters with libraries
+    - task_key: "mixed_task_with_params"
+      notebook_path: "/Users/{{ workspace_user }}/ml_pipelines/feature_engineering"
+      parameters:
+        input_table: "{{ env }}.processed.customer_data"
+        output_table: "{{ env }}.features.customer_features"
+        feature_date: "{{ ds }}"
+      job_parameters:
+        - name: orchestrator_job_run_id
+          default: "{{ run_id }}"
+        - name: environment
+          default: "{{ env }}"
+        - name: output_bucket_name
+          default: "{{ var.output_bucket_name }}"
+        - name: profiler_enabled
+          default: false
+        - name: feature_version
+          default: "v2.0"
+        - name: model_type
+          default: "xgboost"
+      libraries:
+        - whl: "dbfs:/FileStore/wheels/feature_engineering-1.0.0-py3-none-any.whl"
+        - pypi:
+            package: "pandas"
+            version: "2.0.0"
+        - pypi:
+            package: "scikit-learn"
+            version: "1.3.0"
+      asset_specs:
+        - key: customer_features
+          description: "Engineered customer features with job parameters and libraries"
+          kinds: ["databricks", "notebook", "features"]
+          deps: ["processed_customer_data"]
+    
+    # Example 5: Run existing job with job parameters (this uses job_parameters differently)
+    - task_key: "existing_job_with_params"
+      job_id: 123456789
+      job_parameters:  # These are passed to the existing job
+        input_table: "{{ env }}.processed.transactions"
+        output_table: "{{ env }}.analytics.daily_summary"
+        summary_date: "{{ ds }}"
+        orchestrator_job_run_id: "{{ run_id }}"
+        environment: "{{ env }}"
+        output_bucket_name: "{{ var.output_bucket_name }}"
+        profiler_enabled: false
+      asset_specs:
+        - key: daily_summary
+          description: "Daily analytics summary from existing job"
+          kinds: ["databricks", "job", "analytics"]
+          deps: ["processed_transactions"]
+
+---
+# Alternative: Simple job parameters example
+type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+template_vars_module: .template_vars
+
+attributes:
+  job_name_prefix: "simple_job_params"
+  serverless: true
+  
+  tasks:
+    # Simple notebook with job parameters
+    - task_key: "simple_notebook"
+      notebook_path: "/Users/{{ workspace_user }}/simple_analysis"
+      parameters:
+        data_path: "/dbfs/data/input/"
+        output_path: "/dbfs/data/output/"
+      job_parameters:
+        - name: orchestrator_job_run_id
+          default: "{{ run_id }}"
+        - name: environment
+          default: "{{ env }}"
+        - name: output_bucket_name
+          default: "{{ var.output_bucket_name }}"
+        - name: profiler_enabled
+          default: false
+      asset_specs:
+        - key: simple_analysis
+          description: "Simple data analysis with job parameters" 
