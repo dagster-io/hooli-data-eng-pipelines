@@ -49,6 +49,8 @@ class DatabricksTask:
     base_parameters: Dict[str, Any]
     depends_on: List[str]
     job_name: str
+    libraries: Optional[List[Dict[str, Any]]] = None
+    job_parameters: Optional[Dict[str, Any]] = None
 
 
 class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
@@ -237,6 +239,12 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                     print(f"Warning: Unknown task type for task {task_key}, skipping")
                     continue
 
+                # Extract libraries if present
+                libraries = task_config.get("libraries")
+                
+                # Extract job parameters if present (for task configuration, not job invocation)
+                job_parameters = task_config.get("job_parameters")
+
                 tasks.append(
                     DatabricksTask(
                         task_key=task_key,
@@ -245,6 +253,8 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                         base_parameters=base_parameters,
                         depends_on=dependency_keys,
                         job_name=job_name,
+                        libraries=libraries,
+                        job_parameters=job_parameters,
                     )
                 )
 
@@ -426,17 +436,27 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                             )
                         )
 
+                # Add libraries if present
+                if task.libraries:
+                    task_config["libraries"] = task.libraries
+
+                # Add job parameters if present (for task configuration, not job invocation)
+                if task.job_parameters:
+                    task_config["job_parameters"] = task.job_parameters
+
                 component_tasks.append(task_config)
 
         # Generate job name prefix from bundle name or use default
         bundle_name = bundle_info.get("name", "databricks_mlops")
         job_name_prefix = f"{bundle_name}_pipeline"
 
-        return {
+        component_config = {
             "job_name_prefix": job_name_prefix,
             "serverless": True,
             "tasks": component_tasks,
         }
+
+        return component_config
 
     def _process_parameters(
         self,
@@ -614,14 +634,46 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                 {
                     "task_key": "example_task",
                     "notebook_path": "/path/to/your/notebook",
+                    "parameters": {
+                        "input_table": "{{ env }}.raw.example_data",
+                        "output_table": "{{ env }}.processed.example_data",
+                        "param1": "value1",
+                        "env": "{{ env }}"
+                    },
+                    "job_parameters": [
+                        {
+                            "name": "orchestrator_job_run_id",
+                            "default": "{{ run_id }}"
+                        },
+                        {
+                            "name": "environment",
+                            "default": "{{ env }}"
+                        },
+                        {
+                            "name": "profiler_enabled",
+                            "default": False
+                        }
+                    ],
+                    "libraries": [
+                        {
+                            "whl": "dbfs:/FileStore/wheels/example_package-1.0.0-py3-none-any.whl"
+                        },
+                        {
+                            "pypi": {
+                                "package": "pandas",
+                                "version": "2.0.0"
+                            }
+                        }
+                    ],
                     "asset_specs": [
                         {
                             "key": "example_asset",
-                            "description": "Example Databricks notebook asset",
+                            "description": "Example Databricks notebook asset with comprehensive metadata",
                             "kinds": ["databricks", "notebook"],
+                            "table_location": "{{ env }}.processed.example_data",
+                            "data_location": "/dbfs/data/processed/example/"
                         }
                     ],
-                    "parameters": {"param1": "value1", "env": "{{ env }}"},
                 }
             ],
         }
@@ -676,12 +728,22 @@ This component was automatically generated from Databricks bundle configuration.
             else:
                 task_path = "Unknown task type"
 
+            # Add information about new features
+            features_info = []
+            if task.libraries:
+                features_info.append(f"**Libraries**: {len(task.libraries)} configured")
+            if task.job_parameters:
+                features_info.append(f"**Job Parameters**: {len(task.job_parameters)} configured")
+            
+            features_text = "; ".join(features_info) if features_info else "Standard configuration"
+            
             readme_content += f"""### {task.task_key}
 - **Job**: {task.job_name}
 - **Type**: {task_type_display}
 - **Config**: `{task_path}`
 - **Asset Key**: `{snake_case(task.task_key)}`
 - **Dependencies**: {", ".join(task.depends_on) if task.depends_on else "None"}
+- **Features**: {features_text}
 
 """
 
@@ -709,6 +771,33 @@ dg scaffold defs hooli_ml.components.DatabricksMultiNotebookJobComponent my_comp
 - **Serverless**: Currently set to `true`. Change to `false` and configure cluster settings if needed.
 - **Asset Dependencies**: Review the `deps` field in each asset spec to ensure correct lineage.
 - **Parameters**: Update template variables (e.g., `{{ env }}`) to match your setup.
+
+## Features Extracted from Databricks Bundle
+
+The scaffolder automatically extracts the following features from Databricks bundle configurations:
+
+### Libraries (Databricks Supported)
+- **Automatic Extraction**: Libraries from Databricks tasks are automatically included
+- **Supported Types**: Python wheels (whl), JAR files (jar), PyPI packages (pypi), Maven packages (maven), CRAN packages (cran)
+- **Configuration**: Libraries are preserved as-is from the original Databricks configuration
+
+### Job Parameters (Databricks Supported)
+- **Task Configuration**: Job parameters for task configuration (not job invocation) are automatically extracted
+- **Format Support**: Both list format `[{name: "param", default: "value"}]` and dict format `{param: "value"}`
+- **Template Variables**: Job parameters support template variables like `{{ env }}` and `{{ run_id }}`
+
+### Table Location Metadata (Dagster Enhancement)
+- **Automatic Extraction**: Table and data location information is automatically extracted from task parameters
+- **Comprehensive Coverage**: Supports input/output tables, paths, and locations
+- **Metadata Integration**: Table locations are included in asset metadata for lineage tracking
+
+## Features to Add Manually
+
+### Common Configuration (Dagster-Specific Feature)
+- **Manual Addition**: Common configuration should be added manually to the generated component YAML
+- **Bundle Variables**: Bundle variables can be used as a reference for creating common configuration
+- **Format**: Use `--key=value` format for all tasks
+- **Override**: Task-specific parameters take precedence over common configuration
 
 ## Command Line Options
 
