@@ -50,7 +50,6 @@ class DatabricksTask:
     depends_on: List[str]
     job_name: str
     libraries: Optional[List[Dict[str, Any]]] = None
-    job_parameters: Optional[Dict[str, Any]] = None
 
 
 class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
@@ -84,11 +83,13 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
 
         # Parse all included resource files
         all_tasks = []
+        all_job_level_parameters = {}
         for include_path in includes:
             resource_path = bundle_dir / include_path
             if resource_path.exists():
-                tasks = self._extract_tasks_from_resource(resource_path, variables)
+                tasks, job_level_parameters = self._extract_tasks_from_resource(resource_path, variables)
                 all_tasks.extend(tasks)
+                all_job_level_parameters.update(job_level_parameters)
 
         if not all_tasks:
             self._create_basic_template(request)
@@ -99,7 +100,7 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
 
         # Generate component YAML
         component_config = self._generate_component_config(
-            all_tasks, task_dependencies, variables, targets, bundle_info
+            all_tasks, task_dependencies, variables, targets, bundle_info, all_job_level_parameters
         )
 
         # Scaffold the component
@@ -167,12 +168,18 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
         """Extract Databricks tasks from a resource YAML file."""
         resource_config = self._load_yaml(resource_path)
         tasks = []
+        job_level_parameters = {}  # Collect job-level parameters from all jobs
 
         # Navigate to jobs section
         resources = resource_config.get("resources", {})
         jobs = resources.get("jobs", {})
 
         for job_name, job_config in jobs.items():
+            # Extract job-level parameters for this job
+            job_params = self._extract_job_level_parameters(job_config)
+            if job_params:
+                job_level_parameters[job_name] = job_params
+            
             job_tasks = job_config.get("tasks", [])
 
             for task_config in job_tasks:
@@ -241,9 +248,6 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
 
                 # Extract libraries if present
                 libraries = task_config.get("libraries")
-                
-                # Extract job parameters if present (for task configuration, not job invocation)
-                job_parameters = task_config.get("job_parameters")
 
                 tasks.append(
                     DatabricksTask(
@@ -254,11 +258,23 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                         depends_on=dependency_keys,
                         job_name=job_name,
                         libraries=libraries,
-                        job_parameters=job_parameters,
                     )
                 )
 
-        return tasks
+        return tasks, job_level_parameters
+
+    def _extract_job_level_parameters(self, job_config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract job-level parameters from job configuration."""
+        # Job-level parameters can be defined in several ways in Databricks bundle
+        job_parameters = None
+        
+        # Check for job-level parameters in the job configuration
+        if "parameters" in job_config:
+            job_parameters = job_config["parameters"]
+        elif "job_parameters" in job_config:
+            job_parameters = job_config["job_parameters"]
+        
+        return job_parameters
 
     def _build_dependency_graph(
         self, tasks: List[DatabricksTask]
@@ -289,6 +305,7 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
         variables: Dict[str, Any],
         targets: Dict[str, Any],
         bundle_info: Dict[str, Any],
+        job_level_parameters: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Generate the component configuration dictionary."""
 
@@ -440,10 +457,6 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                 if task.libraries:
                     task_config["libraries"] = task.libraries
 
-                # Add job parameters if present (for task configuration, not job invocation)
-                if task.job_parameters:
-                    task_config["job_parameters"] = task.job_parameters
-
                 component_tasks.append(task_config)
 
         # Generate job name prefix from bundle name or use default
@@ -455,6 +468,23 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
             "serverless": True,
             "tasks": component_tasks,
         }
+
+        # Add job-level parameters if any were found
+        if job_level_parameters:
+            # Merge all job-level parameters into a single dict
+            # If multiple jobs have parameters, we'll use the first one or merge them
+            merged_job_params = {}
+            for job_name, job_params in job_level_parameters.items():
+                if isinstance(job_params, dict):
+                    merged_job_params.update(job_params)
+                elif isinstance(job_params, list):
+                    # Handle list format job parameters
+                    for param in job_params:
+                        if isinstance(param, dict) and "name" in param:
+                            merged_job_params[param["name"]] = param.get("default", "")
+            
+            if merged_job_params:
+                component_config["job_parameters"] = merged_job_params
 
         return component_config
 
@@ -504,6 +534,10 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                 processed_value = re.sub(
                     r"\$\{bundle\.([^}]+)\}", r"{{ bundle_\1 }}", processed_value
                 )
+
+                # Preserve job parameter references - these will be processed by the component
+                # Don't convert {{job.parameters.param_name}} as it should remain as-is
+                # This allows the component to handle job parameter references
 
                 processed[key] = processed_value
             else:
@@ -630,6 +664,19 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
         basic_config = {
             "job_name_prefix": "databricks_pipeline",
             "serverless": True,
+            "job_parameters": {
+                "environment": "{{ env }}",
+                "orchestrator_job_run_id": "{{ run_id }}",
+                "output_bucket_name": "{{ var.output_bucket_name }}",
+                "profiler_enabled": False,
+                "experiment_settings": "mlflow://databricks",
+                "catalog_map": "{{ env }}.catalog",
+                "log_level": "INFO",
+                "llm_calls": "enabled",
+                "git_sha": "{{ git_sha }}",
+                "batch_size": 1000,
+                "timeout_minutes": 30
+            },
             "tasks": [
                 {
                     "task_key": "example_task",
@@ -782,8 +829,8 @@ The scaffolder automatically extracts the following features from Databricks bun
 - **Configuration**: Libraries are preserved as-is from the original Databricks configuration
 
 ### Job Parameters (Databricks Supported)
-- **Task Configuration**: Job parameters for task configuration (not job invocation) are automatically extracted
-- **Format Support**: Both list format `[{name: "param", default: "value"}]` and dict format `{param: "value"}`
+- **Job-Level Parameters**: Job-level parameters from Databricks bundle are extracted and passed to the component
+- **Job Parameter References**: Task parameters with `{{job.parameters.param_name}}` references are preserved
 - **Template Variables**: Job parameters support template variables like `{{ env }}` and `{{ run_id }}`
 
 ### Table Location Metadata (Dagster Enhancement)

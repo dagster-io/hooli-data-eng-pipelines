@@ -53,6 +53,7 @@ try:
         - Automatic task generation from databricks.yml
         - Library management per task
         - Job parameters for task configuration
+        - Job-level parameters passed to Databricks job (accessible via {{job.parameters.param_name}} in tasks)
         - Common configuration for all tasks
         - Comprehensive metadata for Databricks-like experience
         """
@@ -69,6 +70,9 @@ try:
         
         # Common configuration that applies to all tasks
         common_config: Optional[List[str]] = None  # List of common parameters for all tasks
+        
+        # Job-level parameters passed to the Databricks job (accessible via {{job.parameters.param_name}} in tasks)
+        job_parameters: Optional[Dict[str, Any]] = None  # Job-level parameters passed to Databricks job
 
         def __init__(self, **data):
             """Initialize with validation that either tasks or databricks_config is provided."""
@@ -131,6 +135,41 @@ try:
                 task_config["right"] = condition_config.get("right", "")
             
             return task_config
+
+        def _process_job_parameter_references(self, parameters: Any, job_params: Optional[Dict[str, Any]]) -> Any:
+            """Process task parameters and replace {{job.parameters.param_name}} references with actual values."""
+            if job_params is None:
+                return parameters
+            
+            if isinstance(parameters, str):
+                # Process string parameters
+                import re
+                pattern = r'\{\{job\.parameters\.(\w+)\}\}'
+                
+                def replace_job_param(match):
+                    param_name = match.group(1)
+                    if param_name in job_params:
+                        return str(job_params[param_name])
+                    else:
+                        # Keep the original reference if parameter not found
+                        return match.group(0)
+                
+                return re.sub(pattern, replace_job_param, parameters)
+            
+            elif isinstance(parameters, list):
+                # Process list parameters
+                return [self._process_job_parameter_references(item, job_params) for item in parameters]
+            
+            elif isinstance(parameters, dict):
+                # Process dict parameters
+                processed = {}
+                for key, value in parameters.items():
+                    processed[key] = self._process_job_parameter_references(value, job_params)
+                return processed
+            
+            else:
+                # Return as-is for other types
+                return parameters
 
         def _extract_table_locations(self, task: Dict[str, Any], asset_spec_config: Dict[str, Any]) -> Dict[str, Any]:
             """Extract table location information from task parameters and asset spec."""
@@ -444,8 +483,13 @@ try:
                         final_parameters = {**common_params, **final_parameters}
                         context.log.info(f"Task {task_key}: applied {len(common_params)} common parameters")
 
+                    # Process job parameter references in final_parameters
+                    if self.job_parameters:
+                        final_parameters = self._process_job_parameter_references(final_parameters, self.job_parameters)
+                        context.log.info(f"Task {task_key}: processed job parameter references")
+
                     context.log.info(
-                        f"Task {task_key}: base_parameters={base_parameters}, config_overrides={merged_config_parameters}, common_params={len(self.common_config) if self.common_config else 0}, final_parameters={final_parameters}"
+                        f"Task {task_key}: base_parameters={base_parameters}, config_overrides={merged_config_parameters}, common_params={len(self.common_config) if self.common_config else 0}, job_params={len(self.job_parameters) if self.job_parameters else 0}, final_parameters={final_parameters}"
                     )
 
                     # Collect task dependencies from asset specs
@@ -594,28 +638,6 @@ try:
                     else:
                         submit_task_params["new_cluster"] = cluster_spec
 
-                    # Add job parameters if specified (for the task itself, not for invoking existing jobs)
-                    if "job_parameters" in task and "job_id" not in task:
-                        # Only apply job_parameters if this is not a run_job_task
-                        # For run_job_task, job_parameters are handled separately above
-                        job_params = task["job_parameters"]
-                        if job_params:
-                            # Convert list of parameter objects to dict format
-                            if isinstance(job_params, list):
-                                # Handle format: [{name: "param1", default: "value1"}, ...]
-                                param_dict = {}
-                                for param in job_params:
-                                    if isinstance(param, dict) and "name" in param:
-                                        param_dict[param["name"]] = param.get("default", "")
-                                submit_task_params["job_parameters"] = param_dict
-                                context.log.info(f"Task {task_key} has job parameters: {param_dict}")
-                            elif isinstance(job_params, dict):
-                                # Handle format: {param1: "value1", param2: "value2"}
-                                submit_task_params["job_parameters"] = job_params
-                                context.log.info(f"Task {task_key} has job parameters: {job_params}")
-                            else:
-                                context.log.warning(f"Task {task_key} has invalid job_parameters format: {job_params}")
-
                     # Add libraries if specified
                     if "libraries" in task:
                         libraries_config = task["libraries"]
@@ -720,10 +742,19 @@ try:
 
                 # Submit the job with only selected tasks
                 client = databricks_resource.workspace_client()
-                job_run = client.jobs.submit(
-                    run_name=f"{self.job_name_prefix}_{context.run_id}",
-                    tasks=databricks_tasks,
-                )
+                
+                # Prepare job submission parameters
+                job_submit_params = {
+                    "run_name": f"{self.job_name_prefix}_{context.run_id}",
+                    "tasks": databricks_tasks,
+                }
+                
+                # Add job-level parameters if specified
+                if self.job_parameters:
+                    job_submit_params["parameters"] = self.job_parameters
+                    context.log.info(f"Submitting job with job-level parameters: {self.job_parameters}")
+                
+                job_run = client.jobs.submit(**job_submit_params)
                 
                 # Add comprehensive metadata to the asset execution context
                 context.add_output_metadata({
@@ -739,6 +770,7 @@ try:
                         "num_workers": self.num_workers,
                     },
                     "common_config": self.common_config if self.common_config else None,
+                    "job_level_parameters": self.job_parameters if self.job_parameters else None,
                     "job_name_prefix": self.job_name_prefix,
                 })
 
