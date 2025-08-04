@@ -173,3 +173,37 @@ attributes:
         - task_key: is_metric_violated
           outcome: 'true'
       job_id: 1047061115106673
+
+# ---
+
+# type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+# template_vars_module: .template_vars
+
+
+# attributes:
+#   job_name_prefix: adventure_continues
+#   serverless: false
+#   existing_cluster_id: "0717-182026-6kr00dvt"
+#   # spark_version: "13.3.x-scala2.12"
+#   # node_type_id: "i3.xlarge"
+#   # num_workers: 1
+#   tasks:
+#     - task_key: adventure_continues
+#       asset_specs:
+#         - key: adventure_continues
+#           description: adventure_continues from adventure_awaits job (notebook
+#             task)
+#           kinds:
+#             - databricks
+#             - notebook 
+#       notebook_path: /Workspace/Users/christian@dagsterlabs.com/choose_another_adventure
+#     - task_key: adventure_awaits
+#       asset_specs:
+#         - key: adventure_awaits
+#           description: adventure_awaits from adventure_awaits job
+#           kinds:
+#             - databricks
+#             - job
+#           deps:
+#             - adventure_continues
+#       job_id: 917365194082799

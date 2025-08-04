@@ -50,6 +50,7 @@ try:
         spark_version: Optional[str] = "13.3.x-scala2.12"
         node_type_id: Optional[str] = "i3.xlarge"
         num_workers: Optional[int] = 1
+        existing_cluster_id: Optional[str] = None  # Use existing cluster instead of creating new one
 
         # Support both explicit tasks and databricks_config
         tasks: Optional[List[Dict[str, Any]]] = None
@@ -66,13 +67,17 @@ try:
         @field_validator("spark_version", "node_type_id", "num_workers")
         @classmethod
         def validate_cluster_fields(cls, v, info):
-            """Validate that cluster fields are provided when not using serverless."""
-            if info.data.get("serverless", False):
+            """Validate that cluster fields are provided when not using serverless or existing cluster."""
+            serverless = info.data.get("serverless", False)
+            existing_cluster_id = info.data.get("existing_cluster_id")
+            
+            # Skip validation if serverless or using existing cluster
+            if serverless or existing_cluster_id:
                 return v
             else:
                 if v is None:
                     field_name = info.field_name
-                    raise ValueError(f"{field_name} is required when serverless=False")
+                    raise ValueError(f"{field_name} is required when serverless=False and existing_cluster_id is not provided")
                 return v
 
         def _load_tasks_from_databricks_config(self) -> List[Dict[str, Any]]:
@@ -154,6 +159,7 @@ try:
         def build_defs(self, context: dg.ComponentLoadContext) -> dg.Definitions:
             """Build Dagster definitions from the component configuration."""
             from databricks.sdk.service import jobs
+            from databricks.sdk.service import compute
 
             # Get tasks - either from explicit configuration or from databricks_config
             if self.tasks:
@@ -349,17 +355,47 @@ try:
                                         f"Task {task_key} depends on task {dependent_task_key} (via asset {dep_key_str})"
                                     )
 
-                    if self.serverless:
-                        cluster_spec = {}
+                    # Determine cluster configuration based on task type
+                    cluster_config = {}
+                    
+                    # Only apply cluster config to tasks that need it
+                    task_needs_cluster = False
+                    if "notebook_path" in task:
+                        task_needs_cluster = True
+                    elif "python_wheel_task" in task:
+                        task_needs_cluster = True
+                    elif "spark_jar_task" in task:
+                        task_needs_cluster = True
+                    elif "condition_task" in task:
+                        task_needs_cluster = False  # Condition tasks don't need clusters
+                    elif "job_id" in task:
+                        task_needs_cluster = False  # Run job tasks don't need clusters (they use the job's cluster)
+                    
+                    if task_needs_cluster:
+                        if self.serverless:
+                            # Serverless mode - no cluster config needed
+                            pass
+                        elif self.existing_cluster_id:
+                            # Use existing cluster
+                            cluster_config["existing_cluster_id"] = self.existing_cluster_id
+                            context.log.info(f"Task {task_key} will use existing cluster: {self.existing_cluster_id}")
+                        else:
+                            # Create new cluster
+                            cluster_spec = compute.ClusterSpec(
+                                spark_version=self.spark_version,
+                                node_type_id=self.node_type_id,
+                                num_workers=self.num_workers,
+                            )
+                            cluster_config["new_cluster"] = cluster_spec
+                            context.log.info(f"Task {task_key} will use new cluster with {self.num_workers} workers")
                     else:
-                        cluster_spec = jobs.ClusterSpec(
-                            spark_version=self.spark_version,
-                            node_type_id=self.node_type_id,
-                            num_workers=self.num_workers,
-                        )
+                        context.log.info(f"Task {task_key} does not need cluster configuration (job/condition task)")
 
                     # Create SubmitTask with dependencies if any exist
                     submit_task_params = {"task_key": task_key}
+
+                    # Add cluster configuration
+                    submit_task_params.update(cluster_config)
 
                     # Determine task type and create appropriate task configuration
                     if "notebook_path" in task:
@@ -419,12 +455,6 @@ try:
                         raise ValueError(
                             f"Task {task_key} must specify one of: notebook_path, job_id, python_wheel_task, spark_jar_task, or condition_task"
                         )
-
-                    # Add cluster configuration
-                    if self.serverless:
-                        pass  # No cluster spec needed for serverless
-                    else:
-                        submit_task_params["new_cluster"] = cluster_spec
 
                     # Add depends_on if there are dependencies
                     all_dependencies = []
