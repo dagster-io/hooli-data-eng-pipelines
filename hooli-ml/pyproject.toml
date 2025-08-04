@@ -3,9 +3,9 @@ name = "hooli_ml"
 requires-python = ">=3.9,<3.13"
 version = "0.1.0"
 dependencies = [
-    "dagster>=1.11.0",
-    "dagster-databricks>=0.27.0",
+    "dagster==1.11.0",
     "dagster-dg-cli>=1.11.0",
+    "databricks-sdk",
     "dagster-cloud",
     "dagster-webserver>=1.11.0",
     "databricks>=0.2",
