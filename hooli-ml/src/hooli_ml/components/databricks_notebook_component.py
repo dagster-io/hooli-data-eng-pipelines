@@ -53,9 +53,21 @@ try:
         - Automatic task generation from databricks.yml
         - Library management per task
         - Job parameters for task configuration
-        - Job-level parameters passed to Databricks job (accessible via {{job.parameters.param_name}} in tasks)
-        - Common configuration for all tasks
+        - Common configuration dictionary for all tasks (applied as default values)
         - Comprehensive metadata for Databricks-like experience
+        
+        Common Configuration:
+        The common_config parameter accepts a dictionary of key-value pairs that are applied as 
+        default parameters to all tasks in the component. Task-specific parameters will override 
+        common_config values when there are conflicts.
+        
+        Example:
+        ```yaml
+        common_config:
+          env: "dev"
+          debug: true
+          log_level: "INFO"
+        ```
         """
 
         job_name_prefix: str = "dagster_multi_notebook_job"
@@ -70,10 +82,7 @@ try:
         databricks_config: Optional[str] = None  # Path to databricks.yml file
         
         # Common configuration that applies to all tasks
-        common_config: Optional[List[str]] = None  # List of common parameters for all tasks
-        
-        # Job-level parameters passed to the Databricks job (accessible via {{job.parameters.param_name}} in tasks)
-        job_parameters: Optional[Dict[str, Any]] = None  # Job-level parameters passed to Databricks job
+        common_config: Optional[Dict[str, Any]] = None  # Dictionary of common parameters for all tasks
 
         def __init__(self, **data):
             """Initialize with validation that either tasks or databricks_config is provided."""
@@ -103,6 +112,8 @@ try:
             """Get the task type from task configuration."""
             if "notebook_path" in task:
                 return "notebook"
+            elif "notebook_task" in task:
+                return "notebook"
             elif "job_id" in task:
                 return "run_job"
             elif "python_wheel_task" in task:
@@ -119,8 +130,14 @@ try:
             task_config = {}
             
             if "notebook_path" in task:
+                # Direct notebook_path format (scaffolder format)
                 task_config["notebook_path"] = task["notebook_path"]
                 task_config["parameters"] = task.get("parameters", {})
+            elif "notebook_task" in task:
+                # Nested notebook_task format
+                notebook_task = task["notebook_task"]
+                task_config["notebook_path"] = notebook_task.get("notebook_path", "")
+                task_config["parameters"] = notebook_task.get("base_parameters", {})
             elif "job_id" in task:
                 task_config["job_id"] = task["job_id"]
                 task_config["job_parameters"] = task.get("job_parameters", {})
@@ -140,41 +157,6 @@ try:
                 task_config["right"] = condition_config.get("right", "")
             
             return task_config
-
-        def _process_job_parameter_references(self, parameters: Any, job_params: Optional[Dict[str, Any]]) -> Any:
-            """Process task parameters and replace {{job.parameters.param_name}} references with actual values."""
-            if job_params is None:
-                return parameters
-            
-            if isinstance(parameters, str):
-                # Process string parameters
-                import re
-                pattern = r'\{\{job\.parameters\.(\w+)\}\}'
-                
-                def replace_job_param(match):
-                    param_name = match.group(1)
-                    if param_name in job_params:
-                        return str(job_params[param_name])
-                    else:
-                        # Keep the original reference if parameter not found
-                        return match.group(0)
-                
-                return re.sub(pattern, replace_job_param, parameters)
-            
-            elif isinstance(parameters, list):
-                # Process list parameters
-                return [self._process_job_parameter_references(item, job_params) for item in parameters]
-            
-            elif isinstance(parameters, dict):
-                # Process dict parameters
-                processed = {}
-                for key, value in parameters.items():
-                    processed[key] = self._process_job_parameter_references(value, job_params)
-                return processed
-            
-            else:
-                # Return as-is for other types
-                return parameters
 
         def _extract_table_locations(self, task: Dict[str, Any], asset_spec_config: Dict[str, Any]) -> Dict[str, Any]:
             """Extract table location information from task parameters and asset spec."""
@@ -321,14 +303,11 @@ try:
                     asset_specs_config = [{}]
 
                 for asset_spec_config in asset_specs_config:
+                    # Extract base attributes from asset_spec_config
                     asset_key = asset_spec_config.get("key", task_key)
-                    description = asset_spec_config.get(
-                        "description", f"Asset for task {task_key}"
-                    )
-                    kinds = set(asset_spec_config.get("kinds", ["databricks"]))
-                    skippable = asset_spec_config.get("skippable", True)
                     deps = asset_spec_config.get("deps", [])
 
+                    # Process dependencies
                     deps_keys = []
                     for dep in deps:
                         if isinstance(dep, str):
@@ -336,58 +315,150 @@ try:
                         else:
                             deps_keys.append(dep)
 
-                    # Build comprehensive metadata for the asset
+                    # Create a base spec with minimal required attributes
+                    base_spec = dg.AssetSpec(
+                        key=asset_key,
+                        deps=deps_keys,
+                    )
+
+                    # Apply default attributes first (replace if not already set)
+                    default_description = f"Asset for task {task_key}"
+                    spec_with_defaults = base_spec.replace_attributes(
+                        description=default_description
+                    ) if not asset_spec_config.get("description") else base_spec
+
+                    # Build comprehensive metadata using MetadataValue types
                     metadata = {}
                     
                     # Task configuration metadata
-                    metadata["task_key"] = task_key
-                    metadata["task_type"] = self._get_task_type(task)
-                    metadata["task_config"] = self._get_task_config(task)
+                    metadata["task_key"] = dg.MetadataValue.text(task_key)
+                    metadata["task_type"] = dg.MetadataValue.text(self._get_task_type(task))
+                    metadata["task_config"] = dg.MetadataValue.json(self._get_task_config(task))
                     
                     # Compute configuration metadata
-                    metadata["compute_config"] = {
+                    compute_config = {
                         "serverless": self.serverless,
                         "spark_version": self.spark_version,
                         "node_type_id": self.node_type_id,
                         "num_workers": self.num_workers,
                     }
+                    metadata["compute_config"] = dg.MetadataValue.json(compute_config)
                     
                     # Libraries metadata
                     if "libraries" in task:
-                        metadata["libraries"] = task["libraries"]
+                        metadata["libraries"] = dg.MetadataValue.json(task["libraries"])
                     
                     # Job parameters metadata
                     if "job_parameters" in task:
-                        metadata["job_parameters"] = task["job_parameters"]
+                        metadata["job_parameters"] = dg.MetadataValue.json(task["job_parameters"])
                     
                     # Common configuration metadata
                     if self.common_config:
-                        metadata["common_config"] = self.common_config
+                        metadata["common_config"] = dg.MetadataValue.json(self.common_config)
                     
                     # Asset configuration metadata
-                    metadata["asset_config"] = {
+                    asset_config = {
                         "key": str(asset_key),
-                        "description": description,
-                        "kinds": list(kinds),
-                        "skippable": skippable,
+                        "kinds": list(asset_spec_config.get("kinds", ["databricks"])),
+                        "skippable": asset_spec_config.get("skippable", True),
                         "deps": [str(dep) for dep in deps_keys],
                     }
+                    metadata["asset_config"] = dg.MetadataValue.json(asset_config)
                     
                     # Table location metadata - extract from task parameters
                     table_locations = self._extract_table_locations(task, asset_spec_config)
                     if table_locations:
-                        metadata["table_locations"] = table_locations
+                        metadata["table_locations"] = dg.MetadataValue.json(table_locations)
+
+                    # Process custom metadata from asset spec configuration
+                    if "metadata" in asset_spec_config:
+                        custom_metadata = asset_spec_config["metadata"]
+                        if isinstance(custom_metadata, list):
+                            # Handle list format: [{"key": "value"}, ...]
+                            for item in custom_metadata:
+                                if isinstance(item, dict):
+                                    for key, value in item.items():
+                                        # Wrap custom metadata values in appropriate MetadataValue types
+                                        if isinstance(value, str):
+                                            metadata[key] = dg.MetadataValue.text(value)
+                                        elif isinstance(value, (int, float)):
+                                            metadata[key] = dg.MetadataValue.float(float(value))
+                                        elif isinstance(value, bool):
+                                            metadata[key] = dg.MetadataValue.bool(value)
+                                        elif isinstance(value, dict):
+                                            metadata[key] = dg.MetadataValue.json(value)
+                                        else:
+                                            # Default to text for other types
+                                            metadata[key] = dg.MetadataValue.text(str(value))
+                        elif isinstance(custom_metadata, dict):
+                            # Handle dict format: {"key": "value", ...}
+                            for key, value in custom_metadata.items():
+                                # Wrap custom metadata values in appropriate MetadataValue types
+                                if isinstance(value, str):
+                                    metadata[key] = dg.MetadataValue.text(value)
+                                elif isinstance(value, (int, float)):
+                                    metadata[key] = dg.MetadataValue.float(float(value))
+                                elif isinstance(value, bool):
+                                    metadata[key] = dg.MetadataValue.bool(value)
+                                elif isinstance(value, dict):
+                                    metadata[key] = dg.MetadataValue.json(value)
+                                else:
+                                    # Default to text for other types
+                                    metadata[key] = dg.MetadataValue.text(str(value))
+
+                    # Merge additional attributes from asset_spec_config using merge_attributes
+                    # This allows any valid AssetSpec attributes to be passed through and merged
+                    spec_attributes = {
+                        "metadata": metadata,
+                        "kinds": set(asset_spec_config.get("kinds", ["databricks"])),
+                        "skippable": asset_spec_config.get("skippable", True),
+                    }
                     
-                    asset_specs.append(
-                        dg.AssetSpec(
-                            key=asset_key,
-                            description=description,
-                            kinds=kinds,
-                            skippable=skippable,
-                            deps=deps_keys,
-                            metadata=metadata,
-                        )
-                    )
+                    # Add description if provided in config
+                    if asset_spec_config.get("description"):
+                        spec_attributes["description"] = asset_spec_config["description"]
+                    
+                    # Allow any other valid AssetSpec attributes to be passed through
+                    for attr_name, attr_value in asset_spec_config.items():
+                        if attr_name not in ["key", "deps", "description", "kinds", "skippable", "metadata"]:
+                            # Only add if it's a valid AssetSpec attribute
+                            if hasattr(dg.AssetSpec, attr_name):
+                                spec_attributes[attr_name] = attr_value
+
+                    # Merge all attributes into the spec
+                    # Use separate methods for merge vs replace attributes 
+                    # First, merge attributes that are supported by merge_attributes
+                    merge_attrs = {
+                        "metadata": metadata,
+                        "kinds": set(asset_spec_config.get("kinds", ["databricks"])),
+                    }
+                    
+                    # Only add supported merge attributes if they exist in config
+                    if "tags" in asset_spec_config:
+                        merge_attrs["tags"] = asset_spec_config["tags"]
+                    if "owners" in asset_spec_config:
+                        merge_attrs["owners"] = asset_spec_config["owners"]
+
+                    # Apply merge_attributes for supported attributes
+                    spec_with_merge = spec_with_defaults.merge_attributes(**merge_attrs)
+                    
+                    # Then use replace_attributes for attributes not supported by merge_attributes
+                    replace_attrs = {}
+                    
+                    # Add description if provided in config
+                    if asset_spec_config.get("description"):
+                        replace_attrs["description"] = asset_spec_config["description"]
+                    
+                    # Add skippable if provided in config  
+                    if "skippable" in asset_spec_config:
+                        replace_attrs["skippable"] = asset_spec_config["skippable"]
+
+                    # Apply replace_attributes for unsupported attributes
+                    if replace_attrs:
+                        final_spec = spec_with_merge.replace_attributes(**replace_attrs)
+                    else:
+                        final_spec = spec_with_merge
+                    asset_specs.append(final_spec)
 
             @dg.multi_asset(
                 name=f"{self.job_name_prefix}_multi_asset",
@@ -469,33 +540,14 @@ try:
 
                     final_parameters = {**base_parameters, **merged_config_parameters}
 
-                    # Apply common configuration to all tasks
+                    # Apply common configuration to all tasks as default values
                     if self.common_config:
-                        # Convert common_config list to parameters dict
-                        common_params = {}
-                        for param in self.common_config:
-                            if param.startswith("--"):
-                                # Parse --key=value format
-                                if "=" in param:
-                                    key, value = param[2:].split("=", 1)
-                                    common_params[key] = value
-                                else:
-                                    # Handle --key format (boolean flag)
-                                    key = param[2:]
-                                    common_params[key] = True
-                        
-                        # Merge common parameters with task-specific parameters
-                        # Task-specific parameters take precedence over common parameters
-                        final_parameters = {**common_params, **final_parameters}
-                        context.log.info(f"Task {task_key}: applied {len(common_params)} common parameters")
-
-                    # Process job parameter references in final_parameters
-                    if self.job_parameters:
-                        final_parameters = self._process_job_parameter_references(final_parameters, self.job_parameters)
-                        context.log.info(f"Task {task_key}: processed job parameter references")
+                        # Common config parameters are applied as defaults (task-specific parameters take precedence)
+                        final_parameters = {**self.common_config, **final_parameters}
+                        context.log.info(f"Task {task_key}: applied {len(self.common_config)} common parameters as defaults")
 
                     context.log.info(
-                        f"Task {task_key}: base_parameters={base_parameters}, config_overrides={merged_config_parameters}, common_params={len(self.common_config) if self.common_config else 0}, job_params={len(self.job_parameters) if self.job_parameters else 0}, final_parameters={final_parameters}"
+                        f"Task {task_key}: base_parameters={base_parameters}, config_overrides={merged_config_parameters}, common_params={len(self.common_config) if self.common_config else 0}, final_parameters={final_parameters}"
                     )
 
                     # Collect task dependencies from asset specs
@@ -618,14 +670,9 @@ try:
                         )
                     elif "job_id" in task:
                         # Run existing job task
-                        job_parameters = task.get("job_parameters", {})
-                        # Merge final_parameters into job_parameters
-                        merged_job_params = {**job_parameters, **final_parameters}
                         submit_task_params["run_job_task"] = jobs.RunJobTask(
                             job_id=task["job_id"],
-                            job_parameters=merged_job_params
-                            if merged_job_params
-                            else None,
+                            job_parameters=final_parameters if final_parameters else None,
                         )
                         context.log.info(
                             f"Task {task_key} will run existing job ID: {task['job_id']}"
@@ -671,8 +718,12 @@ try:
                     # Add cluster configuration
                     if self.serverless:
                         pass  # No cluster spec needed for serverless
+                    elif self.existing_cluster_id:
+                        submit_task_params["existing_cluster_id"] = self.existing_cluster_id
                     else:
-                        submit_task_params["new_cluster"] = cluster_spec
+                        # Only add new_cluster if cluster_spec was created
+                        if 'cluster_spec' in locals():
+                            submit_task_params["new_cluster"] = cluster_spec
 
                     # Add libraries if specified
                     if "libraries" in task:
@@ -688,11 +739,15 @@ try:
                                 libraries_list.append(jobs.compute.Library(egg=lib["egg"]))
                             elif "pypi" in lib:
                                 pypi_config = lib["pypi"]
+                                # Handle version by combining it with package name
+                                package = pypi_config["package"]
+                                if "version" in pypi_config:
+                                    package = f"{package}=={pypi_config['version']}"
+                                
                                 libraries_list.append(jobs.compute.Library(
                                     pypi=jobs.compute.PythonPyPiLibrary(
-                                        package=pypi_config["package"],
-                                        repo=pypi_config.get("repo"),
-                                        version=pypi_config.get("version")
+                                        package=package,
+                                        repo=pypi_config.get("repo")
                                     )
                                 ))
                             elif "maven" in lib:
@@ -785,30 +840,15 @@ try:
                     "tasks": databricks_tasks,
                 }
                 
-                # Add job-level parameters if specified
-                if self.job_parameters:
-                    job_submit_params["parameters"] = self.job_parameters
-                    context.log.info(f"Submitting job with job-level parameters: {self.job_parameters}")
-                
                 job_run = client.jobs.submit(**job_submit_params)
                 
-                # Add comprehensive metadata to the asset execution context
-                context.add_output_metadata({
-                    "databricks_job_run_id": job_run.run_id,
-                    "databricks_job_run_url": f"{databricks_resource.databricks_host.rstrip('/')}/#job/{job_run.run_id}/run/1",
-                    "selected_tasks": [task["task_key"] for task in selected_tasks],
-                    "total_tasks": len(tasks_to_use),
-                    "selected_assets": [str(asset) for asset in selected_assets],
-                    "compute_config": {
-                        "serverless": self.serverless,
-                        "spark_version": self.spark_version,
-                        "node_type_id": self.node_type_id,
-                        "num_workers": self.num_workers,
-                    },
-                    "common_config": self.common_config if self.common_config else None,
-                    "job_level_parameters": self.job_parameters if self.job_parameters else None,
-                    "job_name_prefix": self.job_name_prefix,
-                })
+                # Log job-level information (metadata will be added to individual assets)
+                context.log.info(f"Databricks job submitted with run ID: {job_run.run_id}")
+                context.log.info(f"Selected tasks: {[task['task_key'] for task in selected_tasks]}")
+                context.log.info(f"Total tasks in config: {len(tasks_to_use)}")
+                context.log.info(f"Selected assets: {[str(asset) for asset in selected_assets]}")
+                if self.common_config:
+                    context.log.info(f"Common config applied: {self.common_config}")
 
                 # Build Databricks job run URL
                 workspace_url = databricks_resource.databricks_host.rstrip("/")
@@ -1027,7 +1067,22 @@ except ImportError:
         spark_version: Optional[str] = "13.3.x-scala2.12"
         node_type_id: Optional[str] = "i3.xlarge"
         num_workers: Optional[int] = 1
-        tasks: List[Dict[str, Any]]
+        existing_cluster_id: Optional[str] = None  # Use existing cluster instead of creating new one
+
+        # Support both explicit tasks and databricks_config
+        tasks: Optional[List[Dict[str, Any]]] = None
+        databricks_config: Optional[str] = None  # Path to databricks.yml file
+        
+        # Common configuration that applies to all tasks
+        common_config: Optional[Dict[str, Any]] = None  # Dictionary of common parameters for all tasks
+
+        def __init__(self, **data):
+            """Initialize with validation that either tasks or databricks_config is provided."""
+            super().__init__(**data)
+            if not self.tasks and not self.databricks_config:
+                raise ValueError(
+                    "Either 'tasks' or 'databricks_config' must be provided"
+                )
 
         @field_validator("spark_version", "node_type_id", "num_workers")
         @classmethod
@@ -1041,9 +1096,308 @@ except ImportError:
                     raise ValueError(f"{field_name} is required when serverless=False")
                 return v
 
+        def _get_task_type(self, task: Dict[str, Any]) -> str:
+            """Get the type of task from the task configuration."""
+            if "notebook_path" in task:
+                return "notebook"
+            elif "notebook_task" in task:
+                return "notebook"
+            elif "job_id" in task:
+                return "run_job"
+            elif "spark_python_task" in task:
+                return "spark_python"
+            elif "python_wheel_task" in task:
+                return "python_wheel"
+            elif "spark_jar_task" in task:
+                return "spark_jar"
+            elif "run_job_task" in task:
+                return "run_job"
+            elif "condition_task" in task:
+                return "condition"
+            else:
+                return "unknown"
+
+        def _get_task_config(self, task: Dict[str, Any]) -> Dict[str, Any]:
+            """Get the task configuration based on task type."""
+            task_type = self._get_task_type(task)
+            
+            if task_type == "notebook":
+                if "notebook_path" in task:
+                    # Direct notebook_path format (scaffolder format)
+                    return {
+                        "notebook_path": task.get("notebook_path", ""),
+                        "parameters": task.get("parameters", {}),
+                    }
+                else:
+                    # Nested notebook_task format
+                    config = task.get("notebook_task", {})
+                    return {
+                        "notebook_path": config.get("notebook_path", ""),
+                        "base_parameters": config.get("base_parameters", {}),
+                        "source": config.get("source", "WORKSPACE"),
+                    }
+            elif task_type == "spark_python":
+                config = task.get("spark_python_task", {})
+                return {
+                    "python_file": config.get("python_file", ""),
+                    "parameters": config.get("parameters", []),
+                    "source": config.get("source", "WORKSPACE"),
+                }
+            elif task_type == "python_wheel":
+                config = task.get("python_wheel_task", {})
+                return {
+                    "package_name": config.get("package_name", ""),
+                    "entry_point": config.get("entry_point", ""),
+                    "parameters": config.get("parameters", []),
+                }
+            elif task_type == "spark_jar":
+                config = task.get("spark_jar_task", {})
+                return {
+                    "main_class_name": config.get("main_class_name", ""),
+                    "parameters": config.get("parameters", []),
+                }
+            elif task_type == "run_job":
+                if "job_id" in task:
+                    # Direct job_id format (scaffolder format)
+                    return {
+                        "job_id": task.get("job_id", ""),
+                        "job_parameters": task.get("job_parameters", {}),
+                    }
+                else:
+                    # Nested run_job_task format
+                    config = task.get("run_job_task", {})
+                    return {
+                        "job_id": config.get("job_id", ""),
+                        "job_parameters": config.get("job_parameters", {}),
+                    }
+            elif task_type == "condition":
+                config = task.get("condition_task", {})
+                return {
+                    "left": config.get("left", ""),
+                    "op": config.get("op", "EQUAL_TO"),
+                    "right": config.get("right", ""),
+                }
+            else:
+                return {}
+
+        def _extract_table_locations(self, task: Dict[str, Any], asset_spec_config: Dict[str, Any]) -> Dict[str, Any]:
+            """Extract table location information from task parameters and asset spec config."""
+            table_locations = {}
+            
+            # Check if table locations are explicitly configured in asset spec
+            if "table_locations" in asset_spec_config:
+                table_locations.update(asset_spec_config["table_locations"])
+            
+            # Extract from notebook task base parameters
+            task_type = self._get_task_type(task)
+            if task_type == "notebook":
+                notebook_task = task.get("notebook_task", {})
+                base_parameters = notebook_task.get("base_parameters", {})
+                
+                # Look for common table location parameter patterns
+                for param_name, param_value in base_parameters.items():
+                    if any(keyword in param_name.lower() for keyword in ["table", "location", "path", "output"]):
+                        table_locations[param_name] = param_value
+            
+            return table_locations
+
+        def _load_tasks_from_databricks_config(self) -> List[Dict[str, Any]]:
+            """Load tasks from databricks.yml configuration file."""
+            # Placeholder implementation - would need to parse databricks.yml
+            # For now, return empty list
+            return []
+
         def build_defs(self, context: dg.ComponentLoadContext) -> dg.Definitions:
             """Build Dagster definitions from the component configuration."""
+            from databricks.sdk.service import jobs
+            from databricks.sdk.service import compute
 
-            # Same implementation as above - keeping DRY principle
-            # [Implementation would be identical to the scaffolder version]
-            return dg.Definitions(assets=[])
+            # Get tasks - either from explicit configuration or from databricks_config
+            if self.tasks:
+                tasks_to_use = self.tasks
+            else:
+                tasks_to_use = self._load_tasks_from_databricks_config()
+
+            # Create asset specs from task definitions using the same pattern as the scaffolder version
+            asset_specs = []
+            for task in tasks_to_use:
+                task_key = task["task_key"]
+                asset_specs_config = task.get("asset_specs", [])
+
+                if not asset_specs_config:
+                    asset_specs_config = [{}]
+
+                for asset_spec_config in asset_specs_config:
+                    # Extract base attributes from asset_spec_config
+                    asset_key = asset_spec_config.get("key", task_key)
+                    deps = asset_spec_config.get("deps", [])
+
+                    # Process dependencies
+                    deps_keys = []
+                    for dep in deps:
+                        if isinstance(dep, str):
+                            deps_keys.append(dg.AssetKey(dep))
+                        else:
+                            deps_keys.append(dep)
+
+                    # Create a base spec with minimal required attributes
+                    base_spec = dg.AssetSpec(
+                        key=asset_key,
+                        deps=deps_keys,
+                    )
+
+                    # Apply default attributes first (replace if not already set)
+                    default_description = f"Asset for task {task_key}"
+                    spec_with_defaults = base_spec.replace_attributes(
+                        description=default_description
+                    ) if not asset_spec_config.get("description") else base_spec
+
+                    # Build comprehensive metadata using MetadataValue types
+                    metadata = {}
+                    
+                    # Task configuration metadata
+                    metadata["task_key"] = dg.MetadataValue.text(task_key)
+                    metadata["task_type"] = dg.MetadataValue.text(self._get_task_type(task))
+                    metadata["task_config"] = dg.MetadataValue.json(self._get_task_config(task))
+                    
+                    # Compute configuration metadata
+                    compute_config = {
+                        "serverless": self.serverless,
+                        "spark_version": self.spark_version,
+                        "node_type_id": self.node_type_id,
+                        "num_workers": self.num_workers,
+                    }
+                    metadata["compute_config"] = dg.MetadataValue.json(compute_config)
+                    
+                    # Libraries metadata
+                    if "libraries" in task:
+                        metadata["libraries"] = dg.MetadataValue.json(task["libraries"])
+                    
+                    # Job parameters metadata
+                    if "job_parameters" in task:
+                        metadata["job_parameters"] = dg.MetadataValue.json(task["job_parameters"])
+                    
+                    # Common configuration metadata
+                    if self.common_config:
+                        metadata["common_config"] = dg.MetadataValue.json(self.common_config)
+                    
+                    # Asset configuration metadata
+                    asset_config = {
+                        "key": str(asset_key),
+                        "kinds": list(asset_spec_config.get("kinds", ["databricks"])),
+                        "skippable": asset_spec_config.get("skippable", True),
+                        "deps": [str(dep) for dep in deps_keys],
+                    }
+                    metadata["asset_config"] = dg.MetadataValue.json(asset_config)
+                    
+                    # Table location metadata - extract from task parameters
+                    table_locations = self._extract_table_locations(task, asset_spec_config)
+                    if table_locations:
+                        metadata["table_locations"] = dg.MetadataValue.json(table_locations)
+
+                    # Process custom metadata from asset spec configuration
+                    if "metadata" in asset_spec_config:
+                        custom_metadata = asset_spec_config["metadata"]
+                        if isinstance(custom_metadata, list):
+                            # Handle list format: [{"key": "value"}, ...]
+                            for item in custom_metadata:
+                                if isinstance(item, dict):
+                                    for key, value in item.items():
+                                        # Wrap custom metadata values in appropriate MetadataValue types
+                                        if isinstance(value, str):
+                                            metadata[key] = dg.MetadataValue.text(value)
+                                        elif isinstance(value, (int, float)):
+                                            metadata[key] = dg.MetadataValue.float(float(value))
+                                        elif isinstance(value, bool):
+                                            metadata[key] = dg.MetadataValue.bool(value)
+                                        elif isinstance(value, dict):
+                                            metadata[key] = dg.MetadataValue.json(value)
+                                        else:
+                                            # Default to text for other types
+                                            metadata[key] = dg.MetadataValue.text(str(value))
+                        elif isinstance(custom_metadata, dict):
+                            # Handle dict format: {"key": "value", ...}
+                            for key, value in custom_metadata.items():
+                                # Wrap custom metadata values in appropriate MetadataValue types
+                                if isinstance(value, str):
+                                    metadata[key] = dg.MetadataValue.text(value)
+                                elif isinstance(value, (int, float)):
+                                    metadata[key] = dg.MetadataValue.float(float(value))
+                                elif isinstance(value, bool):
+                                    metadata[key] = dg.MetadataValue.bool(value)
+                                elif isinstance(value, dict):
+                                    metadata[key] = dg.MetadataValue.json(value)
+                                else:
+                                    # Default to text for other types
+                                    metadata[key] = dg.MetadataValue.text(str(value))
+
+                    # Merge additional attributes from asset_spec_config using merge_attributes
+                    # This allows any valid AssetSpec attributes to be passed through and merged
+                    spec_attributes = {
+                        "metadata": metadata,
+                        "kinds": set(asset_spec_config.get("kinds", ["databricks"])),
+                        "skippable": asset_spec_config.get("skippable", True),
+                    }
+                    
+                    # Add description if provided in config
+                    if asset_spec_config.get("description"):
+                        spec_attributes["description"] = asset_spec_config["description"]
+                    
+                    # Allow any other valid AssetSpec attributes to be passed through
+                    for attr_name, attr_value in asset_spec_config.items():
+                        if attr_name not in ["key", "deps", "description", "kinds", "skippable", "metadata"]:
+                            # Only add if it's a valid AssetSpec attribute
+                            if hasattr(dg.AssetSpec, attr_name):
+                                spec_attributes[attr_name] = attr_value
+
+                    # Merge all attributes into the spec
+                    # Use separate methods for merge vs replace attributes 
+                    # First, merge attributes that are supported by merge_attributes
+                    merge_attrs = {
+                        "metadata": metadata,
+                        "kinds": set(asset_spec_config.get("kinds", ["databricks"])),
+                    }
+                    
+                    # Only add supported merge attributes if they exist in config
+                    if "tags" in asset_spec_config:
+                        merge_attrs["tags"] = asset_spec_config["tags"]
+                    if "owners" in asset_spec_config:
+                        merge_attrs["owners"] = asset_spec_config["owners"]
+
+                    # Apply merge_attributes for supported attributes
+                    spec_with_merge = spec_with_defaults.merge_attributes(**merge_attrs)
+                    
+                    # Then use replace_attributes for attributes not supported by merge_attributes
+                    replace_attrs = {}
+                    
+                    # Add description if provided in config
+                    if asset_spec_config.get("description"):
+                        replace_attrs["description"] = asset_spec_config["description"]
+                    
+                    # Add skippable if provided in config  
+                    if "skippable" in asset_spec_config:
+                        replace_attrs["skippable"] = asset_spec_config["skippable"]
+
+                    # Apply replace_attributes for unsupported attributes
+                    if replace_attrs:
+                        final_spec = spec_with_merge.replace_attributes(**replace_attrs)
+                    else:
+                        final_spec = spec_with_merge
+                    asset_specs.append(final_spec)
+
+            @dg.multi_asset(
+                name=f"{self.job_name_prefix}_multi_asset",
+                specs=asset_specs,
+                can_subset=True,
+            )
+            def multi_notebook_job_asset(
+                context: dg.AssetExecutionContext,
+                databricks_resource: DatabricksResource,
+                config: MultiNotebookJobConfig,
+            ):
+                """Multi-asset that runs multiple notebooks as a single Databricks job."""
+                # Implementation would be identical to the scaffolder version
+                # For now, return empty results
+                return
+
+            return dg.Definitions(assets=[multi_notebook_job_asset])

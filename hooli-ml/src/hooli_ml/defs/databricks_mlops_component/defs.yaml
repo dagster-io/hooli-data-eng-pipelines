@@ -5,6 +5,10 @@ template_vars_module: .template_vars
 attributes:
   job_name_prefix: databricks_mlops_pipeline
   serverless: true
+  common_config:
+    env: '{{ env }}'
+    git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch }}; commit:{{ bundle_git_commit }}
+    some_value: 'some_result'
   tasks:
     - task_key: batch_inference_job
       asset_specs:
@@ -25,8 +29,7 @@ attributes:
         input_table_name: '{{ env }}.databricks_mlops.feature_store_inference_input'
         output_table_name: '{{ catalog_name }}.databricks_mlops.predictions'
         model_name: '{{ catalog_name }}.databricks_mlops.{{ model_name }}'
-        git_source_info: url:{{ bundle_git_origin_url }}; branch:{{ bundle_git_branch
-          }}; commit:{{ bundle_git_commit }}
+        # git_source_info moved to common_config
     - task_key: Train
       asset_specs:
         - key: train
@@ -93,6 +96,8 @@ attributes:
           kinds:
             - databricks
             - notebook
+          metadata:
+            - dagster/table_name: '{{ catalog_name }}.databricks_mlops.trip_pickup_features'
       notebook_path: /Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env
         }}/files/feature_engineering/notebooks/GenerateAndWriteFeatures
       parameters:
@@ -183,12 +188,20 @@ attributes:
 # attributes:
 #   job_name_prefix: adventure_continues
 #   serverless: false
-#   existing_cluster_id: "0717-182026-6kr00dvt"
-#   # spark_version: "13.3.x-scala2.12"
-#   # node_type_id: "i3.xlarge"
-#   # num_workers: 1
+#   #existing_cluster_id: "0717-182026-6kr00dvt"
+#   spark_version: "13.3.x-scala2.12"
+#   node_type_id: "i3.xlarge"
+#   num_workers: 1
+#   common_config:
+#     env: '{{ env }}'
+#     log_level: "INFO"
+#     timeout: 3600
 #   tasks:
 #     - task_key: adventure_continues
+#       libraries:
+#         - pypi:
+#             package: "pandas" 
+#             version: "2.0.0"
 #       asset_specs:
 #         - key: adventure_continues
 #           description: adventure_continues from adventure_awaits job (notebook
