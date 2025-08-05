@@ -220,3 +220,87 @@ attributes:
 #           deps:
 #             - adventure_continues
 #       job_id: 917365194082799
+
+# ---
+# Spark Python Task Example
+# Demonstrates the new spark_python_task functionality
+# ---
+
+# type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+# template_vars_module: .template_vars
+
+# attributes:
+#   job_name_prefix: spark_hello_world_example
+#   serverless: false
+#   common_config:
+#     env: '{{ env }}'
+#     debug: 'true'
+#     log_level: 'INFO'
+#   tasks:
+#     - task_key: hello_world_spark
+#       asset_specs:
+#         - key: hello_world_spark
+#           description: Hello World Spark Python Task
+#           kinds:
+#             - databricks
+#             - spark
+#             - python
+#       spark_python_task:
+#         python_file: "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/spark_example/hello_world_spark.py"
+#       parameters:
+#         message: 'Hello from Dagster + Databricks!'
+#         env: '{{ env }}'
+#       libraries:
+#         - pypi:
+#             package: 'pyspark'
+#             version: '3.5.0'
+            
+#     - task_key: spark_analysis
+#       asset_specs:
+#         - key: spark_analysis
+#           description: Spark Analysis Task
+#           kinds:
+#             - databricks
+#             - spark
+#             - python
+#           deps:
+#             - hello_world_spark
+#       spark_python_task:
+#         python_file: "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/spark_example/hello_world_spark.py"
+#       parameters:
+#         message: 'Analysis complete!'
+#         mode: 'analysis'
+        
+#     - task_key: check_spark_success
+#       asset_specs:
+#         - key: check_spark_success
+#           description: Check if Spark tasks succeeded
+#           kinds:
+#             - databricks
+#             - condition
+#           deps:
+#             - spark_analysis
+#       condition_task:
+#         left: '{{ databricks_task_value("tasks.spark_analysis.values.status") }}'
+#         op: 'EQUAL_TO'
+#         right: 'completed'
+        
+#     - task_key: spark_notification
+#       asset_specs:
+#         - key: spark_notification
+#           description: Success notification for Spark pipeline
+#           kinds:
+#             - databricks
+#             - spark
+#             - python
+#           deps:
+#             - check_spark_success
+#       depends_on:
+#         - task_key: check_spark_success
+#           outcome: 'true'
+#       spark_python_task:
+#         python_file: "/Users/{{ workspace_user }}/.bundle/{{ bundle_name }}/{{ env }}/files/spark_example/hello_world_spark.py"
+
+#       parameters:
+#         message: '🎉 Spark pipeline completed successfully!'
+#         mode: 'notification'

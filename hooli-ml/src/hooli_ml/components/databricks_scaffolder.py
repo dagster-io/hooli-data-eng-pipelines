@@ -227,6 +227,13 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                     # Python wheel tasks use parameters differently
                     base_parameters = python_wheel_task.get("parameters", [])
 
+                elif "spark_python_task" in task_config:
+                    task_type = "spark_python"
+                    spark_python_task = task_config["spark_python_task"]
+                    task_specific_config = {"spark_python_task": spark_python_task}
+                    # Spark Python tasks use parameters differently
+                    base_parameters = spark_python_task.get("parameters", [])
+
                 elif "spark_jar_task" in task_config:
                     task_type = "spark_jar"
                     spark_jar_task = task_config["spark_jar_task"]
@@ -411,6 +418,18 @@ class DatabricksBundleScaffolder(dg.Scaffolder[DatabricksScaffoldParams]):
                         "python_wheel_task"
                     ]
                     # Python wheel parameters are handled differently (list format)
+                    if isinstance(task.base_parameters, list):
+                        task_config["parameters"] = task.base_parameters
+                    elif isinstance(task.base_parameters, dict):
+                        task_config["parameters"] = self._process_parameters(
+                            task.base_parameters, variables, default_target
+                        )
+
+                elif task.task_type == "spark_python":
+                    task_config["spark_python_task"] = task.task_config[
+                        "spark_python_task"
+                    ]
+                    # Spark Python parameters are handled differently (list format)
                     if isinstance(task.base_parameters, list):
                         task_config["parameters"] = task.base_parameters
                     elif isinstance(task.base_parameters, dict):
@@ -766,6 +785,9 @@ This component was automatically generated from Databricks bundle configuration.
             elif task.task_type == "python_wheel":
                 wheel_config = task.task_config.get("python_wheel_task", {})
                 task_path = f"Package: {wheel_config.get('package_name', 'N/A')}, Entry: {wheel_config.get('entry_point', 'N/A')}"
+            elif task.task_type == "spark_python":
+                python_config = task.task_config.get("spark_python_task", {})
+                task_path = f"Python File: {python_config.get('python_file', 'N/A')}"
             elif task.task_type == "spark_jar":
                 jar_config = task.task_config.get("spark_jar_task", {})
                 task_path = f"Main Class: {jar_config.get('main_class_name', 'N/A')}"

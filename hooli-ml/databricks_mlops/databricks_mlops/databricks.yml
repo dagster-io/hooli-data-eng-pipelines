@@ -23,6 +23,8 @@ include:
   - ./resources/ml-artifacts-resource.yml
   - ./resources/model-workflow-resource.yml
   - ./resources/feature-engineering-workflow-resource.yml
+  # uncomment to scaffold the spark example job
+  #- ./resources/spark-example.yaml
   # TODO: uncomment once monitoring inference table has been created
   # Temporarily commented out until predictions table exists
   # - ./resources/monitoring-resource.yml
@@ -55,3 +57,9 @@ targets:
       catalog_name: test
     workspace:
       host: https://dbc-edf81ed6-5bff.cloud.databricks.com
+
+  dev_with_cluster:
+    variables:
+      catalog_name: dev
+    workspace:
+      host: https://dbc-07902917-6487.cloud.databricks.com/

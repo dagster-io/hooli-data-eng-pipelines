@@ -33,6 +33,7 @@ try:
         - Notebook tasks (notebook_path)
         - Run existing job tasks (job_id)
         - Python wheel tasks (python_wheel_task)
+        - Spark Python script tasks (spark_python_task)
         - Spark JAR tasks (spark_jar_task)
         - Condition tasks (condition_task)
 
@@ -118,6 +119,8 @@ try:
                 return "run_job"
             elif "python_wheel_task" in task:
                 return "python_wheel"
+            elif "spark_python_task" in task:
+                return "spark_python"
             elif "spark_jar_task" in task:
                 return "spark_jar"
             elif "condition_task" in task:
@@ -145,6 +148,10 @@ try:
                 wheel_config = task["python_wheel_task"]
                 task_config["package_name"] = wheel_config["package_name"]
                 task_config["entry_point"] = wheel_config["entry_point"]
+                task_config["parameters"] = task.get("parameters", {})
+            elif "spark_python_task" in task:
+                python_config = task["spark_python_task"]
+                task_config["python_file"] = python_config["python_file"]
                 task_config["parameters"] = task.get("parameters", {})
             elif "spark_jar_task" in task:
                 jar_config = task["spark_jar_task"]
@@ -259,24 +266,56 @@ try:
                 asset_spec = {
                     "key": asset_key,
                     "description": f"{task.task_key} from {task.job_name} job",
-                    "kinds": ["databricks", "notebook"],
+                    "kinds": ["databricks", task.task_type],
                 }
 
                 # Add dependencies if they exist
                 if asset_key in task_dependencies and task_dependencies[asset_key]:
                     asset_spec["deps"] = task_dependencies[asset_key]
 
-                # Create task configuration
+                # Create task configuration based on task type
                 task_config = {
                     "task_key": task.task_key,
-                    "notebook_path": scaffolder._process_notebook_path(
-                        task.notebook_path
-                    ),
                     "asset_specs": [asset_spec],
-                    "parameters": scaffolder._process_parameters(
-                        task.base_parameters, variables, None
-                    ),
                 }
+
+                # Add task-specific configuration
+                if task.task_type == "notebook":
+                    # For notebook tasks, extract notebook_path from task_config
+                    notebook_path = task.task_config.get("notebook_path", "")
+                    task_config["notebook_path"] = scaffolder._process_notebook_path(notebook_path)
+                    task_config["parameters"] = scaffolder._process_parameters(
+                        task.base_parameters, variables, None
+                    )
+                elif task.task_type == "condition":
+                    # For condition tasks, add the condition_task configuration
+                    task_config["condition_task"] = task.task_config.get("condition_task", {})
+                elif task.task_type == "spark_python":
+                    # For spark python tasks, add the spark_python_task configuration  
+                    task_config["spark_python_task"] = task.task_config.get("spark_python_task", {})
+                    task_config["parameters"] = scaffolder._process_parameters(
+                        task.base_parameters, variables, None
+                    )
+                elif task.task_type == "python_wheel":
+                    # For python wheel tasks, add the python_wheel_task configuration
+                    task_config["python_wheel_task"] = task.task_config.get("python_wheel_task", {})
+                    task_config["parameters"] = scaffolder._process_parameters(
+                        task.base_parameters, variables, None
+                    )
+                elif task.task_type == "spark_jar":
+                    # For spark jar tasks, add the spark_jar_task configuration
+                    task_config["spark_jar_task"] = task.task_config.get("spark_jar_task", {})
+                    task_config["parameters"] = scaffolder._process_parameters(
+                        task.base_parameters, variables, None
+                    )
+                elif task.task_type == "job":
+                    # For job tasks, add the job_id and job_parameters
+                    task_config["job_id"] = task.task_config.get("job_id")
+                    task_config["job_parameters"] = task.task_config.get("job_parameters", {})
+
+                # Add libraries if present
+                if task.libraries:
+                    task_config["libraries"] = task.libraries
 
                 component_tasks.append(task_config)
 
@@ -628,6 +667,8 @@ try:
                         task_needs_cluster = True
                     elif "python_wheel_task" in task:
                         task_needs_cluster = True
+                    elif "spark_python_task" in task:
+                        task_needs_cluster = True
                     elif "spark_jar_task" in task:
                         task_needs_cluster = True
                     elif "condition_task" in task:
@@ -687,6 +728,18 @@ try:
                             if final_parameters
                             else None,
                         )
+                    elif "spark_python_task" in task:
+                        # Spark Python script task
+                        python_config = task["spark_python_task"]
+                        submit_task_params["spark_python_task"] = jobs.SparkPythonTask(
+                            python_file=python_config["python_file"],
+                            parameters=list(final_parameters.values())
+                            if final_parameters
+                            else None,
+                        )
+                        context.log.info(
+                            f"Task {task_key} will run Python script: {python_config['python_file']}"
+                        )
                     elif "spark_jar_task" in task:
                         # Spark JAR task
                         jar_config = task["spark_jar_task"]
@@ -712,18 +765,21 @@ try:
                         )
                     else:
                         raise ValueError(
-                            f"Task {task_key} must specify one of: notebook_path, job_id, python_wheel_task, spark_jar_task, or condition_task"
+                            f"Task {task_key} must specify one of: notebook_path, job_id, python_wheel_task, spark_python_task, spark_jar_task, or condition_task"
                         )
 
-                    # Add cluster configuration
-                    if self.serverless:
-                        pass  # No cluster spec needed for serverless
-                    elif self.existing_cluster_id:
-                        submit_task_params["existing_cluster_id"] = self.existing_cluster_id
+                    # Add cluster configuration ONLY for tasks that need it
+                    if task_needs_cluster:
+                        if self.serverless:
+                            pass  # No cluster spec needed for serverless
+                        elif self.existing_cluster_id:
+                            submit_task_params["existing_cluster_id"] = self.existing_cluster_id
+                        else:
+                            # Only add new_cluster if cluster_spec was created
+                            if 'cluster_spec' in locals():
+                                submit_task_params["new_cluster"] = cluster_spec
                     else:
-                        # Only add new_cluster if cluster_spec was created
-                        if 'cluster_spec' in locals():
-                            submit_task_params["new_cluster"] = cluster_spec
+                        context.log.info(f"Task {task_key} does not need cluster configuration (job/condition task)")
 
                     # Add libraries if specified
                     if "libraries" in task:
@@ -969,6 +1025,10 @@ try:
                                     task_metadata["package_name"] = wheel_config["package_name"]
                                     task_metadata["entry_point"] = wheel_config["entry_point"]
                                     task_metadata["task_type"] = "python_wheel"
+                                elif "spark_python_task" in task_config:
+                                    python_config = task_config["spark_python_task"]
+                                    task_metadata["python_file"] = python_config["python_file"]
+                                    task_metadata["task_type"] = "spark_python"
                                 elif "spark_jar_task" in task_config:
                                     jar_config = task_config["spark_jar_task"]
                                     task_metadata["main_class_name"] = jar_config["main_class_name"]
