@@ -1,0 +1,153 @@
+# Real-world example: Mixed Databricks task types with dependencies
+# This shows how to run existing Databricks jobs as tasks alongside notebooks
+
+type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+template_vars_module: .template_vars
+
+attributes:
+  job_name_prefix: "end_to_end_ml_pipeline"
+  serverless: false
+  existing_cluster_id: "cluster-prod-ml-123"
+  
+  tasks:
+    # Step 1: Run existing ETL job that processes raw data
+    - task_key: "daily_etl_job"
+      job_id: 111222333  # ID of your existing ETL Databricks job
+      job_parameters:
+        # Parameters passed to the existing job
+        source_database: "raw_data"
+        target_database: "{{ env }}.processed"
+        processing_date: "{{ ds }}"  # Airflow-style date parameter
+        batch_size: 10000
+      parameters:
+        # Additional parameters from the component
+        environment: "{{ env }}"
+        run_id: "{{ run_id }}"
+      asset_specs:
+        - key: processed_data
+          description: "Daily processed data from ETL pipeline"
+          kinds: ["databricks", "etl"]
+    
+    # Step 2: Feature engineering using a notebook (depends on ETL)
+    - task_key: "feature_engineering_notebook"
+      notebook_path: "/Users/{{ workspace_user }}/ml_pipelines/feature_engineering"
+      parameters:
+        input_table: "{{ env }}.processed.daily_data"
+        output_table: "{{ env }}.features.customer_features"
+        feature_date: "{{ ds }}"
+      asset_specs:
+        - key: customer_features
+          description: "Engineered customer features"
+          kinds: ["databricks", "notebook", "features"]
+          deps: ["processed_data"]  # Wait for ETL job to complete
+    
+    # Step 3: Run existing ML training job (depends on features)
+    - task_key: "model_training_job"
+      job_id: 444555666  # ID of your existing ML training job
+      job_parameters:
+        features_table: "{{ env }}.features.customer_features"
+        model_output_path: "/models/{{ env }}/customer_churn/{{ ds }}"
+        experiment_name: "/{{ env }}-customer-churn-experiment"
+        hyperparameters: |
+          {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 100
+          }
+      asset_specs:
+        - key: trained_model
+          description: "Trained customer churn model"
+          kinds: ["databricks", "ml_model"]
+          deps: ["customer_features"]
+          skippable: false  # Critical asset
+    
+    # Step 4: Model validation using Python wheel
+    - task_key: "model_validation_wheel"
+      python_wheel_task:
+        package_name: "ml_validation_package"
+        entry_point: "validate_model"
+      parameters:
+        model_path: "/models/{{ env }}/customer_churn/{{ ds }}"
+        validation_data: "{{ env }}.test.validation_dataset"
+        metrics_output: "{{ env }}.metrics.model_performance"
+        threshold_accuracy: 0.85
+      asset_specs:
+        - key: model_validation
+          description: "Model validation metrics and results"
+          kinds: ["databricks", "ml_validation"]
+          deps: ["trained_model"]
+    
+    # Step 5: Model deployment job (only if validation passes)
+    - task_key: "model_deployment_job"
+      job_id: 777888999  # ID of your model deployment job
+      job_parameters:
+        model_path: "/models/{{ env }}/customer_churn/{{ ds }}"
+        deployment_target: "{{ env }}"
+        model_alias: "customer_churn_latest"
+        enable_monitoring: true
+      asset_specs:
+        - key: deployed_model
+          description: "Model deployed to serving endpoint"
+          kinds: ["databricks", "ml_deployment"]
+          deps: ["model_validation"]
+    
+    # Step 6: Batch inference using Spark JAR
+    - task_key: "batch_inference_jar"
+      spark_jar_task:
+        main_class_name: "com.company.ml.BatchInference"
+      parameters:
+        model_uri: "models:/customer_churn_latest/latest"
+        input_table: "{{ env }}.features.customer_features"
+        output_table: "{{ env }}.predictions.customer_churn_scores"
+        prediction_date: "{{ ds }}"
+      asset_specs:
+        - key: batch_predictions
+          description: "Daily customer churn predictions"
+          kinds: ["databricks", "predictions"]
+          deps: ["deployed_model"]
+    
+    # Step 7: Generate monitoring report (notebook)
+    - task_key: "monitoring_report_notebook"
+      notebook_path: "/Users/{{ workspace_user }}/monitoring/generate_report"
+      parameters:
+        predictions_table: "{{ env }}.predictions.customer_churn_scores"
+        baseline_table: "{{ env }}.baselines.historical_performance"
+        alert_email: "ml-team@company.com"
+        dashboard_url: "https://company.databricks.com/sql/dashboards/abc123"
+      asset_specs:
+        - key: monitoring_report
+          description: "Daily ML monitoring and alerting report"
+          kinds: ["databricks", "notebook", "monitoring"]
+          deps: ["batch_predictions"]
+
+---
+# Alternative: Simple job orchestration example
+type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+template_vars_module: .template_vars
+
+attributes:
+  job_name_prefix: "job_orchestration_simple"
+  serverless: true
+  
+  tasks:
+    # Run a data quality job first
+    - task_key: "data_quality_check"
+      job_id: 123456789
+      job_parameters:
+        table_name: "{{ env }}.raw.customer_data"
+        check_date: "{{ ds }}"
+      asset_specs:
+        - key: data_quality_passed
+          description: "Data quality validation results"
+    
+    # Then run the main processing job
+    - task_key: "main_processing"
+      job_id: 987654321
+      job_parameters:
+        input_table: "{{ env }}.raw.customer_data"
+        output_table: "{{ env }}.processed.customer_data"
+        processing_date: "{{ ds }}"
+      asset_specs:
+        - key: processed_customers
+          description: "Processed customer data"
+          deps: ["data_quality_passed"]  # Only run if data quality passes

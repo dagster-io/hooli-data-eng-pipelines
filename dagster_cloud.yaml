@@ -43,3 +43,10 @@ locations:
     build:
       directory: ./hooli-interoperability
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
+  - location_name: hooli_ml
+    code_source:
+      module_name: hooli_ml.definitions
+    build:
+      directory: ./hooli-ml
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

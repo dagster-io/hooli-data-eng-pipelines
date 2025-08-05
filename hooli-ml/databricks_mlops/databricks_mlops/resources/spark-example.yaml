@@ -1,0 +1,81 @@
+resources:
+  jobs:
+    spark_hello_world_job:
+      name: "Spark Hello World Example Job"
+      
+      tasks:
+        - task_key: "hello_world_spark_task"
+          new_cluster:
+            spark_version: "13.3.x-scala2.12"
+            num_workers: 1  # 0 = serverless Spark compute
+            node_type_id: "i3.xlarge"
+            data_security_mode: "SINGLE_USER"
+            runtime_engine: "PHOTON"
+          spark_python_task:
+            python_file: "../spark_example/hello_world_spark.py"
+            parameters:
+              - "Hello from Databricks Bundle!"
+              - "{{ bundle.target }}"
+          libraries:
+            - pypi:
+                package: "pyspark>=3.3.0"
+        
+        - task_key: "hello_world_analysis"
+          depends_on:
+            - task_key: "hello_world_spark_task"
+          new_cluster:
+            spark_version: "13.3.x-scala2.12"
+            num_workers: 2  # 0 = serverless Spark compute
+            node_type_id: "i3.xlarge"
+            data_security_mode: "SINGLE_USER"
+            runtime_engine: "PHOTON"
+          spark_python_task:
+            python_file: "../spark_example/hello_world_spark.py"
+            parameters:
+              - "Analysis phase complete!"
+              - "{{ bundle.target }}"
+              - "analysis_mode"
+          libraries:
+            - pypi:
+                package: "pyspark>=3.3.0"
+                
+        # Example condition task that checks the results
+        - task_key: "check_results"
+          depends_on:
+            - task_key: "hello_world_analysis"
+          condition_task:
+            left: "{{ tasks.hello_world_analysis.values.status }}"
+            op: "EQUAL_TO"
+            right: "completed"
+            
+        # Example follow-up task that only runs if check passes
+        - task_key: "success_notification"
+          depends_on:
+            - task_key: "check_results"
+              outcome: "true"
+          new_cluster:
+            spark_version: "13.3.x-scala2.12"
+            num_workers: 2  # 0 = serverless Spark compute
+            node_type_id: "i3.xlarge"
+            data_security_mode: "SINGLE_USER"
+            runtime_engine: "PHOTON"
+          spark_python_task:
+            python_file: "../spark_example/hello_world_spark.py"
+            parameters:
+              - "🎉 All tasks completed successfully!"
+              - "{{ bundle.target }}"
+              - "notification"
+          libraries:
+            - pypi:
+                package: "pyspark>=3.3.0"
+
+      timeout_seconds: 3600
+      max_concurrent_runs: 1
+      
+      parameters:
+        - name: "environment"
+          default: "{{ bundle.target }}"
+        - name: "log_level"
+          default: "INFO"
+        - name: "debug_mode"
+          default: "false"

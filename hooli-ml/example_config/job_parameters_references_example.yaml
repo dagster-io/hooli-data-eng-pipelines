@@ -1,0 +1,187 @@
+# Example: Job-level parameters with {{job.parameters.param_name}} references
+# This demonstrates how to define job-level parameters that can be referenced in task parameters
+
+type: hooli_ml.components.DatabricksMultiNotebookJobComponent
+template_vars_module: .template_vars
+
+attributes:
+  job_name_prefix: "job_parameters_example"
+  serverless: false
+  spark_version: "13.3.x-scala2.12"
+  node_type_id: "i3.xlarge"
+  num_workers: 2
+  
+  # Job-level parameters that can be referenced in task parameters
+  job_parameters:
+    environment: "{{ env }}"
+    orchestrator_job_run_id: "{{ run_id }}"
+    output_bucket_name: "{{ var.output_bucket_name }}"
+    profiler_enabled: false
+    experiment_settings: "mlflow://databricks"
+    catalog_map: "{{ env }}.catalog"
+    log_level: "INFO"
+    llm_calls: "enabled"
+    git_sha: "{{ git_sha }}"
+    batch_size: 1000
+    timeout_minutes: 30
+  
+  # Common configuration for all tasks
+  common_config:
+    - "--experiment_settings={{ experiment_settings }}"
+    - "--catalog_map={{ catalog_map }}"
+    - "--log_level={{ log_level }}"
+    - "--llm_calls={{ llm_calls }}"
+    - "--git_sha={{ git_sha }}"
+    - "--output_bucket_name={{ output_bucket_name }}"
+    - "--run_id={{ orchestrator_job_run_id }}"
+    - "--module=ml_etl.projects.tune.tasks.test_task"
+    - "--class=TestTask"
+    - "--environment={{ environment }}"
+    - "--profiler_enabled={{ profiler_enabled }}"
+  
+  tasks:
+    # Example 1: Notebook task with job parameter references
+    - task_key: data_processing_notebook
+      notebook_path: "/Users/{{ workspace_user }}/ml_pipelines/data_processing"
+      parameters:
+        input_table: "{{ env }}.raw.customer_data"
+        output_table: "{{ env }}.processed.customer_data"
+        processing_date: "{{ ds }}"
+        # Reference job-level parameters using {{job.parameters.param_name}} syntax
+        environment: "{{job.parameters.environment}}"
+        run_id: "{{job.parameters.orchestrator_job_run_id}}"
+        output_bucket: "{{job.parameters.output_bucket_name}}"
+        profiler_enabled: "{{job.parameters.profiler_enabled}}"
+        experiment_settings: "{{job.parameters.experiment_settings}}"
+        catalog_map: "{{job.parameters.catalog_map}}"
+        log_level: "{{job.parameters.log_level}}"
+        llm_calls: "{{job.parameters.llm_calls}}"
+        git_sha: "{{job.parameters.git_sha}}"
+        batch_size: "{{job.parameters.batch_size}}"
+        timeout_minutes: "{{job.parameters.timeout_minutes}}"
+      libraries:
+        - whl: "dbfs:/FileStore/wheels/data_processing-1.0.0-py3-none-any.whl"
+        - pypi:
+            package: "pandas"
+            version: "2.0.0"
+      asset_specs:
+        - key: processed_customer_data
+          description: "Processed customer data with job parameter references"
+          kinds: ["databricks", "notebook", "processing"]
+    
+    # Example 2: Python wheel task with job parameter references in list format
+    - task_key: feature_engineering_wheel
+      depends_on:
+        - task_key: data_processing_notebook
+      python_wheel_task:
+        package_name: "ml_processing_package"
+        entry_point: "engineer_features"
+      parameters:
+        # List format parameters with job parameter references
+        - "--run_id={{job.parameters.orchestrator_job_run_id}}"
+        - "--module=ml_etl.projects.tune.tasks.test_task"
+        - "--class=TestTask"
+        - "--environment={{job.parameters.environment}}"
+        - "--profiler_enabled={{job.parameters.profiler_enabled}}"
+        - "--experiment_settings={{job.parameters.experiment_settings}}"
+        - "--catalog_map={{job.parameters.catalog_map}}"
+        - "--log_level={{job.parameters.log_level}}"
+        - "--llm_calls={{job.parameters.llm_calls}}"
+        - "--git_sha={{job.parameters.git_sha}}"
+        - "--batch_size={{job.parameters.batch_size}}"
+        - "--timeout_minutes={{job.parameters.timeout_minutes}}"
+        - "--input_table={{ env }}.processed.customer_data"
+        - "--output_table={{ env }}.features.customer_features"
+      libraries:
+        - whl: "dbfs:/FileStore/wheels/ml_processing-2.1.0-py3-none-any.whl"
+        - pypi:
+            package: "scikit-learn"
+            version: "1.3.0"
+      asset_specs:
+        - key: customer_features
+          description: "Engineered customer features with job parameter references"
+          kinds: ["databricks", "wheel", "features"]
+          deps: ["processed_customer_data"]
+    
+    # Example 3: Spark JAR task with job parameter references
+    - task_key: spark_processing_jar
+      depends_on:
+        - task_key: feature_engineering_wheel
+      spark_jar_task:
+        main_class_name: "com.company.etl.DataProcessor"
+      parameters:
+        input_table: "{{ env }}.raw.transactions"
+        output_table: "{{ env }}.processed.transactions"
+        processing_date: "{{ ds }}"
+        # Mix of direct values and job parameter references
+        environment: "{{job.parameters.environment}}"
+        run_id: "{{job.parameters.orchestrator_job_run_id}}"
+        output_bucket: "{{job.parameters.output_bucket_name}}"
+        profiler_enabled: "{{job.parameters.profiler_enabled}}"
+        batch_size: "{{job.parameters.batch_size}}"
+        timeout_minutes: "{{job.parameters.timeout_minutes}}"
+        experiment_settings: "{{job.parameters.experiment_settings}}"
+        catalog_map: "{{job.parameters.catalog_map}}"
+        log_level: "{{job.parameters.log_level}}"
+        llm_calls: "{{job.parameters.llm_calls}}"
+        git_sha: "{{job.parameters.git_sha}}"
+      libraries:
+        - jar: "dbfs:/FileStore/jars/data_processor-1.0.0.jar"
+        - maven:
+            coordinates: "org.apache.spark:spark-streaming_2.12:3.4.0"
+      asset_specs:
+        - key: processed_transactions
+          description: "Processed transaction data with job parameter references"
+          kinds: ["databricks", "jar", "etl"]
+          deps: ["customer_features"]
+    
+    # Example 4: Run existing job with job parameter references
+    - task_key: existing_job_with_references
+      depends_on:
+        - task_key: spark_processing_jar
+      job_id: 123456789
+      job_parameters:
+        # Job parameters for the existing job being invoked
+        input_table: "{{ env }}.processed.transactions"
+        output_table: "{{ env }}.analytics.daily_summary"
+        summary_date: "{{ ds }}"
+        # Reference job-level parameters in job parameters
+        environment: "{{job.parameters.environment}}"
+        run_id: "{{job.parameters.orchestrator_job_run_id}}"
+        output_bucket: "{{job.parameters.output_bucket_name}}"
+        profiler_enabled: "{{job.parameters.profiler_enabled}}"
+        experiment_settings: "{{job.parameters.experiment_settings}}"
+        catalog_map: "{{job.parameters.catalog_map}}"
+        log_level: "{{job.parameters.log_level}}"
+        llm_calls: "{{job.parameters.llm_calls}}"
+        git_sha: "{{job.parameters.git_sha}}"
+        batch_size: "{{job.parameters.batch_size}}"
+        timeout_minutes: "{{job.parameters.timeout_minutes}}"
+      asset_specs:
+        - key: daily_summary
+          description: "Daily analytics summary with job parameter references"
+          kinds: ["databricks", "job", "analytics"]
+          deps: ["processed_transactions"]
+
+---
+# Example: How job parameter references work
+
+# When the component runs, job parameter references like {{job.parameters.environment}}
+# will be replaced with the actual values from the job_parameters section:
+
+# Input task parameter:
+# environment: "{{job.parameters.environment}}"
+
+# After processing (assuming job_parameters.environment = "prod"):
+# environment: "prod"
+
+# This allows you to:
+# 1. Define job-level parameters once in the component configuration
+# 2. Reference them in any task parameter using {{job.parameters.param_name}} syntax
+# 3. Override them at runtime if needed
+# 4. Keep task configurations DRY and maintainable
+
+# Supported parameter formats:
+# - String parameters: "{{job.parameters.environment}}"
+# - List parameters: ["--env={{job.parameters.environment}}", "--run_id={{job.parameters.orchestrator_job_run_id}}"]
+# - Dict parameters: {env: "{{job.parameters.environment}}", run_id: "{{job.parameters.orchestrator_job_run_id}}"} 
