@@ -13,10 +13,27 @@ from pyspark.sql.functions import col, lit, current_timestamp
 def main():
     """Main function that runs the Spark hello world example."""
     
+    # Check if we're running in Databricks
+    is_databricks = False
+    try:
+        # Try to access dbutils - this will only work in Databricks
+        dbutils  # This will be available in Databricks global namespace
+        is_databricks = True
+        print("🏢 Running in Databricks environment")
+    except NameError:
+        print("💻 Running in local/non-Databricks environment")
+    
     # Initialize Spark session
-    spark = SparkSession.builder \
-        .appName("HelloWorldSpark") \
-        .getOrCreate()
+    if is_databricks:
+        # In Databricks, use the existing Spark session
+        spark = SparkSession.getActiveSession()
+        if spark is None:
+            spark = SparkSession.builder.appName("HelloWorldSpark").getOrCreate()
+    else:
+        # In local environments, create a new session
+        spark = SparkSession.builder \
+            .appName("HelloWorldSpark") \
+            .getOrCreate()
     
     print("🚀 Hello World from Spark Python Task!")
     print(f"📊 Spark version: {spark.version}")
@@ -97,16 +114,34 @@ def main():
     print(f"📤 Task values: {task_values}")
     
     # In Databricks, you can set task values using dbutils
-    try:
-        # This will work in Databricks environment
-        dbutils.jobs.taskValues.set(key="task_results", value=task_values)
-        print("📋 Task values set for downstream tasks")
-    except:
-        # This will run in local/non-Databricks environments
+    if is_databricks:
+        try:
+            # Set individual task values that can be referenced by downstream tasks
+            # These can be referenced as: tasks.{task_key}.values.{key}
+            dbutils.jobs.taskValues.set(key="status", value="completed")
+            dbutils.jobs.taskValues.set(key="total_technologies", value=str(df_enhanced.count()))
+            dbutils.jobs.taskValues.set(key="unique_categories", value=str(df_enhanced.select('category').distinct().count()))
+            dbutils.jobs.taskValues.set(key="message", value=message)
+            dbutils.jobs.taskValues.set(key="environment", value=env)
+            
+            print("📋 Task values set for downstream tasks:")
+            print(f"   - status: completed")
+            print(f"   - total_technologies: {df_enhanced.count()}")
+            print(f"   - unique_categories: {df_enhanced.select('category').distinct().count()}")
+            print(f"   - message: {message}")
+            print(f"   - environment: {env}")
+        except Exception as e:
+            print(f"📋 Error setting task values: {e}")
+    else:
         print("📋 Task values would be set in Databricks environment")
     
-    spark.stop()
-    print("🏁 Spark session stopped. Goodbye!")
+    # Don't stop Spark session in Databricks - it's managed by the platform
+    # In local environments, you would call spark.stop(), but not in Databricks
+    if not is_databricks:
+        spark.stop()
+        print("🏁 Spark session stopped. Goodbye!")
+    else:
+        print("🏁 Task completed successfully. Goodbye!")
 
 
 if __name__ == "__main__":
