@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Optional, Literal, List, Dict, Any, Union
 import dagster as dg
 from dagster import AssetKey, asset_check, AssetCheckResult, AssetCheckExecutionContext, MetadataValue, DagsterEventType, EventRecordsFilter
+from pydantic import BaseModel, Field
 import pandas as pd
 import numpy as np
 import json
@@ -17,6 +18,229 @@ import os
 
 import re
 from scipy import stats
+from enum import Enum
+
+
+# ═══════════════════════════════════════════════════════════════
+# ENUMS FOR TYPE SAFETY AND BETTER DOCUMENTATION
+# ═══════════════════════════════════════════════════════════════
+
+class ComparisonOperator(str, Enum):
+    """Comparison operators for validation checks."""
+    EQUALS = "equals"
+    NOT_EQUALS = "not_equals"
+    GREATER_THAN = "greater_than"
+    LESS_THAN = "less_than"
+    GREATER_THAN_OR_EQUAL = "greater_than_or_equal"
+    LESS_THAN_OR_EQUAL = "less_than_or_equal"
+    CONTAINS = "contains"
+    NOT_CONTAINS = "not_contains"
+    IS_NULL = "is_null"
+    IS_NOT_NULL = "is_not_null"
+
+
+class CorrelationMethod(str, Enum):
+    """Statistical correlation methods."""
+    PEARSON = "pearson"
+    SPEARMAN = "spearman"
+    KENDALL = "kendall"
+
+
+class PredictionMethod(str, Enum):
+    """Methods for time series prediction."""
+    MOVING_AVERAGE = "moving_average"
+    LINEAR_REGRESSION = "linear_regression"
+    EXPONENTIAL_SMOOTHING = "exponential_smoothing"
+    ARIMA = "arima"
+
+
+class StatisticalTestMethod(str, Enum):
+    """Statistical test methods for distribution analysis."""
+    KS_TEST = "ks_test"
+    CHI_SQUARE = "chi_square"
+
+
+class AnomalyDetectionMethod(str, Enum):
+    """Methods for anomaly detection."""
+    Z_SCORE = "z_score"
+    IQR = "iqr"
+    ISOLATION_FOREST = "isolation_forest"
+
+
+class ValidationType(str, Enum):
+    """Types of cross-table validation."""
+    ROW_COUNT = "row_count"
+    COLUMN_VALUES = "column_values"
+    AGGREGATE = "aggregate"
+
+
+class AggregateFunction(str, Enum):
+    """SQL aggregate functions."""
+    SUM = "sum"
+    AVG = "avg"
+    MIN = "min"
+    MAX = "max"
+    COUNT = "count"
+
+
+class DataSourceType(str, Enum):
+    """Data source types for processing mode selection."""
+    DATABASE = "database"
+    DATAFRAME = "dataframe"
+
+
+class SampleMethod(str, Enum):
+    """Data sampling methods."""
+    RANDOM = "random"
+    TOP = "top"
+
+
+# ═══════════════════════════════════════════════════════════════
+# CHECK CONFIGURATION MODELS (Pydantic models for type safety)
+# ═══════════════════════════════════════════════════════════════
+
+class BaseCheckConfig(BaseModel):
+    """Base configuration for all checks."""
+    group_by: Optional[str] = Field(None, description="Column to group by for analysis")
+    allowed_failures: int = Field(0, description="Number of groups allowed to fail")
+    blocking: bool = Field(False, description="Whether this check is blocking (fails the pipeline)")
+    name: Optional[str] = Field(None, description="Custom name for this check")
+
+
+class RowCountCheckConfig(BaseCheckConfig):
+    """Configuration for row count checks."""
+    min_rows: int = Field(1, description="Minimum number of rows expected")
+    max_rows: Optional[int] = Field(None, description="Maximum number of rows expected")
+
+
+class NullCheckConfig(BaseCheckConfig):
+    """Configuration for null value checks."""
+    columns: List[str] = Field(..., description="Columns to check for null values")
+
+
+class StaticThresholdConfig(BaseCheckConfig):
+    """Configuration for static threshold checks."""
+    metric: str = Field("num_rows", description="Metric to check (num_rows, sum, avg, etc.)")
+    min_value: Optional[float] = Field(None, description="Minimum expected value")
+    max_value: Optional[float] = Field(None, description="Maximum expected value")
+
+
+class BenfordLawConfig(BaseCheckConfig):
+    """Configuration for Benford's Law checks."""
+    column: str = Field(..., description="Column to analyze for Benford's Law")
+    threshold: float = Field(0.05, description="Significance threshold for the test")
+    digit_position: int = Field(1, description="Digit position to analyze (1=first, 2=second, 12=first two)")
+    min_samples: int = Field(100, description="Minimum samples required for reliable test")
+
+
+class EntropyAnalysisConfig(BaseCheckConfig):
+    """Configuration for entropy analysis checks."""
+    column: str = Field(..., description="Column to analyze for entropy")
+    min_entropy: Optional[float] = Field(None, description="Minimum expected entropy")
+    max_entropy: Optional[float] = Field(None, description="Maximum expected entropy")
+
+
+class CorrelationCheckConfig(BaseCheckConfig):
+    """Configuration for correlation checks."""
+    column_x: str = Field(..., description="First column for correlation analysis")
+    column_y: str = Field(..., description="Second column for correlation analysis")
+    min_correlation: Optional[float] = Field(None, description="Minimum expected correlation")
+    max_correlation: Optional[float] = Field(None, description="Maximum expected correlation")
+    method: CorrelationMethod = Field(CorrelationMethod.PEARSON, description="Correlation method")
+
+
+class ValueSetValidationConfig(BaseCheckConfig):
+    """Configuration for value set validation checks."""
+    column: str = Field(..., description="Column to validate")
+    allowed_values: List[str] = Field(..., description="Allowed values for the column")
+    min_pct: float = Field(95.0, description="Minimum percentage of values that should be in allowed set")
+
+
+class PatternMatchingConfig(BaseCheckConfig):
+    """Configuration for pattern matching checks."""
+    column: str = Field(..., description="Column to check for patterns")
+    regex_pattern: Optional[str] = Field(None, description="Custom regex pattern")
+    preset: Optional[str] = Field(None, description="Preset pattern (email, phone, etc.)")
+    match_percentage: float = Field(95.0, description="Minimum percentage of values that should match")
+
+
+class DataTypeCheckConfig(BaseCheckConfig):
+    """Configuration for data type validation checks."""
+    columns: List[Dict[str, str]] = Field(..., description="Column name and expected data type pairs")
+
+
+class RangeCheckConfig(BaseCheckConfig):
+    """Configuration for range validation checks."""
+    columns: List[Dict[str, Any]] = Field(..., description="Column configurations with min/max values")
+
+
+class UniquenessCheckConfig(BaseCheckConfig):
+    """Configuration for uniqueness validation checks."""
+    columns: List[Dict[str, Any]] = Field(..., description="Column configurations for uniqueness checks")
+
+
+class PredictedRangeConfig(BaseCheckConfig):
+    """Configuration for predicted range checks."""
+    metric: str = Field(..., description="Metric to predict")
+    method: PredictionMethod = Field(PredictionMethod.MOVING_AVERAGE, description="Prediction method")
+    confidence: float = Field(0.95, description="Confidence level for prediction")
+    history: int = Field(10, description="Number of historical data points to use")
+
+
+class PercentDeltaConfig(BaseCheckConfig):
+    """Configuration for percent delta checks."""
+    metric: str = Field(..., description="Metric to compare")
+    max_delta: float = Field(..., description="Maximum allowed percent change")
+    history: int = Field(10, description="Number of historical data points to use")
+
+
+class DistributionChangeConfig(BaseCheckConfig):
+    """Configuration for distribution change checks."""
+    metric: str = Field(..., description="Metric to analyze")
+    method: StatisticalTestMethod = Field(StatisticalTestMethod.KS_TEST, description="Statistical test method")
+    significance_level: float = Field(0.05, description="Significance level for the test")
+
+
+class AnomalyDetectionConfig(BaseCheckConfig):
+    """Configuration for anomaly detection checks."""
+    metric: str = Field(..., description="Metric to analyze for anomalies")
+    method: AnomalyDetectionMethod = Field(AnomalyDetectionMethod.Z_SCORE, description="Anomaly detection method")
+    threshold: float = Field(2.0, description="Threshold for anomaly detection")
+    history: int = Field(10, description="Number of historical data points to use")
+
+
+class CrossTableValidationConfig(BaseCheckConfig):
+    """Configuration for cross-table validation checks."""
+    source_table: str = Field(..., description="Source table name")
+    source_database: Optional[str] = Field(None, description="Source database resource key")
+    join_columns: List[str] = Field(..., description="Columns to join on between source and destination")
+    validation_type: ValidationType = Field(ValidationType.ROW_COUNT, description="Type of validation")
+    aggregate_column: Optional[str] = Field(None, description="Column to aggregate (for aggregate validation)")
+    aggregate_function: AggregateFunction = Field(AggregateFunction.SUM, description="Aggregate function")
+
+
+class CustomSqlCheckConfig(BaseModel):
+    """Configuration for custom SQL checks."""
+    sql_query: str = Field(..., description="SQL query to execute")
+    expected_result: Optional[Any] = Field(None, description="Expected result from the query")
+    comparison: ComparisonOperator = Field(ComparisonOperator.EQUALS, description="Comparison operator")
+    name: Optional[str] = Field(None, description="Custom name for this check")
+
+
+class DataframeQueryCheckConfig(BaseModel):
+    """Configuration for dataframe query checks."""
+    query: str = Field(..., description="Dataframe query to execute")
+    expected_result: Optional[Any] = Field(None, description="Expected result from the query")
+    comparison: ComparisonOperator = Field(ComparisonOperator.EQUALS, description="Comparison operator")
+    name: Optional[str] = Field(None, description="Custom name for this check")
+
+
+class CustomDataframeCheckConfig(BaseModel):
+    """Configuration for custom dataframe checks."""
+    python_code: str = Field(..., description="Python code to execute on the dataframe")
+    expected_result: Optional[Any] = Field(None, description="Expected result from the code")
+    comparison: ComparisonOperator = Field(ComparisonOperator.EQUALS, description="Comparison operator")
+    name: Optional[str] = Field(None, description="Custom name for this check")
 
 
 class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
@@ -31,240 +255,55 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     """
     
     # Basic configuration - ONLY about data location
-    assets: Optional[Dict[str, Any]] = None  # For multi-asset configuration
-    data_source_type: Optional[Literal["database", "dataframe"]] = None
+    assets: Optional[Dict[str, Any]] = Field(None, description="Multi-asset configuration dictionary")
+    data_source_type: Optional[DataSourceType] = Field(None, description="Source of data: 'database' for SQL queries or 'dataframe' for pandas/polars dataframes")
     
     # Database-specific (when data_source_type="database")
-    table_name: Optional[str] = None
-    database_resource_key: Optional[str] = None
+    table_name: Optional[str] = Field(None, description="Database table name to query (e.g., 'schema.table_name')")
+    database_resource_key: Optional[str] = Field(None, description="Dagster resource key for database connection (e.g., 'duckdb', 'postgres')")
     
     # Environment-aware configuration (optional - overrides table_name and database_resource_key)
-    table_name_targets: Optional[Dict[str, str]] = None  # {"dev": "dev_table", "prod": "prod_table"}
-    database_resource_key_targets: Optional[Dict[str, str]] = None  # {"dev": "dev_db", "prod": "prod_db"}
+    table_name_targets: Optional[Dict[str, str]] = Field(None, description="Environment-specific table names (e.g., {'dev': 'dev_table', 'prod': 'prod_table'})")
+    database_resource_key_targets: Optional[Dict[str, str]] = Field(None, description="Environment-specific database resource keys (e.g., {'dev': 'dev_db', 'prod': 'prod_db'})")
     
     # Data sampling (for performance on large datasets)
-    sample_size: Optional[int] = None
-    sample_method: Literal["random", "top"] = "random"
-    
-    # ═══════════════════════════════════════════════════════════════
-    # SIMPLE CHECKS (Can be done in SQL or dataframe)
-    # ═══════════════════════════════════════════════════════════════
-    enable_row_count_check: bool = False
-    row_count_group_by: Optional[str] = None
-    row_count_allowed_failures: int = 0  # Number of groups allowed to fail
-    min_rows: int = 1
-    max_rows: Optional[int] = None
-    row_count_blocking: bool = False  # Blocking vs non-blocking
-    
-    enable_null_check: bool = False
-    null_check_group_by: Optional[str] = None
-    null_check_allowed_failures: int = 0  # Number of groups allowed to fail
-    null_check_columns: List[str] = None
-    null_check_blocking: bool = False  # Blocking vs non-blocking
-    
-    # Static threshold checks
-    enable_static_threshold: bool = False
-    static_threshold_metric: str = "num_rows"
-    static_threshold_group_by: Optional[str] = None
-    static_threshold_allowed_failures: int = 0  # Number of groups allowed to fail
-    static_threshold_min: Optional[float] = None
-    static_threshold_max: Optional[float] = None
-    static_threshold_blocking: bool = False  # Blocking vs non-blocking
-    
-    # ═══════════════════════════════════════════════════════════════
-    # COMPLEX CHECKS (Require dataframe processing)
-    # ═══════════════════════════════════════════════════════════════
-    enable_benford_law: bool = False
-    benford_column: Optional[str] = None
-    benford_group_by: Optional[str] = None
-    benford_allowed_failures: int = 0  # Number of groups allowed to fail
-    benford_threshold: float = 0.05
-    benford_digit_position: int = 1  # 1 = first digit, 2 = second digit, 12 = first two digits
-    benford_min_samples: int = 100   # Minimum samples for reliable test
-    benford_law_blocking: bool = False  # Blocking vs non-blocking
-    
-    enable_entropy_analysis: bool = False
-    entropy_column: Optional[str] = None
-    entropy_group_by: Optional[str] = None
-    entropy_allowed_failures: int = 0  # Number of groups allowed to fail
-    entropy_min: Optional[float] = None
-    entropy_max: Optional[float] = None
-    entropy_analysis_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # PREDICTIVE CHECKS (Advanced time series analysis)
-    # ═══════════════════════════════════════════════════════════════
-    enable_predicted_range: bool = False
-    predicted_range_metric: str = "num_rows"
-    predicted_range_group_by: Optional[str] = None
-    predicted_range_confidence: float = 0.95
-    predicted_range_history: int = 10
-    predicted_range_allowed_failures: int = 0
-    predicted_range_method: Literal["linear_regression", "moving_average", "exponential_smoothing", "arima"] = "linear_regression"
-    predicted_range_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # HISTORICAL COMPARISON CHECKS (All use Dagster metadata storage)
-    # ═══════════════════════════════════════════════════════════════
-    
-    # Percent Delta Check - compare current vs historical percentage change
-    enable_percent_delta: bool = False
-    percent_delta_metric: str = "num_rows"
-    percent_delta_group_by: Optional[str] = None
-    percent_delta_history: int = 5
-    percent_delta_threshold: float = 10.0  # Max allowed percentage change
-    percent_delta_allowed_failures: int = 0
-    
-    # Distribution Change Check - detect shifts in data distributions
-    enable_distribution_change: bool = False
-    distribution_change_column: Optional[str] = None
-    distribution_change_group_by: Optional[str] = None
-    distribution_change_history: int = 5
-    distribution_change_threshold: float = 0.1  # Max KS-test distance
-    distribution_change_allowed_failures: int = 0
-    distribution_change_method: Literal["ks_test", "chi_square", "wasserstein"] = "ks_test"
-    
-    # Anomaly Detection Check - statistical anomaly detection with historical baselines
-    enable_anomaly_detection: bool = False
-    anomaly_detection_metric: str = "num_rows"
-    anomaly_detection_group_by: Optional[str] = None
-    anomaly_detection_history: int = 10
-    anomaly_detection_threshold: float = 3.0  # Number of standard deviations
-    anomaly_detection_allowed_failures: int = 0
-    anomaly_detection_method: Literal["z_score", "iqr", "isolation_forest"] = "z_score"
-    
-    # Blocking/Non-blocking configuration for historical checks  
-    percent_delta_blocking: bool = False
-    distribution_change_blocking: bool = False
-    anomaly_detection_blocking: bool = False
+    sample_size: Optional[int] = Field(None, description="Number of rows to sample for analysis (improves performance on large datasets)")
+    sample_method: SampleMethod = Field(SampleMethod.RANDOM, description="Sampling method: 'random' for random sampling or 'top' for first N rows")
     
     # ═══════════════════════════════════════════════════════════════
     # WHERE CLAUSE FILTERING (Applied to all checks when possible)
     # ═══════════════════════════════════════════════════════════════
-    where_clause: Optional[str] = None  # Custom SQL WHERE clause
-    time_filter_column: Optional[str] = None  # Column for time-based filtering
-    hours_back: Optional[int] = None  # Filter to last N hours
-    days_back: Optional[int] = None   # Filter to last N days
+    where_clause: Optional[str] = Field(None, description="Custom SQL WHERE clause to filter data before analysis")
+    time_filter_column: Optional[str] = Field(None, description="Column name for time-based filtering (used with hours_back/days_back)")
+    hours_back: Optional[int] = Field(None, description="Filter data to last N hours (requires time_filter_column)")
+    days_back: Optional[int] = Field(None, description="Filter data to last N days (requires time_filter_column)")
 
     # ═══════════════════════════════════════════════════════════════
-    # CORRELATION ANALYSIS (Requires dataframe processing)
+    # NESTED CHECK CONFIGURATIONS (Support for multiple checks)
     # ═══════════════════════════════════════════════════════════════
-    enable_correlation_check: bool = False
-    correlation_column_x: Optional[str] = None
-    correlation_column_y: Optional[str] = None
-    correlation_group_by: Optional[str] = None
-    correlation_min: Optional[float] = None  # Minimum expected correlation
-    correlation_max: Optional[float] = None  # Maximum expected correlation
-    correlation_method: Literal["pearson", "spearman", "kendall"] = "pearson"
-    correlation_allowed_failures: int = 0  # Number of groups allowed to fail
-    correlation_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # VALUE SET VALIDATION (Requires dataframe processing)
-    # ═══════════════════════════════════════════════════════════════
-    enable_value_set_validation: bool = False
-    value_set_column: Optional[str] = None
-    value_set_group_by: Optional[str] = None
-    value_set_allowed_failures: int = 0  # Number of groups allowed to fail
-    value_set_allowed_values: List[str] = None
-    value_set_min_pct: float = 100.0  # Minimum percentage of values that must be in allowed set
-    value_set_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # PATTERN MATCHING VALIDATION (Requires dataframe processing)
-    # ═══════════════════════════════════════════════════════════════
-    enable_pattern_matching: bool = False
-    pattern_column: Optional[str] = None
-    pattern_group_by: Optional[str] = None
-    pattern_allowed_failures: int = 0  # Number of groups allowed to fail
-    pattern_regex: Optional[str] = None
-    pattern_preset: Optional[Literal["email", "url", "uuid", "phone", "date", "time", "datetime", "ipv4", "ipv6", "credit_card", "ssn", "zipcode", "currency", "percentage"]] = None
-    pattern_min_pct: float = 100.0  # Minimum percentage of values that must match pattern
-    pattern_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # DATA TYPE VALIDATION (Requires dataframe processing)
-    # ═══════════════════════════════════════════════════════════════
-    enable_data_type_check: bool = False
-    data_type_group_by: Optional[str] = None
-    data_type_allowed_failures: int = 0  # Number of groups allowed to fail
-    data_type_columns: List[Dict[str, str]] = None  # List of {"column": "name", "expected_type": "type"}
-    data_type_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # RANGE/OUTLIER DETECTION (Can be done in SQL or dataframe)
-    # ═══════════════════════════════════════════════════════════════
-    enable_range_check: bool = False
-    range_group_by: Optional[str] = None
-    range_allowed_failures: int = 0  # Number of groups allowed to fail
-    range_columns: List[Dict[str, Any]] = None  # List of {"column": "name", "min_value": val, "max_value": val}
-    range_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # UNIQUENESS VALIDATION (Requires dataframe processing)
-    # ═══════════════════════════════════════════════════════════════
-    enable_uniqueness_check: bool = False
-    uniqueness_group_by: Optional[str] = None
-    uniqueness_allowed_failures: int = 0  # Number of groups allowed to fail
-    uniqueness_columns: List[Dict[str, Any]] = None  # List of {"column": "name"} or {"columns": ["col1", "col2"]}
-    uniqueness_blocking: bool = False  # Blocking vs non-blocking
-
-    # ═══════════════════════════════════════════════════════════════
-    # CUSTOM DATAFRAME CHECK (Dataframe-only - for pandas/polars query validation)
-    # ═══════════════════════════════════════════════════════════════
-    enable_custom_dataframe_check: bool = False
-    custom_dataframe_query: Optional[str] = None  # The pandas/polars query to execute
-    custom_dataframe_expected_result: Optional[Union[float, int, str, bool]] = None  # Expected result (optional)
-    custom_dataframe_comparison: Optional[Literal["equals", "not_equals", "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal", "contains", "not_contains", "is_null", "is_not_null"]] = None
-    custom_dataframe_group_by: Optional[str] = None  # Group by column for multi-row results
-    custom_dataframe_allowed_failures: int = 0  # Number of groups allowed to fail
-    custom_dataframe_blocking: bool = False  # Blocking vs non-blocking
-    custom_dataframe_description: Optional[str] = None  # Custom description for the check
-
-    # ═══════════════════════════════════════════════════════════════
-    # CUSTOM SQL CHECK (Database-only - for direct SQL validation)
-    # ═══════════════════════════════════════════════════════════════
-    enable_custom_sql_check: bool = False
-    custom_sql_check_query: Optional[str] = None  # The SQL query to execute
-    custom_sql_check_expected_result: Optional[Union[float, int, str, bool]] = None  # Expected result (optional)
-    custom_sql_check_comparison: Optional[Literal["equals", "not_equals", "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal", "contains", "not_contains", "is_null", "is_not_null"]] = None
-    custom_sql_check_group_by: Optional[str] = None  # Group by column for multi-row results
-    custom_sql_check_allowed_failures: int = 0  # Number of groups allowed to fail
-    custom_sql_check_blocking: bool = False  # Blocking vs non-blocking
-    custom_sql_check_description: Optional[str] = None  # Custom description for the check
-
-    # ═══════════════════════════════════════════════════════════════
-    # DATAFRAME QUERY CHECK (Dataframe-only - for pandas/polars query validation)
-    # ═══════════════════════════════════════════════════════════════
-    enable_dataframe_query_check: bool = False
-    dataframe_query: Optional[str] = None  # The pandas/polars query to execute
-    dataframe_query_expected_result: Optional[Union[float, int, str, bool]] = None  # Expected result (optional)
-    dataframe_query_comparison: Optional[Literal["equals", "not_equals", "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal", "contains", "not_contains", "is_null", "is_not_null"]] = None
-    dataframe_query_group_by: Optional[str] = None  # Group by column for multi-row results
-    dataframe_query_allowed_failures: int = 0  # Number of groups allowed to fail
-    dataframe_query_blocking: bool = False  # Blocking vs non-blocking
-    dataframe_query_description: Optional[str] = None  # Custom description for the check
-    
     # Support for multiple custom SQL and dataframe query checks
-    custom_sql_check: Optional[List[Dict[str, Any]]] = None
-    dataframe_query_check: Optional[List[Dict[str, Any]]] = None
-    custom_dataframe_check: Optional[List[Dict[str, Any]]] = None
-
-    # ═══════════════════════════════════════════════════════════════
-    # CROSS-TABLE VALIDATION (Database-only - for data completeness validation)
-    # ═══════════════════════════════════════════════════════════════
-    enable_cross_table_validation: bool = False
-    cross_table_source_table: Optional[str] = None  # Source table name
-    cross_table_source_database: Optional[str] = None  # Source database resource key (optional, defaults to same as destination)
-    cross_table_join_columns: List[str] = None  # Columns to join on between source and destination
-    cross_table_validation_type: Literal["row_count", "column_values", "aggregate"] = "row_count"  # Type of validation
-    cross_table_aggregate_column: Optional[str] = None  # Column to aggregate (for aggregate validation)
-    cross_table_aggregate_function: Literal["sum", "avg", "min", "max", "count"] = "sum"  # Aggregation function
-    cross_table_tolerance: float = 0.0  # Tolerance for differences (percentage)
-    cross_table_group_by: Optional[str] = None  # Group by column for validation
-    cross_table_allowed_failures: int = 0  # Number of groups allowed to fail
-    cross_table_blocking: bool = False  # Blocking vs non-blocking
-    cross_table_description: Optional[str] = None  # Custom description for the check
+    custom_sql_check: Optional[List[CustomSqlCheckConfig]] = Field(None, description="List of custom SQL checks to execute against the database")
+    dataframe_query_check: Optional[List[DataframeQueryCheckConfig]] = Field(None, description="List of dataframe query checks to execute on pandas/polars dataframes")
+    custom_dataframe_check: Optional[List[CustomDataframeCheckConfig]] = Field(None, description="List of custom Python code checks to execute on dataframes")
+    
+    # Nested check configurations for all check types
+    row_count_check: Optional[List[RowCountCheckConfig]] = Field(None, description="List of row count validation checks (min/max rows, grouping)")
+    null_check: Optional[List[NullCheckConfig]] = Field(None, description="List of null value checks for specified columns")
+    static_threshold: Optional[List[StaticThresholdConfig]] = Field(None, description="List of static threshold checks for metrics (min/max values)")
+    benford_law: Optional[List[BenfordLawConfig]] = Field(None, description="List of Benford's Law analysis checks for numerical distributions")
+    entropy_analysis: Optional[List[EntropyAnalysisConfig]] = Field(None, description="List of Shannon entropy analysis checks for data diversity")
+    correlation_check: Optional[List[CorrelationCheckConfig]] = Field(None, description="List of correlation analysis checks between column pairs")
+    value_set_validation: Optional[List[ValueSetValidationConfig]] = Field(None, description="List of value set validation checks (allowed values for columns)")
+    pattern_matching: Optional[List[PatternMatchingConfig]] = Field(None, description="List of regex pattern matching checks for text columns")
+    data_type_check: Optional[List[DataTypeCheckConfig]] = Field(None, description="List of data type validation checks for columns")
+    range_check: Optional[List[RangeCheckConfig]] = Field(None, description="List of range validation checks (min/max values for columns)")
+    uniqueness_check: Optional[List[UniquenessCheckConfig]] = Field(None, description="List of uniqueness validation checks for column combinations")
+    predicted_range: Optional[List[PredictedRangeConfig]] = Field(None, description="List of predicted range checks using historical data")
+    percent_delta: Optional[List[PercentDeltaConfig]] = Field(None, description="List of percent delta checks comparing current vs historical values")
+    distribution_change: Optional[List[DistributionChangeConfig]] = Field(None, description="List of distribution change checks using statistical tests")
+    anomaly_detection: Optional[List[AnomalyDetectionConfig]] = Field(None, description="List of anomaly detection checks using various algorithms")
+    cross_table_validation: Optional[List[CrossTableValidationConfig]] = Field(None, description="List of cross-table validation checks between source and destination tables")
+    
 
     def __init__(self, **kwargs):
         """Initialize the component and resolve environment configuration."""
@@ -282,8 +321,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         if hasattr(self, '_asset_name') and self._asset_name and '.' in self._asset_name and not self.table_name:
             self.table_name = self._asset_name
         
-        # Process nested structure if present
-        self._process_nested_structure()
+
         
         # Set default data_source_type if not provided
         if self.data_source_type is None:
@@ -296,76 +334,6 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         # Validate configuration (but allow intelligent defaults to handle table_name)
         if self.data_source_type == "database" and not self.table_name and not getattr(self, '_asset_name', None):
             raise ValueError("table_name is required when data_source_type is 'database' and no asset_key is provided")
-            
-        # Validate check configurations
-        if self.enable_null_check and not self.null_check_columns:
-            raise ValueError("null_check_columns is required when enable_null_check is True")
-            
-        if self.enable_pattern_matching and not self.pattern_column:
-            raise ValueError("pattern_column is required when enable_pattern_matching is True")
-            
-        if self.enable_pattern_matching and not self.pattern_regex:
-            raise ValueError("pattern_regex is required when enable_pattern_matching is True")
-            
-        if self.enable_data_type_check and not self.data_type_columns:
-            raise ValueError("data_type_columns is required when enable_data_type_check is True")
-            
-        if self.enable_range_check and not self.range_columns:
-            raise ValueError("range_columns is required when enable_range_check is True")
-            
-        if self.enable_uniqueness_check and not self.uniqueness_columns:
-            raise ValueError("uniqueness_columns is required when enable_uniqueness_check is True")
-            
-        if self.enable_value_set_validation and not self.value_set_column:
-            raise ValueError("value_set_column is required when enable_value_set_validation is True")
-            
-        if self.enable_value_set_validation and not self.value_set_allowed_values:
-            raise ValueError("value_set_allowed_values is required when enable_value_set_validation is True")
-            
-        if self.enable_benford_law and not self.benford_column:
-            raise ValueError("benford_column is required when enable_benford_law is True")
-            
-        if self.enable_entropy_analysis and not self.entropy_column:
-            raise ValueError("entropy_column is required when enable_entropy_analysis is True")
-            
-        if self.enable_correlation_check and not self.correlation_column_x:
-            raise ValueError("correlation_column_x is required when enable_correlation_check is True")
-            
-        if self.enable_correlation_check and not self.correlation_column_y:
-            raise ValueError("correlation_column_y is required when enable_correlation_check is True")
-            
-        if self.enable_predicted_range and not self.predicted_range_metric:
-            raise ValueError("predicted_range_metric is required when enable_predicted_range is True")
-            
-        if self.enable_percent_delta and not self.percent_delta_metric:
-            raise ValueError("percent_delta_metric is required when enable_percent_delta is True")
-            
-        if self.enable_distribution_change and not self.distribution_change_column:
-            raise ValueError("distribution_change_column is required when enable_distribution_change is True")
-            
-        if self.enable_anomaly_detection and not self.anomaly_detection_metric:
-            raise ValueError("anomaly_detection_metric is required when enable_anomaly_detection is True")
-
-        if self.enable_uniqueness_check and not self.uniqueness_columns:
-            raise ValueError("uniqueness_columns is required when enable_uniqueness_check is True")
-            
-        if self.enable_custom_sql_monitor and not self.custom_sql_query:
-            raise ValueError("custom_sql_query is required when enable_custom_sql_monitor is True")
-            
-        if self.enable_custom_sql_monitor and self.custom_sql_expected_result is not None and not self.custom_sql_comparison:
-            raise ValueError("custom_sql_comparison is required when custom_sql_expected_result is specified")
-            
-        if self.enable_value_set_validation and not self.value_set_column:
-            raise ValueError("value_set_column is required when enable_value_set_validation is True")
-            
-        if self.enable_cross_table_validation and not self.cross_table_source_table:
-            raise ValueError("cross_table_source_table is required when enable_cross_table_validation is True")
-            
-        if self.enable_cross_table_validation and not self.cross_table_join_columns:
-            raise ValueError("cross_table_join_columns is required when enable_cross_table_validation is True")
-            
-        if self.enable_cross_table_validation and self.cross_table_validation_type == "aggregate" and not self.cross_table_aggregate_column:
-            raise ValueError("cross_table_aggregate_column is required when cross_table_validation_type is 'aggregate'")
 
     def _resolve_environment_config(self):
         """Resolve environment-aware configuration based on deployment environment."""
@@ -449,9 +417,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             if check_name not in ['data_source_type', 'table_name', 'database_resource_key', 
                                 'sample_size', 'sample_method', 'where_clause', 'time_filter_column', 
                                 'hours_back', 'days_back', 'table_name_targets', 'database_resource_key_targets']:
-                # This is a nested check configuration, map to flat fields
+                # This is a nested check configuration, apply directly
                 if isinstance(check_config, dict):
-                    self._map_nested_to_flat_fields(component_data, check_name, check_config)
+                    self._apply_nested_check_config(component_data, check_name, check_config)
                 else:
                     # Direct field assignment (for backward compatibility)
                     component_data[check_name] = check_config
@@ -459,16 +427,26 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         # Create a new instance with this data
         new_component = type(self)(**component_data)
         
-        # Store the asset name for use in creating asset checks
+        # Store the asset name and asset key for use in creating asset checks
         new_component._asset_name = asset_name
+        new_component._asset_key = AssetKey(asset_name.split('.')) if '.' in asset_name else AssetKey([asset_name])
+        
+        # Set flat field names as attributes for backward compatibility
+        for key, value in component_data.items():
+            if hasattr(new_component, key):
+                # If the field exists in the model, it's already set
+                continue
+            else:
+                # Set as attribute for backward compatibility
+                setattr(new_component, key, value)
         
         # Ensure environment resolution happens for the new component
         new_component._resolve_environment_config()
         
         return new_component
 
-    def _map_nested_to_flat_fields(self, component_data: dict, check_name: str, check_config: dict):
-        """Map nested check configuration to flat component fields."""
+    def _apply_nested_check_config(self, component_data: dict, check_name: str, check_config: dict):
+        """Apply nested check configuration directly to component fields."""
         # Handle special cases for custom_sql_check, dataframe_query_check, and custom_dataframe_check that support lists
         if check_name in ['custom_sql_check', 'dataframe_query_check', 'custom_dataframe_check']:
             # Support both single dict and list of dicts
@@ -524,7 +502,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         elif check_name == 'pattern_matching':
             if 'column' in check_config:
                 component_data['pattern_column'] = check_config['column']
-            if 'regex' in check_config:
+            if 'regex_pattern' in check_config:
+                component_data['pattern_regex'] = check_config['regex_pattern']
+            elif 'regex' in check_config:
                 component_data['pattern_regex'] = check_config['regex']
             if 'preset' in check_config:
                 component_data['pattern_preset'] = check_config['preset']
@@ -716,6 +696,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 component_data['correlation_min'] = check_config['min_correlation']
             if 'max_correlation' in check_config:
                 component_data['correlation_max'] = check_config['max_correlation']
+            if 'method' in check_config:
+                component_data['correlation_method'] = check_config['method']
             if 'group_by' in check_config:
                 component_data['correlation_group_by'] = check_config['group_by']
             if 'allowed_failures' in check_config:
@@ -755,240 +737,6 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             if 'blocking' in check_config:
                 component_data['distribution_change_blocking'] = check_config['blocking']
 
-    def _map_nested_check_to_flat(self, component_data: dict, check_name: str, check_config: dict):
-        """Map a nested check configuration to flat component fields."""
-        if check_name == 'row_count_check':
-            # Enable by default if not specified
-            component_data['enable_row_count_check'] = check_config.get('enable', True)
-            if 'min_rows' in check_config:
-                component_data['min_rows'] = check_config['min_rows']
-            if 'max_rows' in check_config:
-                component_data['max_rows'] = check_config['max_rows']
-            if 'group_by' in check_config:
-                component_data['row_count_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['row_count_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['row_count_blocking'] = check_config['blocking']
-                
-        elif check_name == 'null_check':
-            # Enable by default if not specified
-            component_data['enable_null_check'] = check_config.get('enable', True)
-            if 'columns' in check_config:
-                component_data['null_check_columns'] = check_config['columns']
-            if 'group_by' in check_config:
-                component_data['null_check_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['null_check_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['null_check_blocking'] = check_config['blocking']
-                
-        elif check_name == 'static_threshold':
-            # Enable by default if not specified
-            component_data['enable_static_threshold'] = check_config.get('enable', True)
-            if 'metric' in check_config:
-                component_data['static_threshold_metric'] = check_config['metric']
-            if 'min_value' in check_config:
-                component_data['static_threshold_min'] = check_config['min_value']
-            if 'max_value' in check_config:
-                component_data['static_threshold_max'] = check_config['max_value']
-            if 'group_by' in check_config:
-                component_data['static_threshold_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['static_threshold_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['static_threshold_blocking'] = check_config['blocking']
-                
-        elif check_name == 'pattern_matching':
-            # Enable by default if not specified
-            component_data['enable_pattern_matching'] = check_config.get('enable', True)
-            if 'column' in check_config:
-                component_data['pattern_column'] = check_config['column']
-            if 'regex' in check_config:
-                component_data['pattern_regex'] = check_config['regex']
-            if 'preset' in check_config:
-                component_data['pattern_preset'] = check_config['preset']
-            if 'group_by' in check_config:
-                component_data['pattern_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['pattern_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['pattern_blocking'] = check_config['blocking']
-                
-        elif check_name == 'data_type_check':
-            # Enable by default if not specified
-            component_data['enable_data_type_check'] = check_config.get('enable', True)
-            if 'columns' in check_config:
-                component_data['data_type_columns'] = check_config['columns']
-            if 'group_by' in check_config:
-                component_data['data_type_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['data_type_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['data_type_blocking'] = check_config['blocking']
-                
-        elif check_name == 'range_check':
-            # Enable by default if not specified
-            component_data['enable_range_check'] = check_config.get('enable', True)
-            if 'columns' in check_config:
-                component_data['range_columns'] = check_config['columns']
-            if 'group_by' in check_config:
-                component_data['range_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['range_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['range_blocking'] = check_config['blocking']
-                
-        elif check_name == 'percent_delta':
-            # Enable by default if not specified
-            component_data['enable_percent_delta'] = check_config.get('enable', True)
-            if 'metric' in check_config:
-                component_data['percent_delta_metric'] = check_config['metric']
-            if 'threshold' in check_config:
-                component_data['percent_delta_threshold'] = check_config['threshold']
-            if 'history' in check_config:
-                component_data['percent_delta_history'] = check_config['history']
-            if 'group_by' in check_config:
-                component_data['percent_delta_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['percent_delta_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['percent_delta_blocking'] = check_config['blocking']
-                
-        elif check_name == 'anomaly_detection':
-            # Enable by default if not specified
-            component_data['enable_anomaly_detection'] = check_config.get('enable', True)
-            if 'metric' in check_config:
-                component_data['anomaly_detection_metric'] = check_config['metric']
-            if 'threshold' in check_config:
-                component_data['anomaly_detection_threshold'] = check_config['threshold']
-            if 'history' in check_config:
-                component_data['anomaly_detection_history'] = check_config['history']
-            if 'group_by' in check_config:
-                component_data['anomaly_detection_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['anomaly_detection_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['anomaly_detection_blocking'] = check_config['blocking']
-                
-        elif check_name == 'value_set_validation':
-            # Enable by default if not specified
-            component_data['enable_value_set_validation'] = check_config.get('enable', True)
-            if 'column' in check_config:
-                component_data['value_set_column'] = check_config['column']
-            if 'allowed_values' in check_config:
-                component_data['value_set_allowed_values'] = check_config['allowed_values']
-            if 'group_by' in check_config:
-                component_data['value_set_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['value_set_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['value_set_blocking'] = check_config['blocking']
-                
-        elif check_name == 'uniqueness_check':
-            # Enable by default if not specified
-            component_data['enable_uniqueness_check'] = check_config.get('enable', True)
-            if 'columns' in check_config:
-                component_data['uniqueness_columns'] = check_config['columns']
-            if 'group_by' in check_config:
-                component_data['uniqueness_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['uniqueness_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['uniqueness_blocking'] = check_config['blocking']
-                
-        elif check_name == 'benford_law':
-            # Enable by default if not specified
-            component_data['enable_benford_law'] = check_config.get('enable', True)
-            if 'column' in check_config:
-                component_data['benford_column'] = check_config['column']
-            if 'threshold' in check_config:
-                component_data['benford_threshold'] = check_config['threshold']
-            if 'group_by' in check_config:
-                component_data['benford_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['benford_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['benford_law_blocking'] = check_config['blocking']
-                
-        elif check_name == 'entropy_analysis':
-            # Enable by default if not specified
-            component_data['enable_entropy_analysis'] = check_config.get('enable', True)
-            if 'column' in check_config:
-                component_data['entropy_column'] = check_config['column']
-            if 'min_entropy' in check_config:
-                component_data['entropy_min'] = check_config['min_entropy']
-            if 'max_entropy' in check_config:
-                component_data['entropy_max'] = check_config['max_entropy']
-            if 'group_by' in check_config:
-                component_data['entropy_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['entropy_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['entropy_analysis_blocking'] = check_config['blocking']
-                
-        elif check_name == 'correlation_check':
-            # Enable by default if not specified
-            component_data['enable_correlation_check'] = check_config.get('enable', True)
-            if 'column_x' in check_config:
-                component_data['correlation_column_x'] = check_config['column_x']
-            if 'column_y' in check_config:
-                component_data['correlation_column_y'] = check_config['column_y']
-            if 'min_correlation' in check_config:
-                component_data['correlation_min'] = check_config['min_correlation']
-            if 'max_correlation' in check_config:
-                component_data['correlation_max'] = check_config['max_correlation']
-            if 'group_by' in check_config:
-                component_data['correlation_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['correlation_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['correlation_blocking'] = check_config['blocking']
-                
-        elif check_name == 'custom_dataframe_check':
-            # Enable by default if not specified
-            component_data['enable_custom_dataframe_check'] = check_config.get('enable', True)
-            if 'query' in check_config:
-                component_data['custom_dataframe_query'] = check_config['query']
-            if 'expected_result' in check_config:
-                component_data['custom_dataframe_expected_result'] = check_config['expected_result']
-            if 'comparison' in check_config:
-                component_data['custom_dataframe_comparison'] = check_config['comparison']
-            if 'group_by' in check_config:
-                component_data['custom_dataframe_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['custom_dataframe_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['custom_dataframe_blocking'] = check_config['blocking']
-            if 'description' in check_config:
-                component_data['custom_dataframe_description'] = check_config['description']
-                
-        elif check_name == 'cross_table_validation':
-            # Enable by default if not specified
-            component_data['enable_cross_table_validation'] = check_config.get('enable', True)
-            if 'source_table' in check_config:
-                component_data['cross_table_source_table'] = check_config['source_table']
-            if 'source_database' in check_config:
-                component_data['cross_table_source_database'] = check_config['source_database']
-            if 'join_columns' in check_config:
-                component_data['cross_table_join_columns'] = check_config['join_columns']
-            if 'validation_type' in check_config:
-                component_data['cross_table_validation_type'] = check_config['validation_type']
-            if 'aggregate_column' in check_config:
-                component_data['cross_table_aggregate_column'] = check_config['aggregate_column']
-            if 'aggregate_function' in check_config:
-                component_data['cross_table_aggregate_function'] = check_config['aggregate_function']
-            if 'tolerance' in check_config:
-                component_data['cross_table_tolerance'] = check_config['tolerance']
-            if 'group_by' in check_config:
-                component_data['cross_table_group_by'] = check_config['group_by']
-            if 'allowed_failures' in check_config:
-                component_data['cross_table_allowed_failures'] = check_config['allowed_failures']
-            if 'blocking' in check_config:
-                component_data['cross_table_blocking'] = check_config['blocking']
-            if 'description' in check_config:
-                component_data['cross_table_description'] = check_config['description']
-
     def _build_single_asset_checks(self):
         """Build checks for a single asset (used by _create_asset_component)."""
         if "." in self._asset_name:
@@ -1002,45 +750,52 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         
         asset_checks = []
         
-        # Simple checks
-        if self.enable_row_count_check:
-            asset_checks.append(self._create_row_count_check(parsed_asset_key))
-            
-        if self.enable_null_check and self.null_check_columns:
-            asset_checks.append(self._create_null_check(parsed_asset_key))
-            
-        if self.enable_static_threshold:
-            asset_checks.append(self._create_static_threshold_check(parsed_asset_key))
+        # Process all nested check configurations
+        check_types = [
+            ('row_count_check', self._create_row_count_check),
+            ('null_check', self._create_null_check),
+            ('static_threshold', self._create_static_threshold_check),
+            ('benford_law', self._create_benford_law_check),
+            ('entropy_analysis', self._create_entropy_check),
+            ('correlation_check', self._create_correlation_check),
+            ('value_set_validation', self._create_value_set_validation_check),
+            ('pattern_matching', self._create_pattern_matching_check),
+            ('data_type_check', self._create_data_type_check),
+            ('range_check', self._create_range_check),
+            ('uniqueness_check', self._create_uniqueness_check),
+            ('predicted_range', self._create_predicted_range_check),
+            ('percent_delta', self._create_percent_delta_check),
+            ('distribution_change', self._create_distribution_change_check),
+            ('anomaly_detection', self._create_anomaly_detection_check),
+            ('cross_table_validation', self._create_cross_table_validation_check),
+        ]
         
-        # Complex checks (always require dataframe processing)
-        if self.enable_benford_law:
-            asset_checks.append(self._create_benford_law_check(parsed_asset_key))
-            
-        if self.enable_entropy_analysis:
-            asset_checks.append(self._create_entropy_check(parsed_asset_key))
-            
-        if self.enable_correlation_check:
-            asset_checks.append(self._create_correlation_check(parsed_asset_key))
-            
-        if self.enable_value_set_validation:
-            asset_checks.append(self._create_value_set_validation_check(parsed_asset_key))
-            
-        if self.enable_pattern_matching:
-            asset_checks.append(self._create_pattern_matching_check(parsed_asset_key))
+        for check_type, create_method in check_types:
+            checks = getattr(self, check_type, None)
+            if checks:
+                for idx, check_cfg in enumerate(checks):
+                    # Create a temporary component with the check configuration
+                    temp_component, check_config = self._create_check_component(check_cfg)
+                    
+                    # Apply the check configuration to the temporary component
+                    if isinstance(check_config, dict):
+                        # Create a component_data dictionary and apply the nested check config
+                        component_data = {}
+                        self._apply_nested_check_config(component_data, check_type, check_config)
+                        # Store flat field names in a separate dictionary for backward compatibility
+                        temp_component._flat_config = component_data
+                    elif hasattr(check_config, '__dict__'):
+                        # Handle Pydantic models by converting to dict
+                        check_config_dict = check_config.dict() if hasattr(check_config, 'dict') else check_config.__dict__
+                        component_data = {}
+                        self._apply_nested_check_config(component_data, check_type, check_config_dict)
+                        # Store flat field names in a separate dictionary for backward compatibility
+                        temp_component._flat_config = component_data
+                    
+                    # Set the check configuration on the temp component for execution methods to access
+                    temp_component._current_check_config = check_config
+                    asset_checks.append(create_method(parsed_asset_key, temp_component))
         
-        if self.enable_data_type_check and self.data_type_columns:
-            asset_checks.append(self._create_data_type_check(parsed_asset_key))
-        
-        if self.enable_range_check and self.range_columns:
-            asset_checks.append(self._create_range_check(parsed_asset_key))
-        
-        if self.enable_uniqueness_check and self.uniqueness_columns:
-            asset_checks.append(self._create_uniqueness_check(parsed_asset_key))
-        
-        # Custom Dataframe Check (Dataframe-only)
-        if self.enable_custom_dataframe_check:
-            asset_checks.append(self._create_custom_dataframe_check(parsed_asset_key))
-            
         # Custom SQL Checks (Database-only) - support multiple checks
         custom_sql_checks = getattr(self, 'custom_sql_check', None)
         if custom_sql_checks:
@@ -1058,24 +813,6 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         if custom_dataframe_checks:
             for idx, check_cfg in enumerate(custom_dataframe_checks):
                 asset_checks.append(self._create_custom_dataframe_check(parsed_asset_key, check_cfg, idx))
-            
-        # Cross-Table Validation (Database-only)
-        if self.enable_cross_table_validation:
-            asset_checks.append(self._create_cross_table_validation_check(parsed_asset_key))
-        
-        # Predictive checks (advanced time series analysis)
-        if self.enable_predicted_range:
-            asset_checks.append(self._create_predicted_range_check(parsed_asset_key))
-        
-        # Historical comparison checks (all use Dagster metadata storage)
-        if self.enable_percent_delta:
-            asset_checks.append(self._create_percent_delta_check(parsed_asset_key))
-            
-        if self.enable_distribution_change:
-            asset_checks.append(self._create_distribution_change_check(parsed_asset_key))
-            
-        if self.enable_anomaly_detection:
-            asset_checks.append(self._create_anomaly_detection_check(parsed_asset_key))
         
         return asset_checks
 
@@ -1103,374 +840,461 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     # CHECK CREATION METHODS - Auto-detect processing mode
     # ═══════════════════════════════════════════════════════════════
 
-    def _create_row_count_check(self, asset_key: AssetKey):
+    def _create_check_component(self, check_cfg: Union[dict, BaseModel]):
+        """Create a temporary component with basic configuration and return the check config."""
+        # Create a temporary component instance with basic configuration
+        temp_component = type(self)()
+        
+        # Copy basic configuration from self to temp_component
+        for attr in ['table_name', 'database_resource_key', 'data_source_type', 'where_clause', 
+                    'time_filter_column', 'hours_back', 'days_back', 'sample_size', 'sample_method']:
+            if hasattr(self, attr):
+                setattr(temp_component, attr, getattr(self, attr))
+        
+        # Copy the asset name for historical data loading
+        if hasattr(self, '_asset_name'):
+            temp_component._asset_name = self._asset_name
+        
+        # Return both the temp component (for basic config) and the check config
+        return temp_component, check_cfg
+    
+    def _get_check_config_value(self, field_name: str, default=None):
+        """Helper method to get configuration values from component attributes."""
+        # First try to get the value from the component's attributes
+        if hasattr(self, field_name):
+            return getattr(self, field_name, default)
+        # If not found, try to get it from the flat config dictionary
+        if hasattr(self, '_flat_config') and self._flat_config:
+            return self._flat_config.get(field_name, default)
+        return default
+
+    def _create_row_count_check(self, asset_key: AssetKey, component=None):
         """Create row count check - can use SQL or dataframe."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_row_count")
             def dataframe_row_count_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_row_count(context, df)
+                return component._execute_dataframe_row_count(context, df)
             return dataframe_row_count_check
         else:
             # Database mode - only include required_resource_keys if database_resource_key is not None
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_row_count", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_row_count", required_resource_keys={component.database_resource_key})
                 def database_row_count_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_row_count(context)
+                    return component._execute_database_row_count(context)
                 return database_row_count_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_row_count")
                 def dataframe_row_count_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_row_count(context, df)
+                    return component._execute_dataframe_row_count(context, df)
                 return dataframe_row_count_check
 
-    def _create_null_check(self, asset_key: AssetKey):
+    def _create_null_check(self, asset_key: AssetKey, component=None):
         """Create null check - can use SQL or dataframe."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_null_check")
             def dataframe_null_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_null_check(context, df)
+                return component._execute_dataframe_null_check(context, df)
             return dataframe_null_check
         else:
             # Database mode - only include required_resource_keys if database_resource_key is not None
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_null_check", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_null_check", required_resource_keys={component.database_resource_key})
                 def database_null_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_null_check(context)
+                    return component._execute_database_null_check(context)
                 return database_null_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_null_check")
                 def dataframe_null_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_null_check(context, df)
+                    return component._execute_dataframe_null_check(context, df)
                 return dataframe_null_check
 
-    def _create_static_threshold_check(self, asset_key: AssetKey):
+    def _create_static_threshold_check(self, asset_key: AssetKey, component=None):
         """Create static threshold check - can use SQL or dataframe."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_static_threshold")
             def dataframe_static_threshold_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_static_threshold(context, df)
+                return component._execute_dataframe_static_threshold(context, df)
             return dataframe_static_threshold_check
         else:
             # Database mode - only include required_resource_keys if database_resource_key is not None
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_static_threshold", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_static_threshold", required_resource_keys={component.database_resource_key})
                 def database_static_threshold_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_static_threshold(context)
+                    return component._execute_database_static_threshold(context)
                 return database_static_threshold_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_static_threshold")
                 def dataframe_static_threshold_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_static_threshold(context, df)
+                    return component._execute_dataframe_static_threshold(context, df)
                 return dataframe_static_threshold_check
 
-    def _create_benford_law_check(self, asset_key: AssetKey):
+    def _create_benford_law_check(self, asset_key: AssetKey, component=None):
         """Create Benford's Law check - ALWAYS requires dataframe processing."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_benford_law")
             def dataframe_benford_law_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_benford_law(context, df)
+                return component._execute_dataframe_benford_law(context, df)
             return dataframe_benford_law_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_benford_law", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_benford_law", required_resource_keys={component.database_resource_key})
                 def database_benford_law_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_benford_law(context)
+                    return component._execute_database_to_dataframe_benford_law(context)
                 return database_benford_law_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_benford_law")
                 def dataframe_benford_law_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_benford_law(context, df)
+                    return component._execute_dataframe_benford_law(context, df)
                 return dataframe_benford_law_check
 
-    def _create_entropy_check(self, asset_key: AssetKey):
+    def _create_entropy_check(self, asset_key: AssetKey, component=None):
         """Create entropy check - ALWAYS requires dataframe processing."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_entropy")
             def dataframe_entropy_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_entropy(context, df)
+                return component._execute_dataframe_entropy(context, df)
             return dataframe_entropy_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_entropy", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_entropy", required_resource_keys={component.database_resource_key})
                 def database_entropy_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_entropy(context)
+                    return component._execute_database_to_dataframe_entropy(context)
                 return database_entropy_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_entropy")
                 def dataframe_entropy_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_entropy(context, df)
+                    return component._execute_dataframe_entropy(context, df)
                 return dataframe_entropy_check
 
-    def _create_correlation_check(self, asset_key: AssetKey):
+    def _create_correlation_check(self, asset_key: AssetKey, component=None):
         """Create correlation check - ALWAYS requires dataframe processing."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_correlation")
             def dataframe_correlation_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_correlation(context, df)
+                return component._execute_dataframe_correlation(context, df)
             return dataframe_correlation_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_correlation", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_correlation", required_resource_keys={component.database_resource_key})
                 def database_correlation_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_correlation(context)
+                    return component._execute_database_to_dataframe_correlation(context)
                 return database_correlation_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_correlation")
                 def dataframe_correlation_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_correlation(context, df)
+                    return component._execute_dataframe_correlation(context, df)
                 return dataframe_correlation_check
 
-    def _create_value_set_validation_check(self, asset_key: AssetKey):
+    def _create_value_set_validation_check(self, asset_key: AssetKey, component=None):
         """Create value set validation check - ALWAYS requires dataframe processing."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_value_set_validation")
             def dataframe_value_set_validation_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_value_set_validation(context, df)
+                return component._execute_dataframe_value_set_validation(context, df)
             return dataframe_value_set_validation_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_value_set_validation", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_value_set_validation", required_resource_keys={component.database_resource_key})
                 def database_value_set_validation_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_value_set_validation(context)
+                    return component._execute_database_to_dataframe_value_set_validation(context)
                 return database_value_set_validation_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_value_set_validation")
                 def dataframe_value_set_validation_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_value_set_validation(context, df)
+                    return component._execute_dataframe_value_set_validation(context, df)
                 return dataframe_value_set_validation_check
 
-    def _create_pattern_matching_check(self, asset_key: AssetKey):
+    def _create_pattern_matching_check(self, asset_key: AssetKey, component=None):
         """Create pattern matching check - ALWAYS requires dataframe processing."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_pattern_matching")
             def dataframe_pattern_matching_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_pattern_matching(context, df)
+                return component._execute_dataframe_pattern_matching(context, df)
             return dataframe_pattern_matching_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_pattern_matching", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_pattern_matching", required_resource_keys={component.database_resource_key})
                 def database_pattern_matching_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_pattern_matching(context)
+                    return component._execute_database_to_dataframe_pattern_matching(context)
                 return database_pattern_matching_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_pattern_matching")
                 def dataframe_pattern_matching_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_pattern_matching(context, df)
+                    return component._execute_dataframe_pattern_matching(context, df)
                 return dataframe_pattern_matching_check
 
-    def _create_predicted_range_check(self, asset_key: AssetKey):
+    def _create_predicted_range_check(self, asset_key: AssetKey, component=None):
         """Create predicted range check - ALWAYS requires dataframe processing."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_predicted_range")
             def dataframe_predicted_range_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_predicted_range(context, df)
+                return component._execute_dataframe_predicted_range(context, df)
             return dataframe_predicted_range_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_predicted_range", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_predicted_range", required_resource_keys={component.database_resource_key})
                 def database_predicted_range_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_predicted_range(context)
+                    return component._execute_database_to_dataframe_predicted_range(context)
                 return database_predicted_range_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_predicted_range")
                 def dataframe_predicted_range_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_predicted_range(context, df)
+                    return component._execute_dataframe_predicted_range(context, df)
                 return dataframe_predicted_range_check
 
-    def _create_percent_delta_check(self, asset_key: AssetKey):
+    def _create_percent_delta_check(self, asset_key: AssetKey, component=None):
         """Create percent delta check - can use SQL or dataframe."""
+        if component is None:
+            component = self
+            
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_percent_delta")
             def dataframe_percent_delta_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_percent_delta(context, df)
+                return component._execute_dataframe_percent_delta(context, df)
             return dataframe_percent_delta_check
         else:
             # Database mode - only include required_resource_keys if database_resource_key is not None
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_percent_delta", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_percent_delta", required_resource_keys={component.database_resource_key})
                 def database_percent_delta_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_percent_delta(context)
+                    return component._execute_database_to_dataframe_percent_delta(context)
                 return database_percent_delta_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_percent_delta")
                 def dataframe_percent_delta_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_percent_delta(context, df)
+                    return component._execute_dataframe_percent_delta(context, df)
                 return dataframe_percent_delta_check
 
-    def _create_distribution_change_check(self, asset_key: AssetKey):
+    def _create_distribution_change_check(self, asset_key: AssetKey, component=None):
         """Create distribution change check - can use SQL or dataframe."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_distribution_change")
             def dataframe_distribution_change_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_distribution_change(context, df)
+                return component._execute_dataframe_distribution_change(context, df)
             return dataframe_distribution_change_check
         else:
             # Database mode - only include required_resource_keys if database_resource_key is not None
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_distribution_change", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_distribution_change", required_resource_keys={component.database_resource_key})
                 def database_distribution_change_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_distribution_change(context)
+                    return component._execute_database_to_dataframe_distribution_change(context)
                 return database_distribution_change_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_distribution_change")
                 def dataframe_distribution_change_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_distribution_change(context, df)
+                    return component._execute_dataframe_distribution_change(context, df)
                 return dataframe_distribution_change_check
 
-    def _create_anomaly_detection_check(self, asset_key: AssetKey):
+    def _create_anomaly_detection_check(self, asset_key: AssetKey, component=None):
         """Create anomaly detection check - can use SQL or dataframe."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_anomaly_detection")
             def dataframe_anomaly_detection_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_anomaly_detection(context, df)
+                return component._execute_dataframe_anomaly_detection(context, df)
             return dataframe_anomaly_detection_check
         else:
             # Database mode - only include required_resource_keys if database_resource_key is not None
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_anomaly_detection", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_anomaly_detection", required_resource_keys={component.database_resource_key})
                 def database_anomaly_detection_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_anomaly_detection(context)
+                    return component._execute_database_to_dataframe_anomaly_detection(context)
                 return database_anomaly_detection_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_anomaly_detection")
                 def dataframe_anomaly_detection_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_anomaly_detection(context, df)
+                    return component._execute_dataframe_anomaly_detection(context, df)
                 return dataframe_anomaly_detection_check
 
-    def _create_data_type_check(self, asset_key: AssetKey):
+    def _create_data_type_check(self, asset_key: AssetKey, component=None):
         """Create data type check - ALWAYS requires dataframe processing."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_data_type")
             def dataframe_data_type_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_data_type(context, df)
+                return component._execute_dataframe_data_type(context, df)
             return dataframe_data_type_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_data_type", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_data_type", required_resource_keys={component.database_resource_key})
                 def database_data_type_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_data_type(context)
+                    return component._execute_database_to_dataframe_data_type(context)
                 return database_data_type_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_data_type")
                 def dataframe_data_type_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_data_type(context, df)
+                    return component._execute_dataframe_data_type(context, df)
                 return dataframe_data_type_check
 
-    def _create_range_check(self, asset_key: AssetKey):
+    def _create_range_check(self, asset_key: AssetKey, component=None):
         """Create range check - can use SQL or dataframe processing."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_range_check")
             def dataframe_range_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_range_check(context, df)
+                return component._execute_dataframe_range_check(context, df)
             return dataframe_range_check
         else:
             # Database source - can use SQL for simple range checks
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_range_check", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_range_check", required_resource_keys={component.database_resource_key})
                 def database_range_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_range_check(context)
+                    return component._execute_database_range_check(context)
                 return database_range_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_range_check")
                 def dataframe_range_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_range_check(context, df)
+                    return component._execute_dataframe_range_check(context, df)
                 return dataframe_range_check
 
-    def _create_uniqueness_check(self, asset_key: AssetKey):
+    def _create_uniqueness_check(self, asset_key: AssetKey, component=None):
         """Create uniqueness check - ALWAYS requires dataframe processing."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_uniqueness_check")
             def dataframe_uniqueness_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_uniqueness_check(context, df)
+                return component._execute_dataframe_uniqueness_check(context, df)
             return dataframe_uniqueness_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_uniqueness_check", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_uniqueness_check", required_resource_keys={component.database_resource_key})
                 def database_uniqueness_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_uniqueness_check(context)
+                    return component._execute_database_to_dataframe_uniqueness_check(context)
                 return database_uniqueness_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_uniqueness_check")
                 def dataframe_uniqueness_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_uniqueness_check(context, df)
+                    return component._execute_dataframe_uniqueness_check(context, df)
                 return dataframe_uniqueness_check
 
-    def _create_custom_dataframe_check(self, asset_key: AssetKey):
+    def _create_custom_dataframe_check(self, asset_key: AssetKey, component=None):
         """Create custom dataframe check - ALWAYS requires dataframe processing."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
-        if self.data_source_type == "dataframe" or (self.data_source_type != "database" and not self.database_resource_key):
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
+        if component.data_source_type == "dataframe" or (component.data_source_type != "database" and not component.database_resource_key):
             @asset_check(asset=asset_key, name=f"{sanitized_name}_custom_dataframe_check")
             def dataframe_custom_dataframe_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                return self._execute_dataframe_custom_dataframe_check(context, df)
+                return component._execute_dataframe_custom_dataframe_check(context, df)
             return dataframe_custom_dataframe_check
         else:
             # Database source but complex check → fetch data and process as dataframe
-            if self.database_resource_key:
-                @asset_check(asset=asset_key, name=f"{sanitized_name}_custom_dataframe_check", required_resource_keys={self.database_resource_key})
+            if component.database_resource_key:
+                @asset_check(asset=asset_key, name=f"{sanitized_name}_custom_dataframe_check", required_resource_keys={component.database_resource_key})
                 def database_custom_dataframe_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                    return self._execute_database_to_dataframe_custom_dataframe_check(context)
+                    return component._execute_database_to_dataframe_custom_dataframe_check(context)
                 return database_custom_dataframe_check
             else:
                 # Fallback to dataframe mode if no database resource is available
                 @asset_check(asset=asset_key, name=f"{sanitized_name}_custom_dataframe_check")
                 def dataframe_custom_dataframe_check(context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-                    return self._execute_dataframe_custom_dataframe_check(context, df)
+                    return component._execute_dataframe_custom_dataframe_check(context, df)
                 return dataframe_custom_dataframe_check
 
-    def _create_custom_sql_check(self, asset_key: AssetKey, check_cfg: dict, idx: int):
+    def _create_custom_sql_check(self, asset_key: AssetKey, check_cfg: Union[dict, CustomSqlCheckConfig], idx: int):
         """Create a custom SQL check (database-only)."""
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        check_name = f"{sanitized_name}_custom_sql_check_{idx+1}"
-        db_key = check_cfg.get('database_resource_key', self.database_resource_key)
+        
+        if isinstance(check_cfg, CustomSqlCheckConfig):
+            check_name = check_cfg.name or f"{sanitized_name}_custom_sql_check_{idx+1}"
+            db_key = self.database_resource_key
+        else:
+            check_name = f"{sanitized_name}_custom_sql_check_{idx+1}"
+            db_key = check_cfg.get('database_resource_key', self.database_resource_key)
+            
         if not db_key:
             raise ValueError("custom_sql_check requires a database_resource_key.")
+            
         @asset_check(asset=asset_key, name=check_name, required_resource_keys={db_key})
         def custom_sql_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
             return self._execute_custom_sql_check(context, check_cfg, db_key)
         return custom_sql_check
 
-    def _create_dataframe_query_check(self, asset_key: AssetKey, check_cfg: dict, idx: int):
+    def _create_dataframe_query_check(self, asset_key: AssetKey, check_cfg: Union[dict, DataframeQueryCheckConfig], idx: int):
         """Create a dataframe query check (dataframe-only)."""
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        check_name = f"{sanitized_name}_dataframe_query_check_{idx+1}"
+        
+        if isinstance(check_cfg, DataframeQueryCheckConfig):
+            check_name = check_cfg.name or f"{sanitized_name}_dataframe_query_check_{idx+1}"
+        else:
+            check_name = f"{sanitized_name}_dataframe_query_check_{idx+1}"
         
         # Dataframe query checks are always dataframe-only (no database fallback)
         @asset_check(asset=asset_key, name=check_name)
@@ -1478,10 +1302,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return self._execute_dataframe_query_check(context, df, check_cfg)
         return dataframe_query_check
         
-    def _create_custom_dataframe_check(self, asset_key: AssetKey, check_cfg: dict, idx: int):
+    def _create_custom_dataframe_check(self, asset_key: AssetKey, check_cfg: Union[dict, CustomDataframeCheckConfig], idx: int):
         """Create a custom dataframe check (dataframe-only)."""
         sanitized_name = self._sanitize_asset_key_name(asset_key)
-        check_name = f"{sanitized_name}_custom_dataframe_check_{idx+1}"
+        
+        if isinstance(check_cfg, CustomDataframeCheckConfig):
+            check_name = check_cfg.name or f"{sanitized_name}_custom_dataframe_check_{idx+1}"
+        else:
+            check_name = f"{sanitized_name}_custom_dataframe_check_{idx+1}"
         
         # Custom dataframe checks are always dataframe-only (no database fallback)
         @asset_check(asset=asset_key, name=check_name)
@@ -1489,25 +1317,31 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return self._execute_custom_dataframe_check(context, df, check_cfg)
         return custom_dataframe_check
             
-    def _create_cross_table_validation_check(self, asset_key: AssetKey):
+    def _create_cross_table_validation_check(self, asset_key: AssetKey, component=None):
         """Create cross-table validation check."""
-        sanitized_name = self._sanitize_asset_key_name(asset_key)
+        if component is None:
+            component = self
+            
+        sanitized_name = component._sanitize_asset_key_name(asset_key)
         # Cross-table validation is database-only
         required_resource_keys = set()
-        if self.database_resource_key:
-            required_resource_keys.add(self.database_resource_key)
-        if self.cross_table_source_database:
-            required_resource_keys.add(self.cross_table_source_database)
+        if component.database_resource_key:
+            required_resource_keys.add(component.database_resource_key)
+        
+        # Get source database from current check config
+        source_database = component._get_check_config_value('source_database')
+        if source_database:
+            required_resource_keys.add(source_database)
             
         if required_resource_keys:
             @asset_check(asset=asset_key, name=f"{sanitized_name}_cross_table_validation", required_resource_keys=required_resource_keys)
             def cross_table_validation_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                return self._execute_cross_table_validation(context)
+                return component._execute_cross_table_validation(context)
             return cross_table_validation_check
         else:
             @asset_check(asset=asset_key, name=f"{sanitized_name}_cross_table_validation")
             def cross_table_validation_check(context: AssetCheckExecutionContext) -> AssetCheckResult:
-                return self._execute_cross_table_validation(context)
+                return component._execute_cross_table_validation(context)
             return cross_table_validation_check
 
     # ═══════════════════════════════════════════════════════════════
@@ -1516,25 +1350,30 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_row_count(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute row count check on dataframe."""
+        # Get configuration using helper method
+        min_rows = self._get_check_config_value('min_rows', 1)
+        max_rows = self._get_check_config_value('max_rows')
+        group_by = self._get_check_config_value('group_by')
+        
         # Apply WHERE clause filtering
         filtered_df = self._filter_dataframe(df)
         
         # Check if we need to group by
-        if self.row_count_group_by:
+        if group_by:
             # Get current metric values grouped by the specified column
-            current_values = self._get_current_metric_values(filtered_df, "num_rows", self.row_count_group_by)
+            current_values = self._get_current_metric_values(filtered_df, "num_rows", group_by)
             
             # Check each group against thresholds
             failed_groups = []
             total_groups = len(current_values)
             
             for group_name, row_count in current_values.items():
-                if not (self.min_rows <= row_count <= (self.max_rows if self.max_rows else float('inf'))):
+                if not (min_rows <= row_count <= (max_rows if max_rows else float('inf'))):
                     failed_groups.append({
                         "group": group_name,
                         "row_count": row_count,
-                        "expected_min": self.min_rows,
-                        "expected_max": self.max_rows or "∞"
+                        "expected_min": min_rows,
+                        "expected_max": max_rows or "∞"
                     })
             
             passed = len(failed_groups) == 0
@@ -1545,7 +1384,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={
                     "total_groups": MetadataValue.int(total_groups),
                     "failed_groups": MetadataValue.json(failed_groups),
-                    "group_by": MetadataValue.text(self.row_count_group_by),
+                    "group_by": MetadataValue.text(group_by),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "filtered": MetadataValue.bool(filtered_df is not df),
                 }
@@ -1558,11 +1397,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             else:  # Pandas
                 row_count = len(filtered_df)
             
-            passed = self.min_rows <= row_count <= (self.max_rows if self.max_rows else float('inf'))
+            passed = min_rows <= row_count <= (max_rows if max_rows else float('inf'))
             
             return AssetCheckResult(
                 passed=passed,
-                description=f"Row count: {row_count} (expected: {self.min_rows}-{self.max_rows or '∞'})",
+                description=f"Row count: {row_count} (expected: {min_rows}-{max_rows or '∞'})",
                 metadata={
                     "row_count": MetadataValue.int(row_count),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
@@ -1572,29 +1411,72 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_database_row_count(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute row count check on database."""
+        # Get configuration using helper method
+        min_rows = self._get_check_config_value('min_rows', 1)
+        max_rows = self._get_check_config_value('max_rows')
+        group_by = self._get_check_config_value('group_by')
+        allowed_failures = self._get_check_config_value('allowed_failures', 0)
+        
         database_resource = getattr(context.resources, self.database_resource_key)
         
         # Build WHERE clause for filtering
         where_conditions = self._build_where_clause()
         where_sql = f" WHERE {where_conditions}" if where_conditions else ""
         
-        with database_resource.get_connection() as conn:
-            result = conn.execute(f"SELECT COUNT(*) FROM {self.table_name}{where_sql}").fetchone()
-            row_count = result[0]
-        
-        passed = self.min_rows <= row_count <= (self.max_rows if self.max_rows else float('inf'))
-        
-        return AssetCheckResult(
-            passed=passed,
-            description=f"Row count: {row_count} (expected: {self.min_rows}-{self.max_rows or '∞'})",
-            metadata={
-                "row_count": MetadataValue.int(row_count),
-                "processing_mode": MetadataValue.text("sql"),
-            }
-        )
+        # Check if we need to group by
+        if group_by:
+            # Get current metric values grouped by the specified column
+            current_values = self._get_current_metric_values_database(database_resource, "num_rows", group_by)
+            
+            # Check each group against thresholds
+            failed_groups = []
+            total_groups = len(current_values)
+            
+            for group_name, row_count in current_values.items():
+                if not (min_rows <= row_count <= (max_rows if max_rows else float('inf'))):
+                    failed_groups.append({
+                        "group": group_name,
+                        "row_count": row_count,
+                        "expected_min": min_rows,
+                        "expected_max": max_rows or "∞"
+                    })
+            
+            # Check if we're within allowed failures
+            passed = len(failed_groups) <= allowed_failures
+            
+            return AssetCheckResult(
+                passed=passed,
+                description=f"Row count check: {len(failed_groups)}/{total_groups} groups failed (allowed: {allowed_failures})",
+                metadata={
+                    "total_groups": MetadataValue.int(total_groups),
+                    "failed_groups": MetadataValue.json(failed_groups),
+                    "group_by": MetadataValue.text(group_by),
+                    "allowed_failures": MetadataValue.int(allowed_failures),
+                    "processing_mode": MetadataValue.text("sql"),
+                }
+            )
+        else:
+            # Original non-grouped logic
+            with database_resource.get_connection() as conn:
+                result = conn.execute(f"SELECT COUNT(*) FROM {self.table_name}{where_sql}").fetchone()
+                row_count = result[0]
+            
+                passed = min_rows <= row_count <= (max_rows if max_rows else float('inf'))
+            
+            return AssetCheckResult(
+                passed=passed,
+                description=f"Row count: {row_count} (expected: {min_rows}-{max_rows or '∞'})",
+                metadata={
+                    "row_count": MetadataValue.int(row_count),
+                    "processing_mode": MetadataValue.text("sql"),
+                }
+            )
 
     def _execute_database_range_check(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute range check on database using SQL."""
+        # Get configuration using helper method
+        range_columns = self._get_check_config_value('range_columns', [])
+        
         database_resource = getattr(context.resources, self.database_resource_key)
         
         # Build WHERE clause for filtering
@@ -1605,7 +1487,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         failed_columns = []
         
         with database_resource.get_connection() as conn:
-            for column_config in self.range_columns:
+            for column_config in range_columns:
                 column_name = column_config["column"]
                 min_value = column_config.get("min_value")
                 max_value = column_config.get("max_value")
@@ -1672,7 +1554,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     failed_columns.append(column_name)
         
         # Overall result
-        total_columns = len(self.range_columns)
+        total_columns = len(range_columns)
         overall_passed = len(failed_columns) == 0
         
         return AssetCheckResult(
@@ -1688,35 +1570,39 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_null_check(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute null check on dataframe."""
+        # Get configuration using helper method
+        columns = self._get_check_config_value('columns', [])
+        group_by = self._get_check_config_value('group_by')
+        
         # Apply WHERE clause filtering
         filtered_df = self._filter_dataframe(df)
         
         # Check if we need to group by
-        if self.null_check_group_by:
+        if group_by:
             # Check each group independently
             failed_groups = []
             total_groups = 0
             
             # Get unique groups
             if hasattr(filtered_df, 'select'):  # Polars
-                groups = filtered_df.select(filtered_df[self.null_check_group_by].unique()).to_numpy().flatten()
+                groups = filtered_df.select(filtered_df[group_by].unique()).to_numpy().flatten()
             else:  # Pandas
-                groups = filtered_df[self.null_check_group_by].unique()
+                groups = filtered_df[group_by].unique()
             
             total_groups = len(groups)
             
             for group in groups:
                 # Filter data for this group
                 if hasattr(filtered_df, 'filter'):  # Polars
-                    group_df = filtered_df.filter(filtered_df[self.null_check_group_by] == group)
+                    group_df = filtered_df.filter(filtered_df[group_by] == group)
                 else:  # Pandas
-                    group_df = filtered_df[filtered_df[self.null_check_group_by] == group]
+                    group_df = filtered_df[filtered_df[group_by] == group]
                 
                 # Check nulls for this group
                 group_null_counts = {}
                 group_total_nulls = 0
                 
-                for column in self.null_check_columns:
+                for column in columns:
                     if hasattr(group_df, 'select'):  # Polars
                         null_count = group_df.select(group_df[column].null_count()).to_numpy()[0][0]
                     else:  # Pandas
@@ -1740,7 +1626,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={
                     "total_groups": MetadataValue.int(total_groups),
                     "failed_groups": MetadataValue.json(failed_groups),
-                    "group_by": MetadataValue.text(self.null_check_group_by),
+                    "group_by": MetadataValue.text(group_by),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "filtered": MetadataValue.bool(filtered_df is not df),
                 }
@@ -1749,7 +1635,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Original non-grouped logic
             null_counts = {}
             
-            for column in self.null_check_columns:
+            for column in columns:
                 if hasattr(filtered_df, 'select'):  # Polars
                     null_count = filtered_df.select(filtered_df[column].null_count()).to_numpy()[0][0]
                 else:  # Pandas
@@ -1772,11 +1658,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_database_null_check(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute null check on database."""
+        # Get configuration using helper method
+        columns = self._get_check_config_value('columns', [])
+        
         database_resource = getattr(context.resources, self.database_resource_key)
         null_counts = {}
         
         with database_resource.get_connection() as conn:
-            for column in self.null_check_columns:
+            for column in columns:
                 result = conn.execute(f"SELECT COUNT(*) FROM {self.table_name} WHERE {column} IS NULL").fetchone()
                 null_counts[column] = result[0]
         
@@ -1795,14 +1684,20 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_static_threshold(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute static threshold check on dataframe."""
+        # Get configuration using helper method
+        metric = self._get_check_config_value('metric', 'num_rows')
+        group_by = self._get_check_config_value('group_by')
+        min_value = self._get_check_config_value('min_value')
+        max_value = self._get_check_config_value('max_value')
+        
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
             # Check if we need to group by
-            if self.static_threshold_group_by:
+            if group_by:
                 # Get current metric values grouped by the specified column
-                current_values = self._get_current_metric_values(filtered_df, self.static_threshold_metric, self.static_threshold_group_by)
+                current_values = self._get_current_metric_values(filtered_df, metric, group_by)
                 
                 # Check each group against thresholds
                 failed_groups = []
@@ -1812,13 +1707,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     group_passed = True
                     failure_reasons = []
                     
-                    if self.static_threshold_min is not None and metric_value < self.static_threshold_min:
+                    if min_value is not None and metric_value < min_value:
                         group_passed = False
-                        failure_reasons.append(f"value {metric_value} < min {self.static_threshold_min}")
+                        failure_reasons.append(f"value {metric_value} < min {min_value}")
                     
-                    if self.static_threshold_max is not None and metric_value > self.static_threshold_max:
+                    if max_value is not None and metric_value > max_value:
                         group_passed = False
-                        failure_reasons.append(f"value {metric_value} > max {self.static_threshold_max}")
+                        failure_reasons.append(f"value {metric_value} > max {max_value}")
                     
                     if not group_passed:
                         failed_groups.append({
@@ -1833,10 +1728,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     passed=passed,
                     description=f"Static threshold check: {len(failed_groups)}/{total_groups} groups failed",
                     metadata={
-                        "metric": MetadataValue.text(self.static_threshold_metric),
+                        "metric": MetadataValue.text(metric),
                         "total_groups": MetadataValue.int(total_groups),
                         "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(self.static_threshold_group_by),
+                        "group_by": MetadataValue.text(group_by),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                         "filtered": MetadataValue.bool(filtered_df is not df),
                     }
@@ -1844,25 +1739,25 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             else:
                 # Original non-grouped logic
                 # Compute metric value
-                metric_value = self._compute_dataframe_metric(filtered_df, self.static_threshold_metric)
+                metric_value = self._compute_dataframe_metric(filtered_df, metric)
                 
                 # Check against thresholds
                 passed = True
                 failure_reasons = []
                 
-                if self.static_threshold_min is not None and metric_value < self.static_threshold_min:
+                if min_value is not None and metric_value < min_value:
                     passed = False
-                    failure_reasons.append(f"value {metric_value} < min {self.static_threshold_min}")
+                    failure_reasons.append(f"value {metric_value} < min {min_value}")
                 
-                if self.static_threshold_max is not None and metric_value > self.static_threshold_max:
+                if max_value is not None and metric_value > max_value:
                     passed = False
-                    failure_reasons.append(f"value {metric_value} > max {self.static_threshold_max}")
+                    failure_reasons.append(f"value {metric_value} > max {max_value}")
                 
                 return AssetCheckResult(
                     passed=passed,
                     description=f"Static threshold check ({'PASSED' if passed else 'FAILED'})",
                     metadata={
-                        "metric": MetadataValue.text(self.static_threshold_metric),
+                        "metric": MetadataValue.text(metric),
                         "metric_value": MetadataValue.float(float(metric_value)),
                         "failure_reasons": MetadataValue.json(failure_reasons),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
@@ -1879,29 +1774,44 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_database_static_threshold(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute static threshold check on database."""
+        # Get configuration using helper method
+        metric = self._get_check_config_value('metric', 'num_rows')
+        min_value = self._get_check_config_value('min_value')
+        max_value = self._get_check_config_value('max_value')
+        
         try:
             database_resource = getattr(context.resources, self.database_resource_key)
             
+            # Debug: Log configuration
+            context.log.info(f"Static threshold - Metric: {metric}")
+            context.log.info(f"Static threshold - Table name: {self.table_name}")
+            context.log.info(f"Static threshold - Database resource key: {self.database_resource_key}")
+            context.log.info(f"Static threshold - Min value: {min_value}")
+            context.log.info(f"Static threshold - Max value: {max_value}")
+            
             # Compute metric value
-            metric_value = self._compute_database_metric(self.static_threshold_metric, database_resource)
+            metric_value = self._compute_database_metric(metric, database_resource, context)
+            
+            # Debug: Log result
+            context.log.info(f"Static threshold - Computed metric value: {metric_value}")
             
             # Check against thresholds
             passed = True
             failure_reasons = []
             
-            if self.static_threshold_min is not None and metric_value < self.static_threshold_min:
+            if min_value is not None and metric_value < min_value:
                 passed = False
-                failure_reasons.append(f"value {metric_value} < min {self.static_threshold_min}")
+                failure_reasons.append(f"value {metric_value} < min {min_value}")
             
-            if self.static_threshold_max is not None and metric_value > self.static_threshold_max:
+            if max_value is not None and metric_value > max_value:
                 passed = False
-                failure_reasons.append(f"value {metric_value} > max {self.static_threshold_max}")
+                failure_reasons.append(f"value {metric_value} > max {max_value}")
             
             return AssetCheckResult(
                 passed=passed,
                 description=f"Static threshold check ({'PASSED' if passed else 'FAILED'})",
                 metadata={
-                    "metric": MetadataValue.text(self.static_threshold_metric),
+                    "metric": MetadataValue.text(metric),
                     "metric_value": MetadataValue.float(float(metric_value)),
                     "failure_reasons": MetadataValue.json(failure_reasons),
                     "processing_mode": MetadataValue.text("sql"),
@@ -1925,14 +1835,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
-            result = self._analyze_benford_law(filtered_df, self.benford_column)
+            result = self._analyze_benford_law(filtered_df, self._get_check_config_value('benford_column', 'column'))
             
             return AssetCheckResult(
                 passed=result["passed"],
                 description=f"Benford's Law check: {result['description']}",
                 metadata={
                     "max_deviation": MetadataValue.float(float(result["max_deviation"])),
-                    "threshold": MetadataValue.float(self.benford_threshold),
+                    "threshold": MetadataValue.float(self._get_check_config_value('benford_threshold')),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "processing_mode": MetadataValue.text("dataframe"),
                     "filtered": MetadataValue.bool(filtered_df is not df),
@@ -1955,14 +1865,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             df = self._fetch_data_as_dataframe(database_resource)
             
             # Run the same dataframe analysis
-            result = self._analyze_benford_law(df, self.benford_column)
+            result = self._analyze_benford_law(df, self._get_check_config_value('benford_column', 'column'))
             
             return AssetCheckResult(
                 passed=result["passed"],
                 description=f"Benford's Law check: {result['description']}",
                 metadata={
                     "max_deviation": MetadataValue.float(float(result["max_deviation"])),
-                    "threshold": MetadataValue.float(self.benford_threshold),
+                    "threshold": MetadataValue.float(self._get_check_config_value('benford_threshold', 0.05)),
                     "data_size": MetadataValue.int(len(df)),
                     "dataframe_type": MetadataValue.text(type(df).__module__.split('.')[0]),
                     "processing_mode": MetadataValue.text("database_to_dataframe"),
@@ -1982,19 +1892,82 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
-            entropy_value = self._calculate_shannon_entropy(filtered_df, self.entropy_column)
+            # Get configuration
+            column = self._get_check_config_value('entropy_column', 'column')
+            min_entropy = self._get_check_config_value('entropy_min', None)
+            max_entropy = self._get_check_config_value('entropy_max', None)
+            group_by = self._get_check_config_value('entropy_group_by', None)
+            allowed_failures = self._get_check_config_value('entropy_allowed_failures', 0)
+            
+            # Add debugging
+            context.log.info(f"Entropy analysis - column: {column}")
+            context.log.info(f"Entropy analysis - group_by: {group_by}")
+            context.log.info(f"Entropy analysis - min_entropy: {min_entropy}")
+            context.log.info(f"Entropy analysis - max_entropy: {max_entropy}")
+            context.log.info(f"Entropy analysis - allowed_failures: {allowed_failures}")
+            
+            if group_by:
+                # Grouped entropy analysis
+                group_results = {}
+                failed_groups = []
+                
+                # Group by the specified column
+                if hasattr(filtered_df, 'groupby'):  # Pandas
+                    groups = filtered_df.groupby(group_by)
+                else:  # Polars
+                    groups = filtered_df.group_by(group_by)
+                
+                for group_name, group_df in groups:
+                    group_entropy = self._calculate_shannon_entropy(group_df, column)
+                    group_results[str(group_name)] = group_entropy
+                    
+                    # Check if this group's entropy is within bounds
+                    group_passed = True
+                    if min_entropy is not None and group_entropy < min_entropy:
+                        group_passed = False
+                    if max_entropy is not None and group_entropy > max_entropy:
+                        group_passed = False
+                    
+                    if not group_passed:
+                        failed_groups.append(str(group_name))
+                
+                # Overall result based on allowed failures
+                total_groups = len(group_results)
+                passed = len(failed_groups) <= allowed_failures
+                
+                description = f"Entropy analysis by {group_by}: {total_groups - len(failed_groups)}/{total_groups} groups passed"
+                if not passed:
+                    description += f". Failed groups: {failed_groups}"
+                
+                return AssetCheckResult(
+                    passed=passed,
+                    description=description,
+                    metadata={
+                        "group_results": MetadataValue.text(str(group_results)),
+                        "failed_groups": MetadataValue.text(str(failed_groups)),
+                        "total_groups": MetadataValue.int(total_groups),
+                        "allowed_failures": MetadataValue.int(allowed_failures),
+                        "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
+                        "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
+                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
+                        "filtered": MetadataValue.bool(filtered_df is not df),
+                    }
+                )
+            else:
+                # Simple entropy analysis (no grouping)
+                entropy_value = self._calculate_shannon_entropy(filtered_df, column)
             
             # Check against thresholds
             passed = True
             failure_reasons = []
             
-            if self.entropy_min is not None and entropy_value < self.entropy_min:
+            if min_entropy is not None and entropy_value < min_entropy:
                 passed = False
-                failure_reasons.append(f"entropy {entropy_value:.3f} < min {self.entropy_min}")
+                failure_reasons.append(f"entropy {entropy_value:.3f} < min {min_entropy}")
             
-            if self.entropy_max is not None and entropy_value > self.entropy_max:
+            if max_entropy is not None and entropy_value > max_entropy:
                 passed = False
-                failure_reasons.append(f"entropy {entropy_value:.3f} > max {self.entropy_max}")
+                failure_reasons.append(f"entropy {entropy_value:.3f} > max {max_entropy}")
             
             return AssetCheckResult(
                 passed=passed,
@@ -2002,6 +1975,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={
                     "entropy_value": MetadataValue.float(float(entropy_value)),
                     "failure_reasons": MetadataValue.json(failure_reasons),
+                    "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
+                    "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "filtered": MetadataValue.bool(filtered_df is not df),
                 }
@@ -2022,14 +1997,80 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Fetch data as dataframe (auto-select pandas/polars)
             df = self._fetch_data_as_dataframe(database_resource)
             
-            # Run the same dataframe analysis
-            entropy = self._calculate_shannon_entropy(df, self.entropy_column)
+            # Apply WHERE clause filtering
+            filtered_df = self._filter_dataframe(df)
+            
+            # Get configuration
+            column = self._get_check_config_value('entropy_column', 'column')
+            min_entropy = self._get_check_config_value('entropy_min', None)
+            max_entropy = self._get_check_config_value('entropy_max', None)
+            group_by = self._get_check_config_value('entropy_group_by', None)
+            allowed_failures = self._get_check_config_value('entropy_allowed_failures', 0)
+            
+            # Add debugging
+            context.log.info(f"Database entropy analysis - column: {column}")
+            context.log.info(f"Database entropy analysis - group_by: {group_by}")
+            context.log.info(f"Database entropy analysis - min_entropy: {min_entropy}")
+            context.log.info(f"Database entropy analysis - max_entropy: {max_entropy}")
+            context.log.info(f"Database entropy analysis - allowed_failures: {allowed_failures}")
+            
+            if group_by:
+                # Grouped entropy analysis
+                group_results = {}
+                failed_groups = []
+                
+                # Group by the specified column
+                if hasattr(filtered_df, 'groupby'):  # Pandas
+                    groups = filtered_df.groupby(group_by)
+                else:  # Polars
+                    groups = filtered_df.group_by(group_by)
+                
+                for group_name, group_df in groups:
+                    group_entropy = self._calculate_shannon_entropy(group_df, column)
+                    group_results[str(group_name)] = group_entropy
+                    
+                    # Check if this group's entropy is within bounds
+                    group_passed = True
+                    if min_entropy is not None and group_entropy < min_entropy:
+                        group_passed = False
+                    if max_entropy is not None and group_entropy > max_entropy:
+                        group_passed = False
+                    
+                    if not group_passed:
+                        failed_groups.append(str(group_name))
+                
+                # Overall result based on allowed failures
+                total_groups = len(group_results)
+                passed = len(failed_groups) <= allowed_failures
+                
+                description = f"Entropy analysis by {group_by}: {total_groups - len(failed_groups)}/{total_groups} groups passed"
+                if not passed:
+                    description += f". Failed groups: {failed_groups}"
+                
+                return AssetCheckResult(
+                    passed=passed,
+                    description=description,
+                    metadata={
+                        "group_results": MetadataValue.text(str(group_results)),
+                        "failed_groups": MetadataValue.text(str(failed_groups)),
+                        "total_groups": MetadataValue.int(total_groups),
+                        "allowed_failures": MetadataValue.int(allowed_failures),
+                        "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
+                        "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
+                        "data_size": MetadataValue.int(len(filtered_df)),
+                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
+                        "processing_mode": MetadataValue.text("database_to_dataframe"),
+                    }
+                )
+            else:
+                # Simple entropy analysis (no grouping)
+                entropy = self._calculate_shannon_entropy(filtered_df, column)
             
             # Check against bounds
             passed = True
-            if self.entropy_min is not None and entropy < self.entropy_min:
+            if min_entropy is not None and entropy < min_entropy:
                 passed = False
-            if self.entropy_max is not None and entropy > self.entropy_max:
+            if max_entropy is not None and entropy > max_entropy:
                 passed = False
             
             return AssetCheckResult(
@@ -2037,8 +2078,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 description=f"Entropy analysis: {entropy:.4f}",
                 metadata={
                     "entropy": MetadataValue.float(float(entropy)),
-                    "data_size": MetadataValue.int(len(df)),
-                    "dataframe_type": MetadataValue.text(type(df).__module__.split('.')[0]),
+                    "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
+                    "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
+                    "data_size": MetadataValue.int(len(filtered_df)),
+                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "processing_mode": MetadataValue.text("database_to_dataframe"),
                 }
             )
@@ -2052,18 +2095,31 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_correlation(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute correlation analysis on dataframe."""
+        # Get configuration from the current check config
+        check_config = getattr(self, '_current_check_config', None)
+        if check_config is None:
+            # Fallback to direct attributes for backward compatibility
+            column_x = self._get_check_config_value('correlation_column_x', 'column1')
+            column_y = self._get_check_config_value('correlation_column_y', 'column2')
+            method = self._get_check_config_value('correlation_method', 'pearson')
+        else:
+            # Access configuration from the Pydantic model
+            column_x = check_config.column_x
+            column_y = check_config.column_y
+            method = check_config.method
+        
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
-            result = self._analyze_correlation(filtered_df, self.correlation_column_x, self.correlation_column_y)
+            result = self._analyze_correlation(filtered_df, column_x, column_y)
             
             return AssetCheckResult(
                 passed=result["passed"],
                 description=f"Correlation analysis: {result['description']}",
                 metadata={
                     "correlation_value": MetadataValue.float(float(result["correlation_value"])),
-                    "correlation_method": MetadataValue.text(self.correlation_method),
+                    "correlation_method": MetadataValue.text(method),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "filtered": MetadataValue.bool(filtered_df is not df),
                 }
@@ -2078,6 +2134,17 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_database_to_dataframe_correlation(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute correlation check: database → dataframe → analysis."""
+        # Get configuration from the current check config
+        check_config = getattr(self, '_current_check_config', None)
+        if check_config is None:
+            # Fallback to direct attributes for backward compatibility
+            column_x = self._get_check_config_value('correlation_column_x', 'column1')
+            column_y = self._get_check_config_value('correlation_column_y', 'column2')
+        else:
+            # Access configuration from the Pydantic model
+            column_x = check_config.column_x
+            column_y = check_config.column_y
+        
         try:
             database_resource = getattr(context.resources, self.database_resource_key)
             
@@ -2085,7 +2152,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             df = self._fetch_data_as_dataframe(database_resource)
             
             # Run the same dataframe analysis
-            result = self._analyze_correlation(df, self.correlation_column_x, self.correlation_column_y)
+            result = self._analyze_correlation(df, column_x, column_y)
             
             return AssetCheckResult(
                 passed=result["passed"],
@@ -2114,35 +2181,35 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             filtered_df = self._filter_dataframe(df)
             
             # Check if we need to group by
-            if self.value_set_group_by:
+            if self._get_check_config_value('value_set_group_by', None):
                 # Check each group independently
                 failed_groups = []
                 total_groups = 0
                 
                 # Get unique groups
                 if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(filtered_df[self.value_set_group_by].unique()).to_numpy().flatten()
+                    groups = filtered_df.select(filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')].unique()).to_numpy().flatten()
                 else:  # Pandas
-                    groups = filtered_df[self.value_set_group_by].unique()
+                    groups = filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')].unique()
                 
                 total_groups = len(groups)
                 
                 for group in groups:
                     # Filter data for this group
                     if hasattr(filtered_df, 'filter'):  # Polars
-                        group_df = filtered_df.filter(filtered_df[self.value_set_group_by] == group)
+                        group_df = filtered_df.filter(filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')] == group)
                     else:  # Pandas
-                        group_df = filtered_df[filtered_df[self.value_set_group_by] == group]
+                        group_df = filtered_df[filtered_df[self._get_check_config_value('value_set_group_by', None)] == group]
                     
                     # Run value set validation analysis for this group
-                    result = self._analyze_value_set_validation(group_df, self.value_set_column, self.value_set_allowed_values)
+                    result = self._analyze_value_set_validation(group_df, self._get_check_config_value('value_set_column', 'column'), self._get_check_config_value('value_set_allowed_values', []))
                     
                     # If this group fails the validation, add it to failed groups
                     if not result["passed"]:
                         failed_groups.append({
                             "group": str(group),
                             "valid_percentage": float(result["valid_percentage"]),
-                            "required_percentage": self.value_set_min_pct,
+                            "required_percentage": self._get_check_config_value('value_set_min_pct', 95.0),
                             "valid_values": int(result["valid_values"]),
                             "total_values": int(result["total_values"])
                         })
@@ -2155,21 +2222,21 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     metadata={
                         "total_groups": MetadataValue.int(total_groups),
                         "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(self.value_set_group_by),
+                        "group_by": MetadataValue.text(self._get_check_config_value('value_set_group_by', None)),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                         "filtered": MetadataValue.bool(filtered_df is not df),
                     }
                 )
             else:
                 # Original non-grouped logic
-                result = self._analyze_value_set_validation(filtered_df, self.value_set_column, self.value_set_allowed_values)
+                result = self._analyze_value_set_validation(filtered_df, self._get_check_config_value('value_set_column', 'column'), self._get_check_config_value('value_set_allowed_values', []))
                 
                 return AssetCheckResult(
                     passed=bool(result["passed"]),
                     description=f"Value set validation: {result['description']}",
                     metadata={
                         "valid_percentage": MetadataValue.float(result["valid_percentage"]),
-                        "required_percentage": MetadataValue.float(self.value_set_min_pct),
+                        "required_percentage": MetadataValue.float(self._get_check_config_value('value_set_min_pct', 95.0)),
                         "valid_values": MetadataValue.int(int(result["valid_values"])),
                         "total_values": MetadataValue.int(int(result["total_values"])),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
@@ -2193,14 +2260,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             df = self._fetch_data_as_dataframe(database_resource)
             
             # Run the same dataframe analysis
-            result = self._analyze_value_set_validation(df, self.value_set_column, self.value_set_allowed_values)
+            result = self._analyze_value_set_validation(df, self._get_check_config_value('value_set_column', 'column'), self._get_check_config_value('value_set_allowed_values', []))
             
             return AssetCheckResult(
                 passed=bool(result["passed"]),
                 description=f"Value set validation: {result['description']}",
                 metadata={
                     "valid_percentage": MetadataValue.float(float(result["valid_percentage"])),
-                    "required_percentage": MetadataValue.float(self.value_set_min_pct),
+                    "required_percentage": MetadataValue.float(self._get_check_config_value('value_set_min_pct', 95.0)),
                     "valid_values": MetadataValue.int(int(result["valid_values"])),
                     "total_values": MetadataValue.int(int(result["total_values"])),
                     "data_size": MetadataValue.int(len(df)),
@@ -2218,42 +2285,78 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_pattern_matching(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute pattern matching validation on dataframe."""
+        # Get configuration from the current check config
+        check_config = getattr(self, '_current_check_config', None)
+        if check_config is None:
+            # Fallback to direct attributes for backward compatibility
+            column = self._get_check_config_value('pattern_column', 'column')
+            group_by = self._get_check_config_value('pattern_group_by', None)
+            min_pct = self._get_check_config_value('pattern_min_pct', 95.0)
+        else:
+            # Access configuration from the Pydantic model
+            column = check_config.column
+            group_by = check_config.group_by
+            min_pct = check_config.match_percentage
+        
         filtered_df = df  # Default to original df
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
+            # Debug: Log dataframe info
+            context.log.info(f"Pattern matching - Original df shape: {len(df) if hasattr(df, '__len__') else 'unknown'}")
+            context.log.info(f"Pattern matching - Filtered df shape: {len(filtered_df) if hasattr(filtered_df, '__len__') else 'unknown'}")
+            context.log.info(f"Pattern matching - Column to check: {column}")
+            context.log.info(f"Pattern matching - Available columns: {list(filtered_df.columns) if hasattr(filtered_df, 'columns') else 'unknown'}")
+            
+            # Check if column exists
+            if hasattr(filtered_df, 'columns') and column not in filtered_df.columns:
+                return AssetCheckResult(
+                    passed=False,
+                    description=f"Pattern matching failed: Column '{column}' not found in dataframe",
+                    metadata={
+                        "error": MetadataValue.text(f"Column '{column}' not found. Available columns: {list(filtered_df.columns)}"),
+                        "total_count": MetadataValue.int(0),
+                        "match_count": MetadataValue.int(0),
+                        "match_percentage": MetadataValue.float(0.0),
+                        "required_percentage": MetadataValue.float(min_pct),
+                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
+                        "filtered": MetadataValue.bool(filtered_df is not df),
+                        **self._get_pattern_info()
+                    }
+                )
+            
             # Check if we need to group by
-            if self.pattern_group_by:
+            if group_by:
                 # Check each group independently
                 failed_groups = []
                 total_groups = 0
                 
                 # Get unique groups
                 if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(filtered_df[self.pattern_group_by].unique()).to_numpy().flatten()
+                    groups = filtered_df.select(filtered_df[group_by].unique()).to_numpy().flatten()
                 else:  # Pandas
-                    groups = filtered_df[self.pattern_group_by].unique()
+                    groups = filtered_df[group_by].unique()
                 
                 total_groups = len(groups)
                 
                 for group in groups:
                     # Filter data for this group
                     if hasattr(filtered_df, 'filter'):  # Polars
-                        group_df = filtered_df.filter(filtered_df[self.pattern_group_by] == group)
+                        group_df = filtered_df.filter(filtered_df[group_by] == group)
                     else:  # Pandas
-                        group_df = filtered_df[filtered_df[self.pattern_group_by] == group]
+                        group_df = filtered_df[filtered_df[group_by] == group]
                     
                     # Run pattern matching analysis for this group
                     regex_pattern = self._get_pattern_regex()
-                    result = self._analyze_pattern_matching(group_df, self.pattern_column, regex_pattern)
+                    result = self._analyze_pattern_matching(group_df, column, regex_pattern, min_pct)
                     
                     # If this group fails the pattern check, add it to failed groups
                     if not result["passed"]:
                         failed_groups.append({
                             "group": str(group),
                             "match_percentage": float(result["match_percentage"]),
-                            "required_percentage": self.pattern_min_pct,
+                            "required_percentage": min_pct,
                             "match_count": int(result["matching_values"]),
                             "total_count": int(result["total_values"])
                         })
@@ -2269,7 +2372,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     metadata={
                         "total_groups": MetadataValue.int(total_groups),
                         "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(self.pattern_group_by),
+                        "group_by": MetadataValue.text(group_by),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                         "filtered": MetadataValue.bool(filtered_df is not df),
                         **pattern_info
@@ -2278,7 +2381,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             else:
                 # Original non-grouped logic
                 regex_pattern = self._get_pattern_regex()
-                result = self._analyze_pattern_matching(filtered_df, self.pattern_column, regex_pattern)
+                result = self._analyze_pattern_matching(filtered_df, column, regex_pattern, min_pct)
                 
                 # Get pattern information for metadata
                 pattern_info = self._get_pattern_info()
@@ -2288,7 +2391,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     description=f"Pattern matching: {result['description']}",
                     metadata={
                         "match_percentage": MetadataValue.float(float(result["match_percentage"])),
-                        "required_percentage": MetadataValue.float(self.pattern_min_pct),
+                        "required_percentage": MetadataValue.float(min_pct),
                         "match_count": MetadataValue.int(int(result["matching_values"])),
                         "total_count": MetadataValue.int(int(result["total_values"])),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
@@ -2313,7 +2416,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             df = self._fetch_data_as_dataframe(database_resource)
             
             # Run the same dataframe analysis
-            result = self._analyze_pattern_matching(df, self.pattern_column, self.pattern_regex)
+            pattern_column = self._get_check_config_value('pattern_column', 'column')
+            pattern_regex = self._get_pattern_regex()
+            result = self._analyze_pattern_matching(df, pattern_column, pattern_regex)
             
             # Get pattern information for metadata
             pattern_info = self._get_pattern_info()
@@ -2323,7 +2428,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 description=f"Pattern matching: {result['description']}",
                 metadata={
                     "match_percentage": MetadataValue.float(float(result["match_percentage"])),
-                    "required_percentage": MetadataValue.float(self.pattern_min_pct),
+                    "required_percentage": MetadataValue.float(self._get_check_config_value('pattern_min_pct', 95.0)),
                     "match_count": MetadataValue.int(int(result["matching_values"])),
                     "total_count": MetadataValue.int(int(result["total_values"])),
                     "data_size": MetadataValue.int(len(df)),
@@ -2377,7 +2482,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             filtered_df = self._filter_dataframe(df)
             
             result = self._analyze_percent_delta(
-                context, filtered_df, self.percent_delta_metric, self.percent_delta_group_by
+                context, filtered_df, self._get_check_config_value('percent_delta_metric', 'num_rows'), self._get_check_config_value('percent_delta_group_by', None)
             )
             
             return AssetCheckResult(
@@ -2386,7 +2491,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={
                     "failed_groups": MetadataValue.json(result["failed_groups"] if isinstance(result["failed_groups"], (list, dict)) else []),
                     "total_groups": MetadataValue.int(int(result["total_groups"])),
-                    "allowed_failures": MetadataValue.int(self.percent_delta_allowed_failures),
+                    "allowed_failures": MetadataValue.int(self._get_check_config_value('percent_delta_allowed_failures', 0)),
                     "max_delta": MetadataValue.float(float(result["max_delta"])),
                     "historical_data": MetadataValue.json(result["current_values_for_storage"]),
                     "loaded_history": MetadataValue.json(result.get("loaded_history", {})),
@@ -2438,12 +2543,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_anomaly_detection(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute anomaly detection check on dataframe."""
+        # Get configuration using helper method
+        metric = self._get_check_config_value('metric', 'num_rows')
+        group_by = self._get_check_config_value('group_by')
+        allowed_failures = self._get_check_config_value('allowed_failures', 0)
+        method = self._get_check_config_value('method', 'z_score')
+        
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
             result = self._analyze_anomaly_detection(
-                context, filtered_df, self.anomaly_detection_metric, self.anomaly_detection_group_by
+                context, filtered_df, metric, group_by,
+                threshold=self._get_check_config_value('threshold', 2.0),
+                method=method,
+                history=self._get_check_config_value('history', 10),
+                allowed_failures=allowed_failures
             )
             
             return AssetCheckResult(
@@ -2452,11 +2567,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={
                     "anomalous_groups": MetadataValue.json(result["anomalous_groups"] if isinstance(result["anomalous_groups"], (list, dict)) else []),
                     "total_groups": MetadataValue.int(result["total_groups"]),
-                    "allowed_failures": MetadataValue.int(self.anomaly_detection_allowed_failures),
+                    "allowed_failures": MetadataValue.int(allowed_failures),
                     "max_anomaly_score": MetadataValue.float(float(result["max_anomaly_score"])),
                     "historical_data": MetadataValue.json(result["current_values_for_storage"]),
                     "loaded_history": MetadataValue.json(result.get("loaded_history", {})),
-                    "method": MetadataValue.text(self.anomaly_detection_method),
+                    "method": MetadataValue.text(method),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "filtered": MetadataValue.bool(filtered_df is not df),
                 }
@@ -2471,39 +2586,42 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _execute_dataframe_data_type(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
         """Execute data type validation on dataframe."""
+        # Get configuration using helper method
+        columns = self._get_check_config_value('data_type_columns', [])
+        group_by = self._get_check_config_value('data_type_group_by')
+        
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
             # Debug: Log the data_type_columns configuration (removed sensitive data logging)
-            context.log.info(f"Data type validation - data_type_columns: {self.data_type_columns}")
-            context.log.info(f"Data type validation - enable_data_type_check: {self.enable_data_type_check}")
+            context.log.info(f"Data type validation - data_type_columns: {columns}")
             context.log.info(f"Data type validation - available columns: {list(filtered_df.columns) if hasattr(filtered_df, 'columns') else 'unknown'}")
             context.log.info(f"Data type validation - dataframe shape: {filtered_df.shape if hasattr(filtered_df, 'shape') else 'unknown'}")
             
             # Check if we need to group by
-            if self.data_type_group_by:
+            if group_by:
                 # Check each group independently
                 failed_groups = []
                 total_groups = 0
                 
                 # Get unique groups
                 if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(filtered_df[self.data_type_group_by].unique()).to_numpy().flatten()
+                    groups = filtered_df.select(filtered_df[group_by].unique()).to_numpy().flatten()
                 else:  # Pandas
-                    groups = filtered_df[self.data_type_group_by].unique()
+                    groups = filtered_df[group_by].unique()
                 
                 total_groups = len(groups)
                 
                 for group in groups:
                     # Filter data for this group
                     if hasattr(filtered_df, 'filter'):  # Polars
-                        group_df = filtered_df.filter(filtered_df[self.data_type_group_by] == group)
+                        group_df = filtered_df.filter(filtered_df[group_by] == group)
                     else:  # Pandas
-                        group_df = filtered_df[filtered_df[self.data_type_group_by] == group]
+                        group_df = filtered_df[filtered_df[group_by] == group]
                     
                     # Run data type validation analysis for this group
-                    result = self._analyze_data_type_validation(group_df, self.data_type_columns)
+                    result = self._analyze_data_type_validation(group_df, columns)
                     
                     # If this group fails the validation, add it to failed groups
                     if not result["passed"]:
@@ -2522,14 +2640,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     metadata={
                         "total_groups": MetadataValue.int(total_groups),
                         "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(self.data_type_group_by),
+                        "group_by": MetadataValue.text(group_by),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                         "filtered": MetadataValue.bool(filtered_df is not df),
                     }
                 )
             else:
                 # Original non-grouped logic
-                result = self._analyze_data_type_validation(filtered_df, self.data_type_columns)
+                result = self._analyze_data_type_validation(filtered_df, columns)
                 
                 return AssetCheckResult(
                     passed=bool(result["passed"]),
@@ -2556,12 +2674,15 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
-            # Debug: Log the range_columns configuration
-            context.log.info(f"Range validation - range_columns: {self.range_columns}")
-            context.log.info(f"Range validation - enable_range_check: {self.enable_range_check}")
-            context.log.info(f"Range validation - asset_key: {getattr(self, '_asset_name', 'N/A')}")
+            # Get configuration using helper method
+            range_columns = self._get_check_config_value('range_columns', [])
             
-            result = self._analyze_range_validation(filtered_df, self.range_columns)
+            # Debug: Log the range_columns configuration
+            context.log.info(f"Range validation - range_columns: {range_columns}")
+            context.log.info(f"Range validation - asset_key: {getattr(self, '_asset_name', 'N/A')}")
+            context.log.info(f"Range validation - dataframe shape: {filtered_df.shape}")
+            
+            result = self._analyze_range_validation(filtered_df, range_columns)
             
             # Debug: Log the result
             context.log.info(f"Range validation result - total_columns: {result.get('total_columns', 'N/A')}")
@@ -2574,6 +2695,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     "failed_column_names": MetadataValue.json(result["failed_column_names"]),
                     "total_columns": MetadataValue.int(int(result["total_columns"])),
                     "validation_results": MetadataValue.json(result["range_validation_results"]),
+                    "outlier_counts": MetadataValue.json(result["outlier_counts"]),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                     "filtered": MetadataValue.bool(filtered_df is not df),
                 }
@@ -2592,7 +2714,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
-            result = self._analyze_uniqueness_validation(filtered_df, self.uniqueness_columns)
+            # Get configuration using helper method
+            uniqueness_columns = self._get_check_config_value('uniqueness_columns', [])
+            
+            result = self._analyze_uniqueness_validation(filtered_df, uniqueness_columns)
             
             return AssetCheckResult(
                 passed=bool(result["passed"]),
@@ -2645,7 +2770,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 if self.custom_sql_expected_result is not None:
                     metadata.update({
                         "expected_result": MetadataValue.text(str(self.custom_sql_expected_result)),
-                        "comparison": MetadataValue.text(self.custom_sql_comparison),
+                        "comparison": MetadataValue.text(self._safe_enum_to_string(self.custom_sql_comparison)),
                     })
             
             return AssetCheckResult(
@@ -2696,9 +2821,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 
                 # Check against thresholds
                 passed = True
-                if self.correlation_min is not None and correlation < self.correlation_min:
+                if self._get_check_config_value('correlation_min', None) is not None and correlation < self._get_check_config_value('correlation_min', None):
                     passed = False
-                if self.correlation_max is not None and correlation > self.correlation_max:
+                if self._get_check_config_value('correlation_max', None) is not None and correlation > self._get_check_config_value('correlation_max', None):
                     passed = False
                 
                 group_correlations[group_key] = {
@@ -2780,7 +2905,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 if self.custom_dataframe_expected_result is not None:
                     metadata.update({
                         "expected_result": MetadataValue.text(str(self.custom_dataframe_expected_result)),
-                        "comparison": MetadataValue.text(self.custom_dataframe_comparison),
+                        "comparison": MetadataValue.text(self._safe_enum_to_string(self.custom_dataframe_comparison)),
                     })
             
             return AssetCheckResult(
@@ -2803,12 +2928,21 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             filtered_df = self._filter_dataframe(df)
             
             # Extract configuration from check_cfg
-            query = check_cfg.get('query')
-            expected_result = check_cfg.get('expected_result')
-            comparison = check_cfg.get('comparison', 'equals')
-            group_by = check_cfg.get('group_by')
-            allowed_failures = check_cfg.get('allowed_failures', 0)
-            description = check_cfg.get('description', 'Custom dataframe check')
+            # Handle both dict and Pydantic model
+            if isinstance(check_cfg, CustomDataframeCheckConfig):
+                query = check_cfg.python_code
+                expected_result = check_cfg.expected_result
+                comparison = check_cfg.comparison
+                description = check_cfg.name or 'Custom dataframe check'
+                group_by = check_cfg.group_by if hasattr(check_cfg, 'group_by') else None
+                allowed_failures = check_cfg.allowed_failures if hasattr(check_cfg, 'allowed_failures') else 0
+            else:
+                query = check_cfg.get('python_code')
+                expected_result = check_cfg.get('expected_result')
+                comparison = check_cfg.get('comparison', 'equals')
+                description = check_cfg.get('name', 'Custom dataframe check')
+                group_by = check_cfg.get('group_by')
+                allowed_failures = check_cfg.get('allowed_failures', 0)
             
             # Execute the query
             if group_by:
@@ -2931,7 +3065,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         "query": MetadataValue.text(query),
                         "query_result": MetadataValue.text(query_result),
                         "expected_result": MetadataValue.text(str(expected_result)),
-                        "comparison": MetadataValue.text(comparison),
+                        "comparison": MetadataValue.text(self._safe_enum_to_string(comparison)),
                         "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
                         "filtered": MetadataValue.bool(filtered_df is not df),
                     }
@@ -3269,7 +3403,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     
         raise ValueError(f"Unsupported metric: {metric}")
 
-    def _compute_database_metric(self, metric: str, database_resource) -> float:
+    def _compute_database_metric(self, metric: str, database_resource, context=None) -> float:
         """Compute metric value for database using SQL with adapter pattern."""
         try:
             # Build WHERE clause for filtering
@@ -3278,6 +3412,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             
             if metric == "num_rows":
                 query = f"SELECT COUNT(*) FROM {self.table_name}{where_sql}"
+                # Debug: Log the SQL query if context is available
+                if context:
+                    context.log.info(f"Database metric - SQL query: {query}")
+                    context.log.info(f"Database metric - Table name: {self.table_name}")
+                    context.log.info(f"Database metric - Where conditions: {where_conditions}")
             elif ":" in metric:
                 metric_type, column = metric.split(":", 1)
                 if metric_type == "null_count":
@@ -3440,10 +3579,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Step 1: Data preprocessing and cleaning
             clean_data = self._preprocess_benford_data(df, column)
             
-            if len(clean_data) < self.benford_min_samples:
+            if len(clean_data) < self._get_check_config_value('benford_min_samples', 100):
                 return {
                     "passed": False,
-                    "description": f"Insufficient data: {len(clean_data)} < {self.benford_min_samples} required",
+                    "description": f"Insufficient data: {len(clean_data)} < {self._get_check_config_value('benford_min_samples', 100)} required",
                     "max_deviation": 1.0,
                     "sample_size": len(clean_data),
                     "chi_square_p_value": None,
@@ -3451,7 +3590,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 }
             
             # Step 2: Extract digits based on position
-            digits_data = self._extract_benford_digits(clean_data, self.benford_digit_position)
+            digits_data = self._extract_benford_digits(clean_data, self._get_check_config_value('benford_digit_position', 1))
             
             if len(digits_data) == 0:
                 return {
@@ -3464,7 +3603,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 }
             
             # Step 3: Calculate actual distribution
-            expected_dist = BENFORD_DISTRIBUTIONS[self.benford_digit_position]
+            expected_dist = BENFORD_DISTRIBUTIONS[self._get_check_config_value('benford_digit_position', 1)]
             actual_dist = self._calculate_digit_distribution(digits_data, expected_dist.keys())
             
             # Step 4: Statistical analysis
@@ -3476,7 +3615,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             
             # Step 6: Determine if test passes
             # Use both max deviation and chi-square test
-            deviation_passed = max_deviation <= self.benford_threshold
+            deviation_passed = max_deviation <= self._get_check_config_value('benford_threshold')
             chi_square_passed = chi_square_p > 0.05 if chi_square_p is not None else True
             overall_passed = deviation_passed and chi_square_passed
             
@@ -3500,7 +3639,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "sample_size": len(digits_data),
                 "chi_square_statistic": chi_square_stat,
                 "chi_square_p_value": chi_square_p,
-                "digit_position": self.benford_digit_position,
+                                    "digit_position": self._get_check_config_value('benford_digit_position', 1),
                 "distribution_details": distribution_details,
                 "deviation_test_passed": deviation_passed,
                 "chi_square_test_passed": chi_square_passed,
@@ -3649,14 +3788,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         status = "PASSED" if passed else "FAILED"
         description = f"Benford's Law check {status}"
         
-        if self.benford_digit_position == 1:
+        if self._get_check_config_value('benford_digit_position', 1) == 1:
             position_desc = "first digit"
-        elif self.benford_digit_position == 2:
+        elif self._get_check_config_value('benford_digit_position', 1) == 2:
             position_desc = "second digit"
-        elif self.benford_digit_position == 12:
+        elif self._get_check_config_value('benford_digit_position', 1) == 12:
             position_desc = "first two digits"
         else:
-            position_desc = f"digit position {self.benford_digit_position}"
+            position_desc = f"digit position {self._get_check_config_value('benford_digit_position', 1)}"
         
         description += f" ({position_desc})"
         description += f" - Max deviation: {max_deviation:.4f}"
@@ -3866,39 +4005,107 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         """Load historical data for all checks from Dagster asset check metadata."""
         
         try:
-            # Get historical asset check evaluation events
+            # Get historical asset check evaluation events (where check metadata is stored)
+            # Get asset key from the component's stored asset key or construct from asset name
+            if hasattr(self, '_asset_key'):
+                asset_key_for_filter = self._asset_key
+            elif hasattr(self, '_asset_name'):
+                asset_key_for_filter = AssetKey(self._asset_name.split('.')) if '.' in self._asset_name else AssetKey([self._asset_name])
+            else:
+                # Fallback: try to get from context if available
+                try:
+                    asset_key_for_filter = context.asset_check_spec.asset_key
+                except:
+                    # Last resort: construct from the check name itself
+                    check_name = str(context.asset_check_spec.name)
+                    if '_' in check_name:
+                        asset_part = check_name.split('_')[0]
+                        asset_key_for_filter = AssetKey([asset_part])
+                    else:
+                        asset_key_for_filter = AssetKey(['unknown'])
+            
+            context.log.info(f"Historical data - Using asset key for filter: {asset_key_for_filter}")
+            
+            # Strategy 1: Try asset key filter first (most efficient) - may fail due to Dagster bug
+            context.log.info(f"Historical data - Strategy 1: Filtering by asset_key={asset_key_for_filter}")
             records = context.instance.get_event_records(
                 EventRecordsFilter(
                     event_type=DagsterEventType.ASSET_CHECK_EVALUATION, 
-                    asset_key=AssetKey(self._asset_name.split(".")) if "." in self._asset_name else AssetKey([self._asset_name])
+                    asset_key=asset_key_for_filter
                 ),
                 limit=history * 3,  # Get extra records to find relevant ones
             )
             
+            context.log.info(f"Historical data - Strategy 1 (asset_key filter): Found {len(records)} records")
+            
+            # Strategy 2: If no records found, try with larger limit but still filtered by asset
+            if len(records) == 0:
+                context.log.info(f"Historical data - Strategy 1 failed, trying Strategy 2 (larger asset_key filter)")
+                records = context.instance.get_event_records(
+                    EventRecordsFilter(
+                        event_type=DagsterEventType.ASSET_CHECK_EVALUATION, 
+                        asset_key=asset_key_for_filter
+                    ),
+                    limit=history * 20,  # Much larger limit for infrequently run checks
+                )
+                context.log.info(f"Historical data - Strategy 2: Found {len(records)} records")
+            
+            # Strategy 3: If still no records, try broader search but with precise filtering
+            # This is the most reliable approach due to Dagster's asset_key filtering bug for check events
+            if len(records) == 0:
+                context.log.info(f"Historical data - Strategy 2 failed, trying Strategy 3 (broader search with precise filtering)")
+                
+                # Get all check events with much larger limit
+                all_check_events = context.instance.get_event_records(
+                    EventRecordsFilter(event_type=DagsterEventType.ASSET_CHECK_EVALUATION),
+                    limit=history * 100,  # Much larger limit to handle many assets
+                )
+                
+                # Filter for events that match our exact asset and check name
+                matching_events = []
+                
+                # Get the correct check name - it should be the full check name, not just the type
+                sanitized_name = self._sanitize_asset_key_name(asset_key_for_filter)
+                expected_check_name = f"{sanitized_name}_{check_name}"
+                
+                context.log.info(f"Historical data - Looking for asset: {asset_key_for_filter}, check_name: {expected_check_name}")
+                
+                for event in all_check_events:
+                    if (hasattr(event, 'event_log_entry') and 
+                        event.event_log_entry and 
+                        event.event_log_entry.dagster_event and
+                        event.event_log_entry.dagster_event.event_specific_data):
+                        
+                        check_eval = event.event_log_entry.dagster_event.event_specific_data
+                        
+                        # Check if this event matches our asset and check name exactly
+                        if (hasattr(check_eval, 'asset_key') and 
+                            hasattr(check_eval, 'check_name')):
+                            
+                            actual_asset_key = check_eval.asset_key
+                            actual_check_name = check_eval.check_name
+                            
+                            # Check if this is our exact target (only log matches, not every record)
+                            if (actual_asset_key == asset_key_for_filter and 
+                                actual_check_name == expected_check_name):
+                                context.log.info(f"Historical data - ✅ EXACT MATCH: {actual_asset_key} / {actual_check_name}")
+                                matching_events.append(event)
+                
+                context.log.info(f"Historical data - Strategy 3: Found {len(matching_events)} matching records")
+                records = matching_events
+
+
+            
             historical_data = {}
             
             for record in records:
-                if record.asset_check_evaluation is None:
-                    continue
+                # Access metadata through the correct path as per Dagster docs
+                if record.event_log_entry and record.event_log_entry.dagster_event and record.event_log_entry.dagster_event.event_specific_data:
+                    metadata = record.event_log_entry.dagster_event.event_specific_data.metadata
                     
-                check_result = record.asset_check_evaluation
-                
-                # Check if this is the right check (check_name match)
-                if not hasattr(check_result, 'check_name'):
-                    continue
-                
-                # The actual check name is {asset_key}_{check_name}, so we need to match the check_name part
-                actual_check_name = str(check_result.check_name)
-                expected_check_name = f"{self._asset_name.replace('.', '_')}_{check_name}"
-                
-                context.log.info(f"Historical data - Looking for {expected_check_name}, found {actual_check_name}")
-                
-                if actual_check_name != expected_check_name:
-                    continue
-                
-                # Extract historical data from metadata
-                if check_result.metadata and 'historical_data' in check_result.metadata:
-                    historical_values = check_result.metadata['historical_data'].value
+                    # Look for historical data in the metadata
+                    if metadata and 'historical_data' in metadata:
+                        historical_values = metadata['historical_data'].value
                     
                     if group_by:
                         # Group-by case: historical_values is a dict {group_key: value}
@@ -3914,6 +4121,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                             historical_data['__total__'].append(float(historical_values['__total__']))
                         elif isinstance(historical_values, (int, float)):
                             historical_data['__total__'].append(float(historical_values))
+
                 
                 # Stop when we have enough history for all groups
                 if historical_data:
@@ -4113,9 +4321,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Step 1: Get current metric values
             current_values = self._get_current_metric_values(df, metric, group_by)
             context.log.info(f"Percent delta - Current values: {current_values}")
+            context.log.info(f"Percent delta - Current values type: {type(current_values)}")
+            context.log.info(f"Percent delta - Current values empty: {not current_values}")
+            context.log.info(f"Percent delta - Metric: {metric}")
+            context.log.info(f"Percent delta - Group by: {group_by}")
+            context.log.info(f"Percent delta - DataFrame shape: {df.shape}")
             
             # Step 2: Load historical data
-            historical_data = self._load_historical_data(context, "percent_delta", metric, group_by, self.percent_delta_history)
+            historical_data = self._load_historical_data(context, "percent_delta", metric, group_by, self._get_check_config_value('percent_delta_history', 10))
             context.log.info(f"Percent delta - Historical data: {historical_data}")
             
             # Step 3: Calculate percent deltas for each group
@@ -4132,7 +4345,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         "current_value": current_value,
                         "historical_average": None,
                         "percent_delta": None,
-                        "threshold": self.percent_delta_threshold
+                        "threshold": self._get_check_config_value('percent_delta_threshold', 10.0)
                     }
                     continue
                 
@@ -4149,7 +4362,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     percent_delta = abs((current_value - historical_avg) / historical_avg * 100)
                 
                 # Check against threshold
-                passed = percent_delta <= self.percent_delta_threshold
+                passed = percent_delta <= self._get_check_config_value('percent_delta_threshold', 20.0)
+                
                 
                 group_deltas[group_key] = {
                     "passed": passed,
@@ -4157,14 +4371,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     "current_value": current_value,
                     "historical_average": historical_avg,
                     "percent_delta": percent_delta,
-                    "threshold": self.percent_delta_threshold,
+                    "threshold": self._get_check_config_value('percent_delta_threshold', 20.0),
                     "history_count": len(group_history)
                 }
             
             # Step 4: Apply allowed failures logic
             failed_groups = [k for k, v in group_deltas.items() if not v["passed"]]
             total_groups = len(group_deltas)
-            allowed_failures = self.percent_delta_allowed_failures
+            allowed_failures = self._get_check_config_value("percent_delta_allowed_failures", 0)
             
             overall_passed = len(failed_groups) <= allowed_failures
             
@@ -4179,7 +4393,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": overall_passed,
                 "description": self._create_percent_delta_description(overall_passed, failed_groups, total_groups, allowed_failures, max_delta),
                 "max_delta": max_delta,
-                "threshold": self.percent_delta_threshold,
+                "threshold": self._get_check_config_value('percent_delta_threshold', 20.0),
                 "total_groups": total_groups,
                 "failed_groups": failed_groups,
                 "allowed_failures": allowed_failures,
@@ -4193,7 +4407,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": False,
                 "description": f"Percent delta analysis failed: {str(e)}",
                 "max_delta": 0.0,
-                "threshold": self.percent_delta_threshold,
+                "threshold": self._get_check_config_value('percent_delta_threshold', 20.0),
                 "total_groups": 0,
                 "failed_groups": 0,
                 "allowed_failures": 0,
@@ -4212,7 +4426,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             current_values = self._get_current_metric_values_database(database_resource, metric, group_by)
             
             # Step 2: Load historical data
-            historical_data = self._load_historical_data(context, "percent_delta", metric, group_by, self.percent_delta_history)
+            historical_data = self._load_historical_data(context, "percent_delta", metric, group_by, self._get_check_config_value('percent_delta_history', 10))
             
             # Step 3: Calculate percent deltas for each group
             group_deltas = {}
@@ -4228,7 +4442,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         "current_value": current_value,
                         "historical_average": None,
                         "percent_delta": None,
-                        "threshold": self.percent_delta_threshold
+                        "threshold": self._get_check_config_value('percent_delta_threshold', 20.0)
                     }
                     continue
                 
@@ -4245,7 +4459,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     percent_delta = abs((current_value - historical_avg) / historical_avg * 100)
                 
                 # Check against threshold
-                passed = percent_delta <= self.percent_delta_threshold
+                passed = percent_delta <= self._get_check_config_value('percent_delta_threshold', 20.0)
                 
                 group_deltas[group_key] = {
                     "passed": passed,
@@ -4253,14 +4467,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     "current_value": current_value,
                     "historical_average": historical_avg,
                     "percent_delta": percent_delta,
-                    "threshold": self.percent_delta_threshold,
+                    "threshold": self._get_check_config_value('percent_delta_threshold', 20.0),
                     "history_count": len(group_history)
                 }
             
             # Step 4: Apply allowed failures logic
             failed_groups = [k for k, v in group_deltas.items() if not v["passed"]]
             total_groups = len(group_deltas)
-            allowed_failures = self.percent_delta_allowed_failures
+            allowed_failures = self._get_check_config_value("percent_delta_allowed_failures", 0)
             
             overall_passed = len(failed_groups) <= allowed_failures
             
@@ -4275,7 +4489,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": overall_passed,
                 "description": self._create_percent_delta_description(overall_passed, failed_groups, total_groups, allowed_failures, max_delta),
                 "max_delta": max_delta,
-                "threshold": self.percent_delta_threshold,
+                "threshold": self._get_check_config_value('percent_delta_threshold', 20.0),
                 "total_groups": total_groups,
                 "failed_groups": failed_groups,
                 "allowed_failures": allowed_failures,
@@ -4289,7 +4503,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": False,
                 "description": f"Percent delta analysis failed: {str(e)}",
                 "max_delta": 0.0,
-                "threshold": self.percent_delta_threshold,
+                "threshold": self._get_check_config_value('percent_delta_threshold', 20.0),
                 "total_groups": 0,
                 "failed_groups": 0,
                 "allowed_failures": 0,
@@ -4405,9 +4619,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             
             # Check against thresholds
             passed = True
-            if self.correlation_min is not None and correlation < self.correlation_min:
+            if self._get_check_config_value('correlation_min', None) is not None and correlation < self._get_check_config_value('correlation_min', None):
                 passed = False
-            if self.correlation_max is not None and correlation > self.correlation_max:
+            if self._get_check_config_value('correlation_max', None) is not None and correlation > self._get_check_config_value('correlation_max', None):
                 passed = False
             
             return {
@@ -4415,7 +4629,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "description": f"Correlation: {correlation:.4f} (p-value: {p_value:.4f})",
                 "correlation": correlation,
                 "p_value": p_value,
-                "method": self.correlation_method,
+                "method": self._get_check_config_value('correlation_method', 'pearson'),
                 "column_x": column_x,
                 "column_y": column_y
             }
@@ -4426,7 +4640,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "description": f"Correlation analysis failed: {str(e)}",
                 "correlation": 0.0,
                 "p_value": 1.0,
-                "method": self.correlation_method,
+                "method": self._get_check_config_value('correlation_method', 'pearson'),
                 "error": str(e)
             }
 
@@ -4452,11 +4666,12 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             y_aligned = y_values.loc[common_index]
             
             # Calculate correlation based on method
-            if self.correlation_method == "pearson":
+            method = self._get_check_config_value('correlation_method', 'pearson')
+            if method == "pearson":
                 correlation = x_aligned.corr(y_aligned, method='pearson')
-            elif self.correlation_method == "spearman":
+            elif method == "spearman":
                 correlation = x_aligned.corr(y_aligned, method='spearman')
-            elif self.correlation_method == "kendall":
+            elif method == "kendall":
                 correlation = x_aligned.corr(y_aligned, method='kendall')
             else:
                 correlation = x_aligned.corr(y_aligned, method='pearson')
@@ -4527,13 +4742,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             valid_percentage = (valid_values / total_values * 100) if total_values > 0 else 0.0
             
             # Check against minimum required percentage
-            passed = valid_percentage >= self.value_set_min_pct
+            passed = valid_percentage >= self._get_check_config_value('value_set_min_pct', 95.0)
             
             return {
                 "passed": passed,
-                "description": f"Value set validation: {valid_percentage:.2f}% valid (required: {self.value_set_min_pct:.2f}%)",
+                "description": f"Value set validation: {valid_percentage:.2f}% valid (required: {self._get_check_config_value('value_set_min_pct', 95.0):.2f}%)",
                 "valid_percentage": valid_percentage,
-                "min_required_pct": self.value_set_min_pct,
+                "min_required_pct": self._get_check_config_value('value_set_min_pct', 95.0),
                 "invalid_values": invalid_values,
                 "total_values": total_values,
                 "valid_values": valid_values,
@@ -4545,7 +4760,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": False,
                 "description": f"Value set validation failed: {str(e)}",
                 "valid_percentage": 0.0,
-                "min_required_pct": self.value_set_min_pct,
+                "min_required_pct": self._get_check_config_value('value_set_min_pct', 95.0),
                 "invalid_values": [],
                 "total_values": 0,
                 "valid_values": 0,
@@ -4556,7 +4771,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     # ANOMALY DETECTION METHODS
     # ═══════════════════════════════════════════════════════════════
 
-    def _analyze_anomaly_detection(self, context: AssetCheckExecutionContext, df, metric: str, group_by: Optional[str] = None) -> dict:
+    def _analyze_anomaly_detection(self, context: AssetCheckExecutionContext, df, metric: str, group_by: Optional[str] = None, threshold: float = 2.0, method: str = "z_score", history: int = 10, allowed_failures: int = 0) -> dict:
         """Analyze anomaly detection using dataframe processing."""
         
         try:
@@ -4565,7 +4780,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             context.log.info(f"Anomaly detection - Current values: {current_values}")
             
             # Step 2: Load historical data
-            historical_data = self._load_historical_data(context, "anomaly_detection", metric, group_by, self.anomaly_detection_history)
+            historical_data = self._load_historical_data(context, "anomaly_detection", metric, group_by, history)
             context.log.info(f"Anomaly detection - Historical data: {historical_data}")
             
             # Step 3: Calculate anomaly scores for each group
@@ -4586,25 +4801,24 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     continue
                 
                 # Calculate anomaly score using specified method
-                anomaly_score = self._calculate_anomaly_score(group_history, current_value, self.anomaly_detection_method)
+                anomaly_score = self._calculate_anomaly_score(group_history, current_value, method)
                 
                 # Check against threshold
-                passed = anomaly_score <= self.anomaly_detection_threshold
+                passed = anomaly_score <= threshold
                 
                 group_anomalies[group_key] = {
                     "passed": passed,
                     "reason": f"Anomaly score within threshold" if passed else f"Anomaly score exceeds threshold",
                     "current_value": current_value,
                     "anomaly_score": anomaly_score,
-                    "threshold": self.anomaly_detection_threshold,
+                    "threshold": threshold,
                     "history_count": len(group_history),
-                    "method": self.anomaly_detection_method
+                    "method": method
                 }
             
             # Step 4: Apply allowed failures logic
             anomalous_groups = [k for k, v in group_anomalies.items() if not v["passed"]]
             total_groups = len(group_anomalies)
-            allowed_failures = self.anomaly_detection_allowed_failures
             
             overall_passed = len(anomalous_groups) <= allowed_failures
             
@@ -4619,13 +4833,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": overall_passed,
                 "description": self._create_anomaly_detection_description(overall_passed, anomalous_groups, total_groups, allowed_failures, max_anomaly_score),
                 "max_anomaly_score": max_anomaly_score,
-                "threshold": self.anomaly_detection_threshold,
+                "threshold": self._get_check_config_value('anomaly_detection_threshold', 2.0),
                 "total_groups": total_groups,
                 "anomalous_groups": anomalous_groups,
                 "allowed_failures": allowed_failures,
                 "group_anomalies": group_anomalies,
                 "current_values_for_storage": current_values if isinstance(current_values, dict) else {"__total__": float(current_values) if isinstance(current_values, (int, float)) else 0.0},
-                "method": self.anomaly_detection_method,
+                "method": self._get_check_config_value('anomaly_detection_method', 'z_score'),
                 "loaded_history": historical_data,
             }
             
@@ -4634,17 +4848,17 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": False,
                 "description": f"Anomaly detection analysis failed: {str(e)}",
                 "max_anomaly_score": 0.0,
-                "threshold": self.anomaly_detection_threshold,
+                "threshold": self._get_check_config_value('anomaly_detection_threshold', 2.0),
                 "total_groups": 0,
                 "anomalous_groups": 0,
                 "allowed_failures": 0,
                 "group_anomalies": {},
                 "current_values_for_storage": {},
-                "method": self.anomaly_detection_method,
+                "method": self._get_check_config_value('anomaly_detection_method', 'z_score'),
                 "error": str(e)
             }
 
-    def _analyze_anomaly_detection_database(self, context: AssetCheckExecutionContext, metric: str, group_by: Optional[str] = None) -> dict:
+    def _analyze_anomaly_detection_database(self, context: AssetCheckExecutionContext, metric: str, group_by: Optional[str] = None, threshold: float = 2.0, method: str = "z_score", history: int = 10, allowed_failures: int = 0) -> dict:
         """Analyze anomaly detection using database processing."""
         
         try:
@@ -4654,7 +4868,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             current_values = self._get_current_metric_values_database(database_resource, metric, group_by)
             
             # Step 2: Load historical data
-            historical_data = self._load_historical_data(context, "anomaly_detection", metric, group_by, self.anomaly_detection_history)
+            historical_data = self._load_historical_data(context, "anomaly_detection", metric, group_by, history)
             
             # Step 3: Calculate anomaly scores for each group
             group_anomalies = {}
@@ -4674,25 +4888,24 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     continue
                 
                 # Calculate anomaly score using specified method
-                anomaly_score = self._calculate_anomaly_score(group_history, current_value, self.anomaly_detection_method)
+                anomaly_score = self._calculate_anomaly_score(group_history, current_value, method)
                 
                 # Check against threshold
-                passed = anomaly_score <= self.anomaly_detection_threshold
+                passed = anomaly_score <= threshold
                 
                 group_anomalies[group_key] = {
                     "passed": passed,
                     "reason": f"Anomaly score within threshold" if passed else f"Anomaly score exceeds threshold",
                     "current_value": current_value,
                     "anomaly_score": anomaly_score,
-                    "threshold": self.anomaly_detection_threshold,
+                    "threshold": threshold,
                     "history_count": len(group_history),
-                    "method": self.anomaly_detection_method
+                    "method": method
                 }
             
             # Step 4: Apply allowed failures logic
             anomalous_groups = [k for k, v in group_anomalies.items() if not v["passed"]]
             total_groups = len(group_anomalies)
-            allowed_failures = self.anomaly_detection_allowed_failures
             
             overall_passed = len(anomalous_groups) <= allowed_failures
             
@@ -4707,13 +4920,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": overall_passed,
                 "description": self._create_anomaly_detection_description(overall_passed, anomalous_groups, total_groups, allowed_failures, max_anomaly_score),
                 "max_anomaly_score": max_anomaly_score,
-                "threshold": self.anomaly_detection_threshold,
+                "threshold": threshold,
                 "total_groups": total_groups,
                 "anomalous_groups": anomalous_groups,
                 "allowed_failures": allowed_failures,
                 "group_anomalies": group_anomalies,
                 "current_values_for_storage": current_values if isinstance(current_values, dict) else {"__total__": float(current_values) if isinstance(current_values, (int, float)) else 0.0},
-                "method": self.anomaly_detection_method,
+                "method": method,
                 "loaded_history": historical_data,
             }
             
@@ -4722,13 +4935,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": False,
                 "description": f"Anomaly detection analysis failed: {str(e)}",
                 "max_anomaly_score": 0.0,
-                "threshold": self.anomaly_detection_threshold,
+                "threshold": threshold,
                 "total_groups": 0,
                 "anomalous_groups": 0,
-                "allowed_failures": 0,
+                "allowed_failures": allowed_failures,
                 "group_anomalies": {},
                 "current_values_for_storage": {},
-                "method": self.anomaly_detection_method,
+                "method": method,
                 "error": str(e)
             }
 
@@ -4838,7 +5051,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     # PATTERN MATCHING METHODS
     # ═══════════════════════════════════════════════════════════════
 
-    def _analyze_pattern_matching(self, df, column: str, regex_pattern: str) -> dict:
+    def _analyze_pattern_matching(self, df, column: str, regex_pattern: str, min_pct: float = 95.0) -> dict:
         """Analyze pattern matching for a column using regex."""
         try:
             import re
@@ -4888,13 +5101,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             match_percentage = (matching_values / total_values * 100) if total_values > 0 else 0.0
             
             # Check against minimum required percentage
-            passed = match_percentage >= self.pattern_min_pct
+            passed = match_percentage >= min_pct
             
             return {
                 "passed": passed,
-                "description": f"Pattern matching: {match_percentage:.2f}% match (required: {self.pattern_min_pct:.2f}%)",
+                "description": f"Pattern matching: {match_percentage:.2f}% match (required: {min_pct:.2f}%)",
                 "match_percentage": match_percentage,
-                "min_required_pct": self.pattern_min_pct,
+                "min_required_pct": min_pct,
                 "non_matching_values": non_matching_values,
                 "total_values": total_values,
                 "matching_values": matching_values,
@@ -4906,7 +5119,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "passed": False,
                 "description": f"Pattern matching failed: {str(e)}",
                 "match_percentage": 0.0,
-                "min_required_pct": self.pattern_min_pct,
+                "min_required_pct": min_pct,
                 "non_matching_values": [],
                 "total_values": 0,
                 "matching_values": 0,
@@ -5106,6 +5319,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     "description": f"Range validation: {outlier_count} outliers found"
                 }
                 
+                # Debug: Log outlier information
+                if outlier_count > 0:
+                    print(f"Range validation - Column '{column_name}': {outlier_count} outliers found")
+                    print(f"Range validation - Min value: {min_value}, Max value: {max_value}")
+                    print(f"Range validation - First 5 outliers: {outliers[:5]}")
+                    print(f"Range validation - Total values: {len(column_data)}")
+                
                 outlier_counts[column_name] = outlier_count
                 
                 if not passed:
@@ -5233,7 +5453,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             df = self._fetch_data_as_dataframe(database_resource)
             
             # Run the same dataframe analysis
-            result = self._analyze_pattern_matching(df, self.pattern_column, self.pattern_regex)
+            pattern_column = self._get_check_config_value('pattern_column', 'column')
+            pattern_regex = self._get_pattern_regex()
+            result = self._analyze_pattern_matching(df, pattern_column, pattern_regex)
             
             # Get pattern information for metadata
             pattern_info = self._get_pattern_info()
@@ -5243,7 +5465,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 description=f"Pattern matching: {result['description']}",
                 metadata={
                     "match_percentage": MetadataValue.float(float(result["match_percentage"])),
-                    "required_percentage": MetadataValue.float(self.pattern_min_pct),
+                    "required_percentage": MetadataValue.float(self._get_check_config_value('pattern_min_pct', 95.0)),
                     "match_count": MetadataValue.int(int(result["matching_values"])),
                     "total_count": MetadataValue.int(int(result["total_values"])),
                     "data_size": MetadataValue.int(len(df)),
@@ -5379,7 +5601,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             
             metadata.update({
                 "expected_result": MetadataValue.text(expected_result),
-                "comparison": MetadataValue.text(self.custom_sql_comparison),
+                "comparison": MetadataValue.text(self._safe_enum_to_string(self.custom_sql_comparison)),
             })
             
             return AssetCheckResult(
@@ -5395,14 +5617,79 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={"error": MetadataValue.text(str(e))}
             )
 
+    def _execute_custom_sql_check(self, context: AssetCheckExecutionContext, check_cfg: Union[dict, CustomSqlCheckConfig], db_key: str) -> AssetCheckResult:
+        """Execute custom SQL check against the database."""
+        try:
+            database_resource = getattr(context.resources, db_key)
+            
+            # Extract configuration from check_cfg
+            if isinstance(check_cfg, CustomSqlCheckConfig):
+                sql_query = check_cfg.sql_query
+                expected_result = check_cfg.expected_result
+                comparison = check_cfg.comparison
+            else:
+                sql_query = check_cfg.get('sql_query')
+                expected_result = check_cfg.get('expected_result')
+                comparison = check_cfg.get('comparison', 'equals')
+            
+            if not sql_query:
+                raise ValueError("sql_query is required for custom SQL check")
+            
+            with database_resource.get_connection() as conn:
+                # Execute the SQL query directly against the database
+                result = conn.execute(sql_query).fetchone()
+                query_result = result[0] if result else None
+                
+            # Build metadata
+            metadata = {
+                "query": MetadataValue.text(sql_query),
+                "query_result": MetadataValue.text(str(query_result)),
+            }
+            
+            # If no expected result specified, just return the query result
+            if expected_result is None:
+                return AssetCheckResult(
+                    passed=True,
+                    description=f"Custom SQL query executed successfully: {query_result}",
+                    metadata=metadata
+                )
+            
+            # Perform comparison if expected result is specified
+            expected_result_str = str(expected_result)
+            passed = self._compare_values(str(query_result), expected_result_str, comparison)
+            
+            description = f"Custom SQL query result: {query_result}, Expected: {expected_result_str}, Comparison: {comparison}"
+            if passed:
+                description += " - PASSED"
+            else:
+                description += " - FAILED"
+            
+            metadata.update({
+                "expected_result": MetadataValue.text(expected_result_str),
+                "comparison": MetadataValue.text(self._safe_enum_to_string(comparison)),
+            })
+            
+            return AssetCheckResult(
+                passed=passed,
+                description=description,
+                metadata=metadata
+            )
+            
+        except Exception as e:
+            return AssetCheckResult(
+                passed=False,
+                description=f"Custom SQL check failed: {str(e)}",
+                metadata={"error": MetadataValue.text(str(e))}
+            )
+
     def _execute_custom_dataframe_query(self, df) -> dict:
         """Execute custom dataframe query and validate results."""
-        if not self.custom_dataframe_query:
+        if not self._get_check_config_value('custom_dataframe_query', None):
             raise ValueError("custom_dataframe_query is required for custom dataframe check")
         
         try:
             # Handle group_by scenario
-            if self.custom_dataframe_group_by:
+            if self._get_check_config_value('custom_dataframe_group_by', None):
                 # For group_by, we apply the query to each group separately
                 group_results = {}
                 failed_groups = []
@@ -5410,22 +5697,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 
                 if hasattr(df, 'select'):  # Polars
                     # Get unique groups
-                    groups = df.select(self.custom_dataframe_group_by).unique().to_numpy().flatten()
+                    groups = df.select(df[self._get_check_config_value('custom_dataframe_group_by', None)].unique()).to_numpy().flatten()
                     total_groups = len(groups)
                     
                     for group_name in groups:
                         # Filter data for this group
-                        group_df = df.filter(df[self.custom_dataframe_group_by] == group_name)
+                        group_df = df.filter(df[self._get_check_config_value('custom_dataframe_group_by', None)] == group_name)
                         
                         # Apply the query to this group's data
                         try:
-                            if self.custom_dataframe_query.startswith("SELECT"):
+                            if self._get_check_config_value('custom_dataframe_query', None).startswith("SELECT"):
                                 # Handle SELECT queries
-                                result = group_df.select(self.custom_dataframe_query).to_numpy()
+                                result = group_df.select(self._get_check_config_value('custom_dataframe_query', None)).to_numpy()
                                 metric_value = float(result[0][0]) if len(result) > 0 else 0.0
                             else:
                                 # Handle aggregation queries (like COUNT, SUM, etc.)
-                                result = group_df.select(self.custom_dataframe_query).to_numpy()
+                                result = group_df.select(self._get_check_config_value('custom_dataframe_query', None)).to_numpy()
                                 metric_value = float(result[0][0]) if len(result) > 0 else 0.0
                         except Exception as e:
                             # If query fails for this group, mark as failed
@@ -5434,9 +5721,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         group_results[str(group_name)] = metric_value
                         
                         # Check if this group passes the validation
-                        if self.custom_dataframe_expected_result is not None:
+                        if self._get_check_config_value('custom_dataframe_expected_result', None) is not None:
                             if metric_value is not None:
-                                passed = self._compare_values(str(metric_value), str(self.custom_dataframe_expected_result), self.custom_dataframe_comparison)
+                                passed = self._compare_values(str(metric_value), str(self._get_check_config_value('custom_dataframe_expected_result', None)), self._get_check_config_value('custom_dataframe_comparison', None))
                                 if not passed:
                                     failed_groups.append(str(group_name))
                             else:
@@ -5448,22 +5735,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 
                 else:  # Pandas
                     # Get unique groups
-                    groups = df[self.custom_dataframe_group_by].unique()
+                    groups = df[self._get_check_config_value('custom_dataframe_group_by', None)].unique()
                     total_groups = len(groups)
                     
                     for group_name in groups:
                         # Filter data for this group
-                        group_df = df[df[self.custom_dataframe_group_by] == group_name]
+                        group_df = df[df[self._get_check_config_value('custom_dataframe_group_by', None)] == group_name]
                         
                         # Apply the query to this group's data
                         try:
-                            if self.custom_dataframe_query.startswith("SELECT"):
+                            if self._get_check_config_value('custom_dataframe_query', None).startswith("SELECT"):
                                 # Handle SELECT queries
-                                result = group_df.eval(self.custom_dataframe_query)
+                                result = group_df.eval(self._get_check_config_value('custom_dataframe_query', None))
                                 metric_value = float(result.iloc[0]) if len(result) > 0 else 0.0
                             else:
                                 # Handle aggregation queries
-                                result = group_df.eval(self.custom_dataframe_query)
+                                result = group_df.eval(self._get_check_config_value('custom_dataframe_query', None))
                                 metric_value = float(result) if result is not None else 0.0
                         except Exception as e:
                             # If query fails for this group, mark as failed
@@ -5472,9 +5759,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         group_results[str(group_name)] = metric_value
                         
                         # Check if this group passes the validation
-                        if self.custom_dataframe_expected_result is not None:
+                        if self._get_check_config_value('custom_dataframe_expected_result', None) is not None:
                             if metric_value is not None:
-                                passed = self._compare_values(str(metric_value), str(self.custom_dataframe_expected_result), self.custom_dataframe_comparison)
+                                passed = self._compare_values(str(metric_value), str(self._get_check_config_value('custom_dataframe_expected_result', None)), self._get_check_config_value('custom_dataframe_comparison', None))
                                 if not passed:
                                     failed_groups.append(str(group_name))
                             else:
@@ -5485,9 +5772,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                                 failed_groups.append(str(group_name))
                 
                 # Determine overall pass/fail based on allowed_failures
-                passed = len(failed_groups) <= self.custom_dataframe_allowed_failures
+                passed = len(failed_groups) <= self._get_check_config_value('custom_dataframe_allowed_failures', 0)
                 
-                description = f"Custom dataframe check grouped by {self.custom_dataframe_group_by}: {total_groups - len(failed_groups)}/{total_groups} groups passed"
+                description = f"Custom dataframe check grouped by {self._get_check_config_value('custom_dataframe_group_by', None)}: {total_groups - len(failed_groups)}/{total_groups} groups passed"
                 if failed_groups:
                     description += f". Failed groups: {failed_groups}"
                 
@@ -5502,14 +5789,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             else:
                 # Non-grouped scenario - original logic
                 if hasattr(df, 'select'):  # Polars
-                    result = df.select(self.custom_dataframe_query).to_numpy()
+                    result = df.select(self._get_check_config_value('custom_dataframe_query', None)).to_numpy()
                 else:  # Pandas
-                    result = df.eval(self.custom_dataframe_query)
+                    result = df.eval(self._get_check_config_value('custom_dataframe_query', None))
                 
                 query_result = str(result)
                 
                 # If no expected result specified, just return the query result
-                if self.custom_dataframe_expected_result is None:
+                if self._get_check_config_value('custom_dataframe_expected_result', None) is None:
                     return {
                         "passed": True,
                         "description": f"Custom dataframe query executed successfully: {query_result}",
@@ -5517,10 +5804,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     }
                 
                 # Perform comparison if expected result is specified
-                expected_result = str(self.custom_dataframe_expected_result)
-                passed = self._compare_values(query_result, expected_result, self.custom_dataframe_comparison)
+                expected_result = str(self._get_check_config_value('custom_dataframe_expected_result', None))
+                passed = self._compare_values(query_result, expected_result, self._get_check_config_value('custom_dataframe_comparison', None))
                 
-                description = f"Custom dataframe query result: {query_result}, Expected: {expected_result}, Comparison: {self.custom_dataframe_comparison}"
+                description = f"Custom dataframe query result: {query_result}, Expected: {expected_result}, Comparison: {self._get_check_config_value('custom_dataframe_comparison', None)}"
                 if passed:
                     description += " - PASSED"
                 else:
@@ -5539,19 +5826,44 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 "query_result": str(e)
             }
 
-    def _compare_values(self, actual: str, expected: str, comparison: str) -> bool:
-        """Compare actual and expected values based on the specified comparison operator."""
-        if comparison == "equals":
+    def _safe_enum_to_string(self, value) -> str:
+        """Safely convert enum values to strings for metadata storage.
+        
+        Args:
+            value: Any value that might be an enum
+            
+        Returns:
+            String representation of the value
+        """
+        if hasattr(value, 'value') and hasattr(value, '__class__') and hasattr(value.__class__, '__bases__'):
+            # Check if it's an enum by looking for the value attribute and enum base classes
+            for base in value.__class__.__bases__:
+                if 'Enum' in str(base):
+                    return str(value.value)
+        return str(value)
+
+    def _compare_values(self, actual: str, expected: str, comparison: Union[str, ComparisonOperator]) -> bool:
+        """Compare actual and expected values based on the specified comparison operator.
+        
+        Args:
+            actual: The actual value to compare
+            expected: The expected value to compare against
+            comparison: Comparison operator (string or ComparisonOperator enum)
+        """
+        # Convert enum to string if needed
+        comparison_str = comparison.value if isinstance(comparison, ComparisonOperator) else comparison
+        
+        if comparison_str == "equals":
             return actual == expected
-        elif comparison == "not_equals":
+        elif comparison_str == "not_equals":
             return actual != expected
-        elif comparison == "contains":
+        elif comparison_str == "contains":
             return expected in actual
-        elif comparison == "not_contains":
+        elif comparison_str == "not_contains":
             return expected not in actual
-        elif comparison == "is_null":
+        elif comparison_str == "is_null":
             return actual.lower() in ["null", "none", "nan"]
-        elif comparison == "is_not_null":
+        elif comparison_str == "is_not_null":
             return actual.lower() not in ["null", "none", "nan"]
         else:
             # For numeric comparisons, try to convert to float
@@ -5559,13 +5871,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 actual_num = float(actual)
                 expected_num = float(expected)
                 
-                if comparison == "greater_than":
+                if comparison_str == "greater_than":
                     return actual_num > expected_num
-                elif comparison == "less_than":
+                elif comparison_str == "less_than":
                     return actual_num < expected_num
-                elif comparison == "greater_than_or_equal":
+                elif comparison_str == "greater_than_or_equal":
                     return actual_num >= expected_num
-                elif comparison == "less_than_or_equal":
+                elif comparison_str == "less_than_or_equal":
                     return actual_num <= expected_num
                 else:
                     return False
@@ -5574,10 +5886,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
 
     def _get_pattern_regex(self) -> str:
         """Get regex pattern from preset or custom regex."""
-        if self.pattern_preset:
-            return self._get_preset_regex(self.pattern_preset)
-        elif self.pattern_regex:
-            return self.pattern_regex
+        if self._get_check_config_value('pattern_preset', None):
+            return self._get_preset_regex(self._get_check_config_value('pattern_preset', None))
+        elif self._get_check_config_value('pattern_regex', None):
+            return self._get_check_config_value('pattern_regex', None)
         else:
             raise ValueError("Either pattern_preset or pattern_regex must be specified for pattern matching")
     
@@ -5636,36 +5948,75 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         """Get pattern information for metadata."""
         pattern_info = {}
         
-        if self.pattern_preset:
-            pattern_info["pattern_preset"] = MetadataValue.text(self.pattern_preset)
-            pattern_info["pattern_regex"] = MetadataValue.text(self._get_preset_regex(self.pattern_preset))
-        elif self.pattern_regex:
-            pattern_info["pattern_regex"] = MetadataValue.text(self.pattern_regex)
+        if self._get_check_config_value('pattern_preset', None):
+            pattern_info["pattern_preset"] = MetadataValue.text(self._get_check_config_value('pattern_preset', None))
+            pattern_info["pattern_regex"] = MetadataValue.text(self._get_preset_regex(self._get_check_config_value('pattern_preset', None)))
+        elif self._get_check_config_value('pattern_regex', None):
+            pattern_info["pattern_regex"] = MetadataValue.text(self._get_check_config_value('pattern_regex', None))
         
-        if self.pattern_column:
-            pattern_info["pattern_column"] = MetadataValue.text(self.pattern_column)
+        pattern_column = self._get_check_config_value('pattern_column', None)
+        if pattern_column:
+            pattern_info["pattern_column"] = MetadataValue.text(pattern_column)
         
         return pattern_info
         
     def _execute_cross_table_validation(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute cross-table validation check."""
+        # Get configuration using helper method with correct prefixed field names
+        source_table = self._get_check_config_value('cross_table_source_table', '')
+        source_database = self._get_check_config_value('cross_table_source_database')
+        validation_type = self._get_check_config_value('cross_table_validation_type', 'row_count')
+        join_columns = self._get_check_config_value('cross_table_join_columns', [])
+        group_by = self._get_check_config_value('cross_table_group_by')
+        
+        # Add debugging
+        context.log.info(f"Cross-table validation - source_table: {source_table}")
+        context.log.info(f"Cross-table validation - join_columns: {join_columns}")
+        context.log.info(f"Cross-table validation - validation_type: {validation_type}")
+        context.log.info(f"Cross-table validation - _flat_config: {getattr(self, '_flat_config', {})}")
+        
+        # Validate required configuration
+        if not source_table:
+            return AssetCheckResult(
+                passed=False,
+                description="Cross-table validation failed: source_table is required",
+                metadata={
+                    "error": MetadataValue.text("source_table is required"),
+                    "source_table": MetadataValue.text(source_table),
+                    "destination_table": MetadataValue.text(self.table_name),
+                    "validation_type": MetadataValue.text(validation_type)
+                }
+            )
+        
+        if not join_columns:
+            return AssetCheckResult(
+                passed=False,
+                description="Cross-table validation failed: join_columns is required",
+                metadata={
+                    "error": MetadataValue.text("join_columns is required"),
+                    "source_table": MetadataValue.text(source_table),
+                    "destination_table": MetadataValue.text(self.table_name),
+                    "validation_type": MetadataValue.text(validation_type)
+                }
+            )
+        
         try:
             # Get database resources
             dest_db = getattr(context.resources, self.database_resource_key)
-            source_db = getattr(context.resources, self.cross_table_source_database or self.database_resource_key)
+            source_db = getattr(context.resources, source_database or self.database_resource_key)
             
             # Build WHERE clause for filtering
             where_clause = self._build_where_clause()
             
             # Determine validation type and execute appropriate logic
-            if self.cross_table_validation_type == "row_count":
+            if validation_type == "row_count":
                 return self._execute_cross_table_row_count_validation(context, dest_db, source_db, where_clause)
-            elif self.cross_table_validation_type == "column_values":
+            elif validation_type == "column_values":
                 return self._execute_cross_table_column_values_validation(context, dest_db, source_db, where_clause)
-            elif self.cross_table_validation_type == "aggregate":
+            elif validation_type == "aggregate":
                 return self._execute_cross_table_aggregate_validation(context, dest_db, source_db, where_clause)
             else:
-                raise ValueError(f"Unsupported validation type: {self.cross_table_validation_type}")
+                raise ValueError(f"Unsupported validation type: {validation_type}")
                 
         except Exception as e:
             return AssetCheckResult(
@@ -5673,30 +6024,65 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 description=f"Cross-table validation failed: {str(e)}",
                 metadata={
                     "error": MetadataValue.text(str(e)),
-                    "source_table": MetadataValue.text(self.cross_table_source_table),
+                    "source_table": MetadataValue.text(source_table),
                     "destination_table": MetadataValue.text(self.table_name),
-                    "validation_type": MetadataValue.text(self.cross_table_validation_type)
+                    "validation_type": MetadataValue.text(validation_type)
                 }
             )
     
     def _execute_cross_table_row_count_validation(self, context: AssetCheckExecutionContext, dest_db, source_db, where_clause: str) -> AssetCheckResult:
         """Execute row count validation between source and destination tables."""
+        # Get configuration using helper method with correct prefixed field names
+        source_table = self._get_check_config_value('cross_table_source_table', '')
+        join_columns = self._get_check_config_value('cross_table_join_columns', [])
+        group_by = self._get_check_config_value('cross_table_group_by')
+        tolerance = self._get_check_config_value('cross_table_tolerance', 5.0)
+        allowed_failures = self._get_check_config_value('cross_table_allowed_failures', 0)
+        
+        # Add debugging
+        context.log.info(f"Cross-table row count validation - source_table: {source_table}")
+        context.log.info(f"Cross-table row count validation - join_columns: {join_columns}")
+        context.log.info(f"Cross-table row count validation - group_by: {group_by}")
+        
+        # Validate required configuration
+        if not source_table:
+            return AssetCheckResult(
+                passed=False,
+                description="Cross-table row count validation failed: source_table is required",
+                metadata={
+                    "error": MetadataValue.text("source_table is required"),
+                    "source_table": MetadataValue.text(source_table),
+                    "destination_table": MetadataValue.text(self.table_name)
+                }
+            )
+        
+        if not join_columns:
+            return AssetCheckResult(
+                passed=False,
+                description="Cross-table row count validation failed: join_columns is required",
+                metadata={
+                    "error": MetadataValue.text("join_columns is required"),
+                    "source_table": MetadataValue.text(source_table),
+                    "destination_table": MetadataValue.text(self.table_name)
+                }
+            )
+        
         try:
             # Build join conditions
-            join_conditions = " AND ".join([f"dest.{col} = src.{col}" for col in self.cross_table_join_columns])
+            join_conditions = " AND ".join([f"dest.{col} = src.{col}" for col in join_columns])
             
             # Query to get row counts
-            if self.cross_table_group_by:
+            if group_by:
                 # Grouped validation
                 query = f"""
                 SELECT 
-                    dest.{self.cross_table_group_by} as group_name,
+                    dest.{group_by} as group_name,
                     COUNT(DISTINCT dest.*) as dest_count,
                     COUNT(DISTINCT src.*) as src_count
                 FROM {self.table_name} dest
-                LEFT JOIN {self.cross_table_source_table} src ON {join_conditions}
+                LEFT JOIN {source_table} src ON {join_conditions}
                 {f"WHERE {where_clause}" if where_clause else ""}
-                GROUP BY dest.{self.cross_table_group_by}
+                GROUP BY dest.{group_by}
                 """
             else:
                 # Simple validation
@@ -5705,14 +6091,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     COUNT(DISTINCT dest.*) as dest_count,
                     COUNT(DISTINCT src.*) as src_count
                 FROM {self.table_name} dest
-                LEFT JOIN {self.cross_table_source_table} src ON {join_conditions}
+                LEFT JOIN {source_table} src ON {join_conditions}
                 {f"WHERE {where_clause}" if where_clause else ""}
                 """
             
             # Execute query
             results = self._execute_database_query(dest_db, query)
             
-            if self.cross_table_group_by:
+            if group_by:
                 # Process grouped results
                 failed_groups = []
                 total_groups = len(results)
@@ -5736,10 +6122,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     }
                     
                     # Check if difference exceeds tolerance
-                    if diff_pct > self.cross_table_tolerance:
+                    if diff_pct > tolerance:
                         failed_groups.append(group_name)
                 
-                passed = len(failed_groups) <= self.cross_table_allowed_failures
+                passed = len(failed_groups) <= allowed_failures
                 description = f"Cross-table row count validation: {total_groups - len(failed_groups)}/{total_groups} groups passed"
                 if not passed:
                     description += f". Failed groups: {failed_groups}"
@@ -5750,8 +6136,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     metadata={
                         "total_groups": MetadataValue.int(total_groups),
                         "failed_groups_count": MetadataValue.int(len(failed_groups)),
-                        "allowed_failures": MetadataValue.int(self.cross_table_allowed_failures),
-                        "tolerance_pct": MetadataValue.float(self.cross_table_tolerance),
+                        "allowed_failures": MetadataValue.int(allowed_failures),
+                        "tolerance_pct": MetadataValue.float(tolerance),
                         "group_results": MetadataValue.json(group_results),
                         "source_table": MetadataValue.text(self.cross_table_source_table),
                         "destination_table": MetadataValue.text(self.table_name)
@@ -5768,7 +6154,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 else:
                     diff_pct = 0 if dest_count == 0 else 100
                 
-                passed = diff_pct <= self.cross_table_tolerance
+                passed = diff_pct <= tolerance
                 description = f"Cross-table row count validation: destination={dest_count}, source={src_count}, difference={diff_pct:.2f}%"
                 
                 return AssetCheckResult(
@@ -5778,8 +6164,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         "dest_count": MetadataValue.int(int(dest_count)),
                         "src_count": MetadataValue.int(int(src_count)),
                         "difference_pct": MetadataValue.float(diff_pct),
-                        "tolerance_pct": MetadataValue.float(self.cross_table_tolerance),
-                        "source_table": MetadataValue.text(self.cross_table_source_table),
+                        "tolerance_pct": MetadataValue.float(tolerance),
+                        "source_table": MetadataValue.text(source_table),
                         "destination_table": MetadataValue.text(self.table_name)
                     }
                 )
@@ -5790,7 +6176,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 description=f"Cross-table row count validation failed: {str(e)}",
                 metadata={
                     "error": MetadataValue.text(str(e)),
-                    "source_table": MetadataValue.text(self.cross_table_source_table),
+                    "source_table": MetadataValue.text(source_table),
                     "destination_table": MetadataValue.text(self.table_name)
                 }
             )
@@ -5810,24 +6196,27 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     def _execute_cross_table_aggregate_validation(self, context: AssetCheckExecutionContext, dest_db, source_db, where_clause: str) -> AssetCheckResult:
         """Execute aggregate validation between source and destination tables."""
         try:
+            # Get source table from configuration
+            source_table = self._get_check_config_value('cross_table_source_table', '')
+            
             # Build join conditions
-            join_conditions = " AND ".join([f"dest.{col} = src.{col}" for col in self.cross_table_join_columns])
+            join_conditions = " AND ".join([f"dest.{col} = src.{col}" for col in self._get_check_config_value('cross_table_join_columns', [])])
             
             # Build aggregate query
-            agg_function = self.cross_table_aggregate_function.upper()
-            agg_column = self.cross_table_aggregate_column
+            agg_function = self._get_check_config_value('cross_table_aggregate_function', 'sum').upper()
+            agg_column = self._get_check_config_value('cross_table_aggregate_column', 'column')
             
-            if self.cross_table_group_by:
+            if self._get_check_config_value('cross_table_group_by', None):
                 # Grouped aggregate validation
                 query = f"""
                 SELECT 
-                    dest.{self.cross_table_group_by} as group_name,
+                    dest.{self._get_check_config_value('cross_table_group_by', None)} as group_name,
                     {agg_function}(dest.{agg_column}) as dest_agg,
                     {agg_function}(src.{agg_column}) as src_agg
                 FROM {self.table_name} dest
-                LEFT JOIN {self.cross_table_source_table} src ON {join_conditions}
+                LEFT JOIN {source_table} src ON {join_conditions}
                 {f"WHERE {where_clause}" if where_clause else ""}
-                GROUP BY dest.{self.cross_table_group_by}
+                GROUP BY dest.{self._get_check_config_value('cross_table_group_by', None)}
                 """
             else:
                 # Simple aggregate validation
@@ -5836,14 +6225,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     {agg_function}(dest.{agg_column}) as dest_agg,
                     {agg_function}(src.{agg_column}) as src_agg
                 FROM {self.table_name} dest
-                LEFT JOIN {self.cross_table_source_table} src ON {join_conditions}
+                LEFT JOIN {source_table} src ON {join_conditions}
                 {f"WHERE {where_clause}" if where_clause else ""}
                 """
             
             # Execute query
             results = self._execute_database_query(dest_db, query)
             
-            if self.cross_table_group_by:
+            if self._get_check_config_value('cross_table_group_by', None):
                 # Process grouped results
                 failed_groups = []
                 total_groups = len(results)
@@ -5867,10 +6256,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     }
                     
                     # Check if difference exceeds tolerance
-                    if diff_pct > self.cross_table_tolerance:
+                    if diff_pct > self._get_check_config_value('cross_table_tolerance', 5.0):
                         failed_groups.append(group_name)
                 
-                passed = len(failed_groups) <= self.cross_table_allowed_failures
+                passed = len(failed_groups) <= self._get_check_config_value('cross_table_allowed_failures', 0)
                 description = f"Cross-table {agg_function.lower()} validation: {total_groups - len(failed_groups)}/{total_groups} groups passed"
                 if not passed:
                     description += f". Failed groups: {failed_groups}"
@@ -5881,12 +6270,12 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     metadata={
                         "total_groups": MetadataValue.int(total_groups),
                         "failed_groups_count": MetadataValue.int(len(failed_groups)),
-                        "allowed_failures": MetadataValue.int(self.cross_table_allowed_failures),
-                        "tolerance_pct": MetadataValue.float(self.cross_table_tolerance),
+                        "allowed_failures": MetadataValue.int(self._get_check_config_value('cross_table_allowed_failures', 0)),
+                        "tolerance_pct": MetadataValue.float(self._get_check_config_value('cross_table_tolerance', 5.0)),
                         "aggregate_function": MetadataValue.text(agg_function),
                         "aggregate_column": MetadataValue.text(agg_column),
                         "group_results": MetadataValue.json(group_results),
-                        "source_table": MetadataValue.text(self.cross_table_source_table),
+                        "source_table": MetadataValue.text(source_table),
                         "destination_table": MetadataValue.text(self.table_name)
                     }
                 )
@@ -5901,7 +6290,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 else:
                     diff_pct = 0 if dest_agg == 0 else 100
                 
-                passed = diff_pct <= self.cross_table_tolerance
+                passed = diff_pct <= self._get_check_config_value('cross_table_tolerance', 5.0)
                 description = f"Cross-table {agg_function.lower()} validation: destination={dest_agg}, source={src_agg}, difference={diff_pct:.2f}%"
                 
                 return AssetCheckResult(
@@ -5911,10 +6300,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         "dest_agg": MetadataValue.float(dest_agg),
                         "src_agg": MetadataValue.float(src_agg),
                         "difference_pct": MetadataValue.float(diff_pct),
-                        "tolerance_pct": MetadataValue.float(self.cross_table_tolerance),
+                        "tolerance_pct": MetadataValue.float(self._get_check_config_value('cross_table_tolerance', 5.0)),
                         "aggregate_function": MetadataValue.text(agg_function),
                         "aggregate_column": MetadataValue.text(agg_column),
-                        "source_table": MetadataValue.text(self.cross_table_source_table),
+                        "source_table": MetadataValue.text(source_table),
                         "destination_table": MetadataValue.text(self.table_name)
                     }
                 )
@@ -5925,57 +6314,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 description=f"Cross-table aggregate validation failed: {str(e)}",
                 metadata={
                     "error": MetadataValue.text(str(e)),
-                    "source_table": MetadataValue.text(self.cross_table_source_table),
+                    "source_table": MetadataValue.text(source_table),
                     "destination_table": MetadataValue.text(self.table_name),
-                    "aggregate_function": MetadataValue.text(self.cross_table_aggregate_function),
-                    "aggregate_column": MetadataValue.text(self.cross_table_aggregate_column)
+                    "aggregate_function": MetadataValue.text(self._get_check_config_value('cross_table_aggregate_function', 'sum')),
+                    "aggregate_column": MetadataValue.text(self._get_check_config_value('cross_table_aggregate_column', 'column'))
                 }
             )
-    def _execute_custom_sql_check(self, context: AssetCheckExecutionContext, check_cfg: dict, db_key: str) -> AssetCheckResult:
-        """Execute a custom SQL check against the database."""
-        try:
-            database_resource = getattr(context.resources, db_key)
-            query = check_cfg["query"]
-            expected = check_cfg.get("expected_result")
-            comparison = check_cfg.get("comparison", "equals")
-            description = check_cfg.get("description", "")
-            blocking = check_cfg.get("blocking", False)
-            
-            with database_resource.get_connection() as conn:
-                result = conn.execute(query).fetchone()
-                actual_result = result[0] if result else None
-                
-            passed = self._compare_values(actual_result, expected, comparison)
-            desc = f"Custom SQL Check: {description}"
-            if not passed:
-                desc += f" - FAILED (Expected: {expected}, Got: {actual_result})"
-                
-            return AssetCheckResult(
-                passed=passed,
-                metadata={
-                    "query": MetadataValue.text(query),
-                    "expected_result": MetadataValue.text(str(expected)),
-                    "actual_result": MetadataValue.text(str(actual_result)),
-                    "comparison": MetadataValue.text(comparison),
-                    "blocking": MetadataValue.bool(blocking)
-                },
-                description=desc
-            )
-        except Exception as e:
-            return AssetCheckResult(
-                passed=False,
-                metadata={"error": MetadataValue.text(str(e))},
-                description=f"Custom SQL check failed with error: {e}"
-            )
 
-    def _execute_dataframe_query_check(self, context: AssetCheckExecutionContext, df, check_cfg: dict) -> AssetCheckResult:
+    def _execute_dataframe_query_check(self, context: AssetCheckExecutionContext, df, check_cfg: Union[dict, DataframeQueryCheckConfig]) -> AssetCheckResult:
         """Execute a dataframe query check against the dataframe."""
         try:
-            query = check_cfg["query"]
-            expected = check_cfg.get("expected_result")
-            comparison = check_cfg.get("comparison", "equals")
-            description = check_cfg.get("description", "")
-            blocking = check_cfg.get("blocking", False)
+            # Get configuration using helper method
+            query = self._get_check_config_value('query', '')
+            expected = self._get_check_config_value('expected_result', None)
+            comparison = self._get_check_config_value('comparison', 'equals')
+            description = self._get_check_config_value('name', '')
+            blocking = self._get_check_config_value('blocking', False)
             
             filtered_df = self._filter_dataframe(df)
             
@@ -6018,7 +6372,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     "query": MetadataValue.text(query),
                     "expected_result": MetadataValue.text(str(expected)),
                     "actual_result": MetadataValue.int(actual_result),
-                    "comparison": MetadataValue.text(comparison),
+                    "comparison": MetadataValue.text(self._safe_enum_to_string(comparison)),
                     "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split(".")[0]),
                     "blocking": MetadataValue.bool(blocking)
                 },
@@ -6030,32 +6384,3 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 metadata={"error": MetadataValue.text(str(e))},
                 description=f"Dataframe query check failed with error: {e}"
             )
-
-    @staticmethod
-    def _compare_values(actual, expected, comparison: str) -> bool:
-        """Helper for all standard comparison operators."""
-        try:
-            if comparison in (None, "equals", "equal", "=="):
-                return actual == expected
-            if comparison in ("not_equals", "not_equal", "!="):
-                return actual != expected
-            if comparison in ("greater_than", ">"):
-                return float(actual) > float(expected)
-            if comparison in ("greater_than_or_equal", ">="):
-                return float(actual) >= float(expected)
-            if comparison in ("less_than", "<"):
-                return float(actual) < float(expected)
-            if comparison in ("less_than_or_equal", "<="):
-                return float(actual) <= float(expected)
-            if comparison == "contains":
-                return str(expected) in str(actual)
-            if comparison == "not_contains":
-                return str(expected) not in str(actual)
-            if comparison == "is_null":
-                return actual is None
-            if comparison == "is_not_null":
-                return actual is not None
-            # fallback
-            return actual == expected
-        except Exception:
-            return False

@@ -1,42 +1,264 @@
-# ═══════════════════════════════════════════════════════════════
-# REAL ASSET DATA QUALITY CHECKS
-# Checks for assets that actually exist in the Dagster instance
-# ═══════════════════════════════════════════════════════════════
-
 type: hooli_data_eng.components.enhanced_data_quality_checks.EnhancedDataQualityChecks
 attributes:
   assets:
     RAW_DATA.users:
       row_count_check:
-        min_rows: 10
-        max_rows: 1000000
-        blocking: true
+        - name: "users_row_count"
+          min_rows: 10
+          max_rows: 1000000
+          blocking: true
       data_type_check:
-        columns:
-          - column: "is_test_user"
-            expected_type: "bool"
-        blocking: true
+        - name: "users_data_type"
+          columns:
+            - column: "is_test_user"
+              expected_type: "bool"
+          enable: true
+          blocking: true
     RAW_DATA.orders:
       database_resource_key: "db_resource"                      
       row_count_check:
-        min_rows: 10
-        max_rows: 1000000
-        blocking: true
+        - name: "orders_row_count"
+          min_rows: 10
+          max_rows: 1000000
+          blocking: true
       range_check:
-        columns:
-          - column: "purchase_price"
-            min_value: 0
-            max_value: 1000
-        blocking: false
+        - name: "orders_range_check"
+          columns:
+            - column: "purchase_price"
+              min_value: 0
+              max_value: 1000
+          blocking: false
       custom_sql_check:
-        - query: "SELECT COUNT(*) as total_rows FROM RAW_DATA.orders"
+        - name: "orders_minimum_rows"
+          sql_query: "SELECT COUNT(*) as total_rows FROM RAW_DATA.orders"
           expected_result: 1000
           comparison: "greater_than"
           description: "Ensure we have at least 1000 rows"
           blocking: true
       custom_dataframe_check:
-        - query: "len(df) > 0"  # Check if dataframe has rows
+        - name: "orders_dataframe_check"
+          python_code: "len(df) > 0"  # Check if dataframe has rows
           expected_result: True
           comparison: "equals"
           description: "Ensure dataframe has at least one row"
           blocking: true
+    CLEANED.orders_cleaned:
+      database_resource_key: "db_resource"
+      table_name: "analytics.orders_cleaned"
+      # Row count validation with grouping by date
+      row_count_check:
+        - name: "orders_cleaned_row_count"
+          min_rows: 10
+          max_rows: 1000000
+          group_by: "dt"  # Check each date separately
+          allowed_failures: 2  # Allow 2 dates to fail
+          blocking: true
+      
+      # Null value checks for critical columns
+      null_check:
+        - name: "orders_cleaned_null_check"
+          columns: ["user_id", "quantity", "purchase_price", "sku", "dt", "order_date", "order_total"]
+          blocking: true
+      
+      # Data type validation
+      data_type_check:
+        - name: "orders_cleaned_data_type"
+          columns:
+            - column: "user_id"
+              expected_type: "int"
+            - column: "quantity"
+              expected_type: "int"
+            - column: "purchase_price"
+              expected_type: "float"
+            - column: "sku"
+              expected_type: "object"
+            - column: "dt"
+              expected_type: "datetime"
+            - column: "order_date"
+              expected_type: "datetime"
+            - column: "order_total"
+              expected_type: "float"
+          blocking: true
+      
+      # Range validation with grouping
+      range_check:
+        - name: "orders_cleaned_range_check"
+          columns:
+            - column: "quantity"
+              min_value: 1
+              max_value: 100
+            - column: "purchase_price"
+              min_value: 0.01
+              max_value: 1000
+            - column: "order_total"
+              min_value: 0.01
+              max_value: 100000
+          group_by: "dt"  # Check each date separately
+          allowed_failures: 2  # Allow 2 dates to fail
+          blocking: false
+      
+      # Static threshold checks for order metrics
+      static_threshold:
+        - name: "orders_cleaned_avg_order_value"
+          metric: "mean:order_total"
+          min_value: 10.0
+          max_value: 500.0
+          group_by: "dt"  # Check each date separately
+          allowed_failures: 2  # Allow 2 dates to fail
+          blocking: false
+      
+      # Anomaly detection on order counts
+      anomaly_detection:
+        - name: "orders_cleaned_order_count_anomaly"
+          metric: "num_rows"
+          threshold: 2.0
+          history: 10
+          group_by: "dt"  # Detect anomalies per date
+          allowed_failures: 2  # Allow 2 dates to be anomalous
+          blocking: false
+      
+      # Percent delta tracking for order volume
+      percent_delta:
+        - name: "orders_cleaned_order_volume_delta"
+          metric: "num_rows"
+          max_delta: 50.0
+          history: 5
+          group_by: "dt"  # Track changes per date
+          allowed_failures: 2  # Allow 2 dates to fail
+          blocking: false
+      
+      # Uniqueness check for order combinations
+      uniqueness_check:
+        - name: "orders_cleaned_uniqueness"
+          columns:
+            - columns: ["user_id", "sku", "dt"]  # Should be unique per user-sku-date
+          blocking: false
+      
+      # Custom SQL checks
+      custom_sql_check:
+        - name: "orders_cleaned_order_total_validation"
+          sql_query: "SELECT COUNT(*) as invalid_rows FROM analytics.orders_cleaned WHERE order_total != quantity * purchase_price"
+          expected_result: 0
+          comparison: "equals"
+          description: "Ensure order_total calculation is correct"
+          blocking: true
+        - name: "orders_cleaned_date_range"
+          sql_query: "SELECT COUNT(*) as recent_orders FROM analytics.orders_cleaned WHERE order_date >= CURRENT_DATE - INTERVAL 30 DAY"
+          expected_result: 0
+          comparison: "greater_than"
+          description: "Ensure we have recent orders"
+          blocking: false
+    CLEANED.users_cleaned:
+      database_resource_key: "db_resource"
+      table_name: "analytics.users_cleaned"
+      # Row count validation with grouping by company
+      row_count_check:
+        - name: "user_cleaned_row_count"
+          min_rows: 5
+          max_rows: 100000
+          group_by: "company"  # Check each company separately
+          allowed_failures: 1  # Allow 1 company to fail
+          blocking: true
+      
+      # Null value checks for critical columns
+      null_check:
+        - name: "user_cleaned_null_check"
+          columns: ["user_id", "created_at", "company"]
+          blocking: true
+      
+      # Data type validation
+      data_type_check:
+        - name: "users_cleaned_data_type"
+          columns:
+            - column: "user_id"
+              expected_type: "int"
+            - column: "created_at"
+              expected_type: "datetime"
+            - column: "company"
+              expected_type: "object"
+          blocking: true
+      
+      # Pattern matching for company names
+      pattern_matching:
+        - name: "user_cleaned_company_pattern"
+          column: "company"
+          regex_pattern: "^[A-Za-z\\s\\-&\\.]+$"
+          match_percentage: 95.0
+          blocking: false
+      
+      # Value set validation for company names (if you have a known list)
+      value_set_validation:
+        - name: "user_cleaned_company_validation"
+          column: "company"
+          allowed_values: ["FamilyLtd", "FoodCo", "SportTime", "ShopMart", "TechCorp", "HealthInc"]
+          min_pct: 90.0  # Allow 10% unknown companies
+          blocking: false
+      
+      # Range validation for user IDs
+      range_check:
+        - name: "user_cleaned_user_id_range"
+          columns:
+            - column: "user_id"
+              min_value: 1
+              max_value: 1000000
+          blocking: false
+      
+      # Static threshold for average users per company
+      static_threshold:
+        - name: "user_cleaned_avg_users_per_company"
+          metric: "mean:user_id"
+          min_value: 1.0
+          max_value: 1000.0
+          group_by: "company"  # Check each company separately
+          allowed_failures: 1  # Allow 1 company to fail
+          blocking: false
+      
+      # Anomaly detection on user creation patterns
+      anomaly_detection:
+        - name: "user_cleaned_creation_anomaly"
+          metric: "num_rows"
+          threshold: 2.0
+          history: 10
+          group_by: "company"  # Detect anomalies per company
+          allowed_failures: 1  # Allow 1 company to be anomalous
+          blocking: false
+      
+      # Percent delta tracking for user growth
+      percent_delta:
+        - name: "user_cleaned_growth_delta"
+          metric: "num_rows"
+          max_delta: 30.0
+          history: 5
+          group_by: "company"  # Track changes per company
+          allowed_failures: 1  # Allow 1 company to fail
+          blocking: false
+      
+      # Uniqueness check for user IDs
+      uniqueness_check:
+        - name: "user_cleaned_user_uniqueness"
+          columns:
+            - columns: ["user_id"]  # Each user_id should be unique
+          blocking: true
+      
+      # Entropy analysis for company diversity
+      entropy_analysis:
+        - name: "user_cleaned_company_entropy"
+          column: "company"
+          min_entropy: 1.0
+          max_entropy: 3.0
+          blocking: false
+      
+      # Custom SQL checks
+      custom_sql_check:
+        - name: "users_cleaned_no_test_users"
+          sql_query: "SELECT COUNT(*) as test_users FROM analytics.users_cleaned WHERE is_test_user = true"
+          expected_result: 0
+          comparison: "equals"
+          description: "Ensure no test users in cleaned data"
+          blocking: true
+        - name: "users_cleaned_unique_users"
+          sql_query: "SELECT COUNT(*) as total_users, COUNT(DISTINCT user_id) as unique_users FROM analytics.users_cleaned"
+          expected_result: 0
+          comparison: "greater_than"
+          description: "Ensure user_id uniqueness"
+          blocking: false
