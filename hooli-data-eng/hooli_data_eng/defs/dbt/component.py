@@ -240,7 +240,6 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
             asset_checks=checks,
             sensors=sensors,
             resources=resource_def[get_env()],
-            jobs=[get_slim_ci_job()],
         )
 
         defs = defs.map_resolved_asset_specs(
@@ -295,33 +294,3 @@ def build_code_version_sensor(target_assets: dg.AssetsDefinition):
     return dbt_code_version_sensor
 
 
-def get_slim_ci_job():
-    # This op will be used to run slim CI
-    @dg.op(out={})
-    def dbt_slim_ci(dbt: DbtCliResource):
-        dbt_command = [
-            "build",
-            "--select",
-            "state:modified.body+",
-            "--defer",
-            "--state",
-            dbt.state_path,
-        ]
-
-        yield from (
-            dbt.cli(
-                args=dbt_command,
-                manifest=dbt_project.manifest_path,
-                dagster_dbt_translator=get_hooli_translator(),
-            )
-            .stream()
-            .fetch_row_counts()
-            .fetch_column_metadata()
-        )
-
-    # This job will be triggered by Pull Request and should only run new or changed dbt models
-    @dg.job
-    def dbt_slim_ci_job():
-        dbt_slim_ci()
-
-    return dbt_slim_ci_job

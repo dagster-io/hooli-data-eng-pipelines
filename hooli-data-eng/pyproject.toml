@@ -29,6 +29,7 @@ dependencies = [
       "requests-toolbelt",
       "html5lib",
       "scikit-learn",
+      "PyGithub",
 ]
 
 [project.optional-dependencies]
