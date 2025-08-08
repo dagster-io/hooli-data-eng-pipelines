@@ -348,12 +348,35 @@ def get_slim_ci_job():
             
         # Get GitHub token and repo info from environment
         github_token = os.getenv("GITHUB_TOKEN")
-        github_repo = os.getenv("GITHUB_REPOSITORY")  # format: owner/repo
-        github_pr_number = os.getenv("GITHUB_PR_NUMBER") or os.getenv("PR_NUMBER")
+        github_repo = os.getenv("GITHUB_REPOSITORY")  # format: owner/repo - available by default
+        
+        # Get PR number from GitHub event (available in pull_request events)
+        github_event_path = os.getenv("GITHUB_EVENT_PATH")
+        github_pr_number = None
+        
+        if github_event_path:
+            try:
+                with open(github_event_path, 'r') as f:
+                    event_data = json.load(f)
+                    github_pr_number = event_data.get("number") or event_data.get("pull_request", {}).get("number")
+            except Exception as e:
+                context.log.warning(f"Could not parse GitHub event data: {e}")
+        
+        # Fallback to GITHUB_REF for PR number extraction
+        if not github_pr_number:
+            github_ref = os.getenv("GITHUB_REF")  # format: refs/pull/{pr_number}/merge
+            if github_ref and github_ref.startswith("refs/pull/") and github_ref.endswith("/merge"):
+                try:
+                    github_pr_number = int(github_ref.split("/")[2])
+                except (IndexError, ValueError):
+                    pass
         
         if not all([github_token, github_repo, github_pr_number]):
             context.log.warning(
-                "Missing required GitHub environment variables (GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_PR_NUMBER). "
+                f"Missing required GitHub information. "
+                f"Token: {'✓' if github_token else '✗'}, "
+                f"Repo: {'✓' if github_repo else '✗'}, "
+                f"PR: {'✓' if github_pr_number else '✗'}. "
                 "Cannot post comment."
             )
             return
