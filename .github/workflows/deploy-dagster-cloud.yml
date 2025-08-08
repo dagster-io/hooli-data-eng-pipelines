@@ -277,7 +277,7 @@ jobs:
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
-        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
         with:
           location_name: data-eng-pipeline
