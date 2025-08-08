@@ -1,6 +1,7 @@
 import dagster as dg
 from dagster.components import load_defs
 import hooli_data_eng.defs
+from hooli_data_eng.defs.dbt.slim_ci_job import dbt_slim_ci_with_github_job
 
 
 # ---------------------------------------------------
@@ -15,5 +16,6 @@ defs = dg.Definitions.merge(
     dg.Definitions(
         # only apply this setting once
         executor=dg.multiprocess_executor.configured({"max_concurrent": 3}),
+        jobs=[dbt_slim_ci_with_github_job],
     ),
 )
