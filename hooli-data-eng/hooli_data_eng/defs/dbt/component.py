@@ -405,8 +405,8 @@ All models passed validation and tests!"""
             context.log.error(f"Failed to post GitHub comment: {e}")
 
     # This job will be triggered by Pull Request and should only run new or changed dbt models
-    @dg.job
-    def dbt_slim_ci_job():
+    @dg.job(name="dbt_slim_ci_with_github_job")
+    def dbt_slim_ci_with_github_job():
         dbt_slim_ci()
 
-    return dbt_slim_ci_job
+    return dbt_slim_ci_with_github_job

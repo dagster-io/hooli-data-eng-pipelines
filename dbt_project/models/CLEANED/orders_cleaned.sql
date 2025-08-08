@@ -1,4 +1,4 @@
-{{config(tags="my_test_tag")}}
+{{config(tags="all_cleaned_models")}}
 select
         user_id,
         quantity,
