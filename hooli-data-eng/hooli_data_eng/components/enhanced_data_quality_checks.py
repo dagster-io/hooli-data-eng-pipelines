@@ -37,6 +37,12 @@ class ComparisonOperator(str, Enum):
     IS_NOT_NULL = "is_not_null"
 
 
+class CheckSeverity(str, Enum):
+    """Severity levels for asset checks."""
+    WARN = "WARN"
+    ERROR = "ERROR"
+
+
 class CorrelationMethod(str, Enum):
     """Statistical correlation methods."""
     PEARSON = "pearson"
@@ -1411,6 +1417,7 @@ class BaseCheckConfig(BaseModel):
     allowed_failures: int = Field(0, description="Number of groups allowed to fail")
     blocking: bool = Field(False, description="Whether this check is blocking (fails the pipeline)")
     name: Optional[str] = Field(None, description="Custom name for this check")
+    severity: Optional[CheckSeverity] = Field(CheckSeverity.WARN, description="Severity level for the check")
 
 
 class RowCountCheckConfig(BaseCheckConfig):
@@ -1531,6 +1538,7 @@ class CustomSqlCheckConfig(BaseModel):
     expected_result: Optional[Any] = Field(None, description="Expected result from the query")
     comparison: ComparisonOperator = Field(ComparisonOperator.EQUALS, description="Comparison operator")
     name: Optional[str] = Field(None, description="Custom name for this check")
+    severity: Optional[CheckSeverity] = Field(CheckSeverity.WARN, description="Severity level for the check")
 
 
 class DataframeQueryCheckConfig(BaseModel):
@@ -1539,6 +1547,7 @@ class DataframeQueryCheckConfig(BaseModel):
     expected_result: Optional[Any] = Field(None, description="Expected result from the query")
     comparison: ComparisonOperator = Field(ComparisonOperator.EQUALS, description="Comparison operator")
     name: Optional[str] = Field(None, description="Custom name for this check")
+    severity: Optional[CheckSeverity] = Field(CheckSeverity.WARN, description="Severity level for the check")
 
 
 class CustomDataframeCheckConfig(BaseModel):
@@ -1547,6 +1556,7 @@ class CustomDataframeCheckConfig(BaseModel):
     expected_result: Optional[Any] = Field(None, description="Expected result from the code")
     comparison: ComparisonOperator = Field(ComparisonOperator.EQUALS, description="Comparison operator")
     name: Optional[str] = Field(None, description="Custom name for this check")
+    severity: Optional[CheckSeverity] = Field(CheckSeverity.WARN, description="Severity level for the check")
 
 
 class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
@@ -2172,6 +2182,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         if hasattr(self, '_flat_config') and self._flat_config:
             return self._flat_config.get(field_name, default)
         return default
+    
+    def _get_check_severity(self, check_config: dict) -> str:
+        """Get severity level from check configuration, defaulting to WARN."""
+        severity = check_config.get("severity", CheckSeverity.WARN)
+        # If it's already an enum, return the value
+        if isinstance(severity, CheckSeverity):
+            return severity.value
+        # If it's a string, validate and convert
+        if isinstance(severity, str):
+            try:
+                return CheckSeverity(severity.upper()).value
+            except ValueError:
+                print(f"Warning: Invalid severity '{severity}', defaulting to 'WARN'")
+                return CheckSeverity.WARN.value
+        # Default to WARN
+        return CheckSeverity.WARN.value
 
     def _create_row_count_check(self, asset_key: AssetKey, component=None):
         """Create row count check - can use SQL or dataframe."""
@@ -2946,6 +2972,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Null check: {total_nulls} null values found",
+                severity=self._get_check_severity({"severity": "WARN"}),  # Default to WARN for null checks
                 metadata=build_metadata(
                     query="null_check",
                     query_result=total_nulls,
@@ -2970,10 +2997,12 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         
         return AssetCheckResult(
             passed=passed,
-            description=f"Null check: {total_nulls} null values found",
+            description=f"Null check: {total_nulls} null values found across {len(columns)} columns",
+            severity=self._get_check_severity({"severity": "WARN"}),  # Default to WARN for null checks
             metadata={
                 "total_nulls": MetadataValue.int(total_nulls),
                 "null_counts": MetadataValue.json(null_counts),
+                "total_columns": MetadataValue.int(len(columns)),
                 "processing_mode": MetadataValue.text("sql"),
             }
         )
@@ -3023,6 +3052,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 return AssetCheckResult(
                     passed=passed,
                     description=f"Static threshold check: {len(failed_groups)}/{total_groups} groups failed",
+                    severity=self._get_check_severity({"severity": "WARN"}),  # Default to WARN for static threshold checks
                     metadata=build_metadata(
                         query=f"static_threshold_{metric}",
                         query_result=len(failed_groups),
@@ -3109,6 +3139,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Static threshold check ({'PASSED' if passed else 'FAILED'})",
+                severity=self._get_check_severity({"severity": "WARN"}),  # Default to WARN for static threshold checks
                 metadata=build_metadata(
                     query=f"static_threshold_{metric}",
                     query_result=metric_value
@@ -3119,6 +3150,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=False,
                 description=f"Static threshold check failed: {str(e)}",
+                severity=self._get_check_severity({"severity": "WARN"}),  # Default to WARN for static threshold checks
                 metadata=build_metadata(
                     query="static_threshold",
                     query_result="ERROR",

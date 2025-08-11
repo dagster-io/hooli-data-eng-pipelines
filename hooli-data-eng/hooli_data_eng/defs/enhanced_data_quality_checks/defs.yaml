@@ -164,6 +164,7 @@ attributes:
       null_check:
         - name: "user_cleaned_null_check"
           columns: ["user_id", "created_at", "company"]
+          severity: "WARN"  # Default severity (can be "WARN" or "ERROR")
           blocking: true
       
       # Data type validation
@@ -184,6 +185,7 @@ attributes:
           column: "company"
           regex_pattern: "^[A-Za-z\\s\\-&\\.]+$"
           match_percentage: 95.0
+          severity: "WARN"  # Default severity (can be "WARN" or "ERROR")
           blocking: false
       
       # Value set validation for company names (if you have a known list)
@@ -192,6 +194,7 @@ attributes:
           column: "company"
           allowed_values: ["FamilyLtd", "FoodCo", "SportTime", "ShopMart", "TechCorp", "HealthInc"]
           min_pct: 90.0  # Allow 10% unknown companies
+          severity: "WARN"  # Default severity (can be "WARN" or "ERROR")
           blocking: false
       
       # Range validation for user IDs
@@ -246,6 +249,7 @@ attributes:
           column: "company"
           min_entropy: 1.0
           max_entropy: 3.0
+          severity: "WARN"  # Default severity (can be "WARN" or "ERROR")
           blocking: false
       
       # Custom SQL checks
