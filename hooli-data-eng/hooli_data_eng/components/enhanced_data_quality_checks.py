@@ -4206,25 +4206,71 @@ len(result['failed_column_names'])
                 if isinstance(result[0], (list, tuple)):
                     # Multiple columns - try to get column names from database
                     try:
-                        # Get column names from database schema
-                        schema_query = f"PRAGMA table_info({self.table_name})"
-                        schema_result = self._execute_database_query(database_resource, schema_query)
+                        # Try different schema query approaches for different databases
+                        columns = None
                         
-                        print(f"DEBUG: Schema query: {schema_query}")
-                        print(f"DEBUG: Schema result: {schema_result}")
+                        # Try Snowflake-style information schema query first
+                        try:
+                            # Extract table name without schema prefix for Snowflake
+                            table_name_only = self.table_name.split('.')[-1] if '.' in self.table_name else self.table_name
+                            schema_name = self.table_name.split('.')[0] if '.' in self.table_name else 'PUBLIC'
+                            
+                            schema_query = f"""
+                            SELECT COLUMN_NAME 
+                            FROM INFORMATION_SCHEMA.COLUMNS 
+                            WHERE TABLE_NAME = '{table_name_only}' 
+                            AND TABLE_SCHEMA = '{schema_name}'
+                            ORDER BY ORDINAL_POSITION
+                            """
+                            schema_result = self._execute_database_query(database_resource, schema_query)
+                            
+                            print(f"DEBUG: Snowflake schema query: {schema_query}")
+                            print(f"DEBUG: Snowflake schema result: {schema_result}")
+                            
+                            if schema_result and len(schema_result) > 0:
+                                # Extract column names from Snowflake schema result
+                                if isinstance(schema_result[0], (list, tuple)):
+                                    columns = [row[0] for row in schema_result]  # Column name is at index 0
+                                else:
+                                    columns = [schema_result[0]]  # Single column result
+                                print(f"DEBUG: Extracted Snowflake columns: {columns}")
+                        except Exception as e:
+                            print(f"DEBUG: Snowflake schema query failed: {e}")
                         
-                        if schema_result and len(schema_result) > 0:
-                            # Extract column names from schema
-                            columns = [row[1] for row in schema_result]  # Column name is at index 1
-                            print(f"DEBUG: Extracted columns: {columns}")
-                        else:
-                            # Fallback to generic column names
+                        # If Snowflake approach failed, try DuckDB approach
+                        if not columns:
+                            try:
+                                schema_query = f"PRAGMA table_info({self.table_name})"
+                                schema_result = self._execute_database_query(database_resource, schema_query)
+                                
+                                print(f"DEBUG: DuckDB schema query: {schema_query}")
+                                print(f"DEBUG: DuckDB schema result: {schema_result}")
+                                
+                                if schema_result and len(schema_result) > 0:
+                                    # Extract column names from DuckDB schema result
+                                    if isinstance(schema_result[0], (list, tuple)):
+                                        columns = [row[1] for row in schema_result]  # Column name is at index 1
+                                    else:
+                                        columns = [schema_result[1]]  # Single column result
+                                    print(f"DEBUG: Extracted DuckDB columns: {columns}")
+                            except Exception as e:
+                                print(f"DEBUG: DuckDB schema query failed: {e}")
+                        
+                        # If both approaches failed, use fallback
+                        if not columns:
                             columns = [f"col_{i}" for i in range(len(result[0]))]
                             print(f"DEBUG: Using fallback columns: {columns}")
+                        else:
+                            # Ensure we have the right number of columns
+                            if len(columns) != len(result[0]):
+                                print(f"DEBUG: Column count mismatch. Expected: {len(result[0])}, Got: {len(columns)}")
+                                columns = [f"col_{i}" for i in range(len(result[0]))]
+                                print(f"DEBUG: Using fallback columns due to count mismatch: {columns}")
+                                
                     except Exception as e:
-                        # Fallback to generic column names if schema query fails
+                        # Fallback to generic column names if all schema queries fail
                         columns = [f"col_{i}" for i in range(len(result[0]))]
-                        print(f"DEBUG: Schema query failed: {e}, using fallback columns: {columns}")
+                        print(f"DEBUG: All schema queries failed: {e}, using fallback columns: {columns}")
                     
                     df = pd.DataFrame(result, columns=columns)
                     print(f"DEBUG: Created DataFrame with shape: {df.shape}")
@@ -4236,36 +4282,66 @@ len(result['failed_column_names'])
             else:
                 # Empty result - try to get column names from schema
                 try:
-                    schema_query = f"PRAGMA table_info({self.table_name})"
-                    schema_result = self._execute_database_query(database_resource, schema_query)
+                    columns = None
                     
-                    print(f"DEBUG: Empty result, schema query: {schema_query}")
-                    print(f"DEBUG: Empty result, schema result: {schema_result}")
-                    print(f"DEBUG: Schema result type: {type(schema_result)}")
-                    print(f"DEBUG: Schema result length: {len(schema_result) if isinstance(schema_result, (list, tuple)) else 'N/A'}")
+                    # Try Snowflake-style information schema query first
+                    try:
+                        # Extract table name without schema prefix for Snowflake
+                        table_name_only = self.table_name.split('.')[-1] if '.' in self.table_name else self.table_name
+                        schema_name = self.table_name.split('.')[0] if '.' in self.table_name else 'PUBLIC'
+                        
+                        schema_query = f"""
+                        SELECT COLUMN_NAME 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = '{table_name_only}' 
+                        AND TABLE_SCHEMA = '{schema_name}'
+                        ORDER BY ORDINAL_POSITION
+                        """
+                        schema_result = self._execute_database_query(database_resource, schema_query)
+                        
+                        print(f"DEBUG: Empty result, Snowflake schema query: {schema_query}")
+                        print(f"DEBUG: Empty result, Snowflake schema result: {schema_result}")
+                        
+                        if schema_result and len(schema_result) > 0:
+                            # Extract column names from Snowflake schema result
+                            if isinstance(schema_result[0], (list, tuple)):
+                                columns = [row[0] for row in schema_result]  # Column name is at index 0
+                            else:
+                                columns = [schema_result[0]]  # Single column result
+                            print(f"DEBUG: Empty result, extracted Snowflake columns: {columns}")
+                    except Exception as e:
+                        print(f"DEBUG: Empty result, Snowflake schema query failed: {e}")
                     
-                    if schema_result:
-                        # Handle both single tuple and list of tuples
-                        if isinstance(schema_result, tuple):
-                            # Single column
-                            columns = [schema_result[1]]  # Column name is at index 1
-                            print(f"DEBUG: Single tuple schema result, columns: {columns}")
-                        elif isinstance(schema_result, list) and len(schema_result) > 0:
-                            # Multiple columns
-                            columns = [row[1] for row in schema_result]  # Column name is at index 1
-                            print(f"DEBUG: List of tuples schema result, columns: {columns}")
-                        else:
-                            # Empty schema result
-                            columns = []
-                            print("DEBUG: Empty schema result")
+                    # If Snowflake approach failed, try DuckDB approach
+                    if not columns:
+                        try:
+                            schema_query = f"PRAGMA table_info({self.table_name})"
+                            schema_result = self._execute_database_query(database_resource, schema_query)
+                            
+                            print(f"DEBUG: Empty result, DuckDB schema query: {schema_query}")
+                            print(f"DEBUG: Empty result, DuckDB schema result: {schema_result}")
+                            
+                            if schema_result and len(schema_result) > 0:
+                                # Extract column names from DuckDB schema result
+                                if isinstance(schema_result[0], (list, tuple)):
+                                    columns = [row[1] for row in schema_result]  # Column name is at index 1
+                                else:
+                                    columns = [schema_result[1]]  # Single column result
+                                print(f"DEBUG: Empty result, extracted DuckDB columns: {columns}")
+                        except Exception as e:
+                            print(f"DEBUG: Empty result, DuckDB schema query failed: {e}")
+                    
+                    # Create DataFrame with extracted columns or empty
+                    if columns:
                         df = pd.DataFrame(columns=columns)
                         print(f"DEBUG: Created empty DataFrame with columns: {list(df.columns)}")
                     else:
                         df = pd.DataFrame()
                         print("DEBUG: Created empty DataFrame with no columns")
+                        
                 except Exception as e:
                     df = pd.DataFrame()
-                    print(f"DEBUG: Schema query failed for empty result: {e}, created empty DataFrame")
+                    print(f"DEBUG: All schema queries failed for empty result: {e}, created empty DataFrame")
             
             return df
             
@@ -4525,8 +4601,22 @@ len(result['failed_column_names'])
             
             # Execute query using database adapter
             result = self._execute_database_query(database_resource, query)
-            if result and len(result) > 0 and len(result[0]) > 0:
-                return float(result[0][0]) if result[0][0] is not None else 0.0
+            
+            # Handle different result formats
+            if result is None:
+                return 0.0
+            elif isinstance(result, (int, float)):
+                # Direct numeric result (e.g., COUNT queries)
+                return float(result) if result is not None else 0.0
+            elif isinstance(result, list) and len(result) > 0:
+                if isinstance(result[0], (list, tuple)) and len(result[0]) > 0:
+                    # Nested result format: [[value]]
+                    return float(result[0][0]) if result[0][0] is not None else 0.0
+                elif isinstance(result[0], (int, float)):
+                    # Flat result format: [value]
+                    return float(result[0]) if result[0] is not None else 0.0
+                else:
+                    return 0.0
             else:
                 return 0.0
             
