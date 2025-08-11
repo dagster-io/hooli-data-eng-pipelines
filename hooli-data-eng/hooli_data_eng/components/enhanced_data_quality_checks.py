@@ -104,10 +104,13 @@ def _is_polars(df) -> bool:
 
 def _get_unique_values(df, column: str) -> list:
     """Get unique values from a column, works with both Pandas and Polars."""
+    # Get actual column name with case-insensitive matching
+    actual_column = _get_actual_column_name(df, column)
+    
     if _is_polars(df):
-        return df.select(column).unique().to_numpy().flatten().tolist()
+        return df.select(actual_column).unique().to_numpy().flatten().tolist()
     else:
-        return df[column].unique().tolist()
+        return df[actual_column].unique().tolist()
 
 
 def _get_groups(df, group_by: str) -> list:
@@ -134,6 +137,22 @@ def _get_dataframe_columns(df) -> list:
         return df.columns
     else:
         return df.columns.tolist()
+
+def _get_actual_column_name(df, column_name: str) -> str:
+    """Get the actual column name from DataFrame with case-insensitive matching."""
+    available_columns = _get_dataframe_columns(df)
+    
+    # First try exact match
+    if column_name in available_columns:
+        return column_name
+    
+    # Fall back to case-insensitive match
+    for col in available_columns:
+        if col.lower() == column_name.lower():
+            return col
+    
+    # If no match found, raise error with helpful message
+    raise ValueError(f"Column '{column_name}' not found in dataframe. Available columns: {available_columns}")
 
 
 def _get_dataframe_dtypes(df) -> dict:
@@ -5142,11 +5161,14 @@ len(result['failed_column_names'])
 
     def _calculate_shannon_entropy(self, df, column: str) -> float:
         """Calculate Shannon entropy (same for pandas/polars)."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(df, column)
+        
         # Get value counts
         if hasattr(df, 'select'):  # Polars
-            value_counts = df[column].value_counts().to_pandas()['count'].values
+            value_counts = df[actual_column].value_counts().to_pandas()['count'].values
         else:  # Pandas
-            value_counts = df[column].value_counts().values
+            value_counts = df[actual_column].value_counts().values
         
         # Calculate probabilities
         probabilities = value_counts / value_counts.sum()
@@ -5971,8 +5993,11 @@ len(result['failed_column_names'])
     def _analyze_value_set_validation(self, df, column: str, allowed_values: List[str]) -> dict:
         """Analyze value set validation for a column."""
         try:
+            # Get actual column name with case-insensitive matching
+            actual_column = _get_actual_column_name(df, column)
+            
             # Get unique values in the column using helper methods
-            unique_values = _get_unique_values(df, column)
+            unique_values = _get_unique_values(df, actual_column)
             total_values = _count_rows(df)
             
             # Count valid and invalid values
@@ -5982,11 +6007,11 @@ len(result['failed_column_names'])
             for value in unique_values:
                 if str(value) in allowed_values:
                     # Count occurrences of this valid value
-                    count = _count_rows(_filter_dataframe_by_condition(df, df[column] == value))
+                    count = _count_rows(_filter_dataframe_by_condition(df, df[actual_column] == value))
                     valid_values += count
                 else:
                     # Count occurrences of this invalid value
-                    count = _count_rows(_filter_dataframe_by_condition(df, df[column] == value))
+                    count = _count_rows(_filter_dataframe_by_condition(df, df[actual_column] == value))
                     invalid_values.append({"value": str(value), "count": int(count)})
             
             # Calculate percentage of valid values

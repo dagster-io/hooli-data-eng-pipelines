@@ -143,7 +143,7 @@ attributes:
           description: "Ensure order_total calculation is correct"
           blocking: true
         - name: "orders_cleaned_date_range"
-          sql_query: "SELECT COUNT(*) as recent_orders FROM analytics.orders_cleaned WHERE order_date >= CURRENT_DATE - INTERVAL 30 DAY"
+          sql_query: "SELECT COUNT(*) as recent_orders FROM analytics.orders_cleaned WHERE order_date >= DATEADD(day, -30, CURRENT_DATE())"
           expected_result: 0
           comparison: "greater_than"
           description: "Ensure we have recent orders"
