@@ -153,11 +153,29 @@ def _filter_dataframe_by_condition(df, condition) -> Any:
 
 
 def _group_dataframe(df, group_by: str) -> Any:
-    """Group dataframe by column."""
-    if _is_polars(df):
-        return df.group_by(group_by)
+    """Group dataframe by column with case-insensitive matching."""
+    # Get available columns
+    available_columns = _get_dataframe_columns(df)
+    
+    # First try exact match
+    if group_by in available_columns:
+        actual_column = group_by
     else:
-        return df.groupby(group_by)
+        # Fall back to case-insensitive match
+        actual_column = None
+        for col in available_columns:
+            if col.lower() == group_by.lower():
+                actual_column = col
+                break
+        
+        if actual_column is None:
+            raise ValueError(f"Column '{group_by}' not found in dataframe. Available columns: {available_columns}")
+    
+    # Group by the actual column name
+    if _is_polars(df):
+        return df.group_by(actual_column)
+    else:
+        return df.groupby(actual_column)
 
 
 def _aggregate_grouped(df, agg_dict: dict) -> Any:
@@ -384,20 +402,37 @@ def _get_grouped_metric_values(df, metric: str, group_by: str) -> dict:
     """Get metric values grouped by a column using helper methods."""
     values = {}
     
+    # Get the actual column name for grouping (handles case sensitivity)
+    available_columns = _get_dataframe_columns(df)
+    actual_group_column = None
+    
+    # First try exact match
+    if group_by in available_columns:
+        actual_group_column = group_by
+    else:
+        # Fall back to case-insensitive match
+        for col in available_columns:
+            if col.lower() == group_by.lower():
+                actual_group_column = col
+                break
+        
+        if actual_group_column is None:
+            raise ValueError(f"Column '{group_by}' not found in dataframe. Available columns: {available_columns}")
+    
     if metric == "num_rows":
         # Count rows per group
-        grouped_df = _group_dataframe(df, group_by)
+        grouped_df = _group_dataframe(df, group_by)  # This now handles case sensitivity internally
         if _is_polars(df):
             import polars as pl
             result = grouped_df.agg(pl.count().alias("count"))
             for row in result.iter_rows(named=True):
-                values[str(row[group_by])] = float(row["count"])
+                values[str(row[actual_group_column])] = float(row["count"])
         else:
             result = grouped_df.size()
             values = {str(k): float(v) for k, v in result.items()}
     elif ":" in metric:
         metric_type, column = metric.split(":", 1)
-        grouped_df = _group_dataframe(df, group_by)
+        grouped_df = _group_dataframe(df, group_by)  # This now handles case sensitivity internally
         
         if _is_polars(df):
             import polars as pl
@@ -405,27 +440,27 @@ def _get_grouped_metric_values(df, metric: str, group_by: str) -> dict:
             if metric_type == "mean":
                 result = grouped_df.agg(pl.col(column).mean().alias("mean_val"))
                 for row in result.iter_rows(named=True):
-                    values[str(row[group_by])] = float(row["mean_val"])
+                    values[str(row[actual_group_column])] = float(row["mean_val"])
             elif metric_type == "sum":
                 result = grouped_df.agg(pl.col(column).sum().alias("sum_val"))
                 for row in result.iter_rows(named=True):
-                    values[str(row[group_by])] = float(row["sum_val"])
+                    values[str(row[actual_group_column])] = float(row["sum_val"])
             elif metric_type == "max":
                 result = grouped_df.agg(pl.col(column).max().alias("max_val"))
                 for row in result.iter_rows(named=True):
-                    values[str(row[group_by])] = float(row["max_val"])
+                    values[str(row[actual_group_column])] = float(row["max_val"])
             elif metric_type == "min":
                 result = grouped_df.agg(pl.col(column).min().alias("min_val"))
                 for row in result.iter_rows(named=True):
-                    values[str(row[group_by])] = float(row["min_val"])
+                    values[str(row[actual_group_column])] = float(row["min_val"])
             elif metric_type == "distinct_count":
                 result = grouped_df.agg(pl.col(column).n_unique().alias("distinct_count"))
                 for row in result.iter_rows(named=True):
-                    values[str(row[group_by])] = float(row["distinct_count"])
+                    values[str(row[actual_group_column])] = float(row["distinct_count"])
             elif metric_type == "null_count":
                 result = grouped_df.agg(pl.col(column).null_count().alias("null_count"))
                 for row in result.iter_rows(named=True):
-                    values[str(row[group_by])] = float(row["null_count"])
+                    values[str(row[actual_group_column])] = float(row["null_count"])
             elif metric_type == "null_pct":
                 result = grouped_df.agg([
                     pl.col(column).null_count().alias("nulls"),
@@ -433,7 +468,7 @@ def _get_grouped_metric_values(df, metric: str, group_by: str) -> dict:
                 ])
                 for row in result.iter_rows(named=True):
                     pct = (row["nulls"] / row["total"] * 100) if row["total"] > 0 else 0
-                    values[str(row[group_by])] = float(pct)
+                    values[str(row[actual_group_column])] = float(pct)
         else:
             # Pandas implementation
             if metric_type == "mean":
@@ -6354,8 +6389,23 @@ len(result['failed_column_names'])
                 column_name = column_config["column"]
                 expected_type = column_config["expected_type"]
                 
-                # Debug: Check if column exists
-                if column_name not in available_columns:
+                # Debug: Check if column exists (case-insensitive)
+                column_found = False
+                actual_column_name = None
+                
+                # First try exact match
+                if column_name in available_columns:
+                    column_found = True
+                    actual_column_name = column_name
+                else:
+                    # Try case-insensitive match
+                    for available_col in available_columns:
+                        if available_col.lower() == column_name.lower():
+                            column_found = True
+                            actual_column_name = available_col
+                            break
+                
+                if not column_found:
                     type_validation_results[column_name] = {
                         "passed": False,
                         "expected_type": expected_type,
@@ -6367,7 +6417,7 @@ len(result['failed_column_names'])
                 
                 # Get actual data type of the column using helper method
                 dtypes = _get_dataframe_dtypes(df)
-                actual_type = str(dtypes.get(column_name, "unknown"))
+                actual_type = str(dtypes.get(actual_column_name, "unknown"))
                 
                 # Special handling for empty DataFrames
                 if is_empty:
