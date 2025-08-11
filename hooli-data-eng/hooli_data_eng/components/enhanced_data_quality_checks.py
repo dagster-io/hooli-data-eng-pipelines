@@ -6,14 +6,12 @@ Simplified API:
 - Auto-selects pandas/polars based on data size (IMPLEMENTATION DETAIL)
 """
 
-from dataclasses import dataclass
-from typing import Optional, Literal, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union
 import dagster as dg
 from dagster import AssetKey, asset_check, AssetCheckResult, AssetCheckExecutionContext, MetadataValue, DagsterEventType, EventRecordsFilter
 from pydantic import BaseModel, Field
 import pandas as pd
 import numpy as np
-import json
 import os
 
 import re
@@ -1049,7 +1047,7 @@ class SharedCheckExecutor:
                 # For simple expressions, try eval first
                 try:
                     return eval(query, {}, local_vars)
-                except:
+                except Exception:
                     # If eval fails, try exec
                     exec(f"result = {query}", {}, local_vars)
                     return local_vars['result']
@@ -2051,7 +2049,6 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         # Replace forward slashes with underscores
         sanitized_name = asset_name.replace("/", "_")
         # Replace any other invalid characters with underscores
-        import re
         sanitized_name = re.sub(r'[^A-Za-z0-9_]', '_', sanitized_name)
         # Remove consecutive underscores
         sanitized_name = re.sub(r'_+', '_', sanitized_name)
@@ -2739,7 +2736,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         "max_value": max_value,
                         "outlier_count": 0,
                         "total_values": 0,
-                        "description": f"Range validation: No data to analyze"
+                        "description": "Range validation: No data to analyze"
                     }
                     continue
                 
@@ -3583,7 +3580,6 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             
             # Create a custom query that performs pattern matching analysis
             regex_pattern = self._get_pattern_regex()
-            pattern_info = self._get_pattern_info()
             
             # Build the analysis query
             analysis_query = f"""
@@ -4029,7 +4025,7 @@ len(result['failed_column_names'])
                 
                 group_correlations[group_key] = {
                     "passed": passed,
-                    "reason": f"Correlation within thresholds" if passed else f"Correlation outside thresholds",
+                    "reason": "Correlation within thresholds" if passed else "Correlation outside thresholds",
                     "current_value": current_value,
                     "correlation": correlation,
                     "p_value": p_value,
@@ -4264,12 +4260,12 @@ len(result['failed_column_names'])
                         else:
                             # Empty schema result
                             columns = []
-                            print(f"DEBUG: Empty schema result")
+                            print("DEBUG: Empty schema result")
                         df = pd.DataFrame(columns=columns)
                         print(f"DEBUG: Created empty DataFrame with columns: {list(df.columns)}")
                     else:
                         df = pd.DataFrame()
-                        print(f"DEBUG: Created empty DataFrame with no columns")
+                        print("DEBUG: Created empty DataFrame with no columns")
                 except Exception as e:
                     df = pd.DataFrame()
                     print(f"DEBUG: Schema query failed for empty result: {e}, created empty DataFrame")
@@ -4312,7 +4308,6 @@ len(result['failed_column_names'])
         
         # Handle time-based filtering
         if self.time_filter_column and (self.hours_back or self.days_back):
-            import pandas as pd
             from datetime import datetime, timedelta
             
             # Calculate cutoff time
@@ -4496,17 +4491,17 @@ len(result['failed_column_names'])
                     query = f"SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {column}) FROM {self.table_name}{where_sql}"
                 elif metric_type == "mode":
                     # Most frequent value - complex SQL, use dataframe processing
-                    raise ValueError(f"Mode metric not supported in database mode - use dataframe processing")
+                    raise ValueError("Mode metric not supported in database mode - use dataframe processing")
                 elif metric_type == "range":
                     query = f"SELECT MAX({column}) - MIN({column}) FROM {self.table_name}{where_sql}"
                 elif metric_type == "iqr":
                     query = f"SELECT PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {column}) - PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY {column}) FROM {self.table_name}{where_sql}"
                 elif metric_type == "skew":
                     # Skewness - complex SQL, use dataframe processing
-                    raise ValueError(f"Skewness metric not supported in database mode - use dataframe processing")
+                    raise ValueError("Skewness metric not supported in database mode - use dataframe processing")
                 elif metric_type == "kurt":
                     # Kurtosis - complex SQL, use dataframe processing
-                    raise ValueError(f"Kurtosis metric not supported in database mode - use dataframe processing")
+                    raise ValueError("Kurtosis metric not supported in database mode - use dataframe processing")
                 elif metric_type == "cv":
                     # Coefficient of variation = std / mean
                     query = f"SELECT STDDEV({column}) / AVG({column}) FROM {self.table_name}{where_sql}"
@@ -4865,7 +4860,7 @@ len(result['failed_column_names'])
         if chi_square_p is not None:
             description += f", χ² p-value: {chi_square_p:.4f}"
         else:
-            description += f", χ² p-value: N/A"
+            description += ", χ² p-value: N/A"
         
         return description
 
@@ -5003,7 +4998,7 @@ len(result['failed_column_names'])
                 # Fallback: try to get from context if available
                 try:
                     asset_key_for_filter = context.asset_check_spec.asset_key
-                except:
+                except Exception:
                     # Last resort: construct from the check name itself
                     check_name = str(context.asset_check_spec.name)
                     if '_' in check_name:
@@ -5028,7 +5023,7 @@ len(result['failed_column_names'])
             
             # Strategy 2: If no records found, try with larger limit but still filtered by asset
             if len(records) == 0:
-                context.log.info(f"Historical data - Strategy 1 failed, trying Strategy 2 (larger asset_key filter)")
+                context.log.info("Historical data - Strategy 1 failed, trying Strategy 2 (larger asset_key filter)")
                 records = context.instance.get_event_records(
                     EventRecordsFilter(
                         event_type=DagsterEventType.ASSET_CHECK_EVALUATION, 
@@ -5041,7 +5036,7 @@ len(result['failed_column_names'])
             # Strategy 3: If still no records, try broader search but with precise filtering
             # This is the most reliable approach due to Dagster's asset_key filtering bug for check events
             if len(records) == 0:
-                context.log.info(f"Historical data - Strategy 2 failed, trying Strategy 3 (broader search with precise filtering)")
+                context.log.info("Historical data - Strategy 2 failed, trying Strategy 3 (broader search with precise filtering)")
                 
                 # Get all check events with much larger limit
                 all_check_events = context.instance.get_event_records(
@@ -5205,7 +5200,7 @@ len(result['failed_column_names'])
                 "r_squared": 1 - (np.sum(residuals ** 2) / np.sum((y - np.mean(y)) ** 2))
             }
             
-        except Exception as e:
+        except Exception:
             # Fallback to moving average if linear regression fails
             return self._predict_moving_average(values, confidence)
 
@@ -5244,7 +5239,7 @@ len(result['failed_column_names'])
                 "std_error": std_error
             }
             
-        except Exception as e:
+        except Exception:
             # Fallback to moving average if exponential smoothing fails
             return self._predict_moving_average(values, confidence)
 
@@ -5284,7 +5279,7 @@ len(result['failed_column_names'])
             # Fallback to moving average if ARIMA fails
             return self._predict_moving_average(values, confidence)
             
-        except Exception as e:
+        except Exception:
             # Fallback to moving average if ARIMA fails
             return self._predict_moving_average(values, confidence)
 
@@ -5355,7 +5350,7 @@ len(result['failed_column_names'])
                 
                 group_deltas[group_key] = {
                     "passed": passed,
-                    "reason": f"Delta within threshold" if passed else f"Delta exceeds threshold",
+                    "reason": "Delta within threshold" if passed else "Delta exceeds threshold",
                     "current_value": current_value,
                     "historical_average": historical_avg,
                     "percent_delta": percent_delta,
@@ -5451,7 +5446,7 @@ len(result['failed_column_names'])
                 
                 group_deltas[group_key] = {
                     "passed": passed,
-                    "reason": f"Delta within threshold" if passed else f"Delta exceeds threshold",
+                    "reason": "Delta within threshold" if passed else "Delta exceeds threshold",
                     "current_value": current_value,
                     "historical_average": historical_avg,
                     "percent_delta": percent_delta,
@@ -5544,17 +5539,17 @@ len(result['failed_column_names'])
                         query = f"SELECT {group_by}, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {column}) as median_val FROM {self.table_name} GROUP BY {group_by}"
                     elif metric_type == "mode":
                         # Mode not supported in database mode
-                        raise ValueError(f"Mode metric not supported in database mode - use dataframe processing")
+                        raise ValueError("Mode metric not supported in database mode - use dataframe processing")
                     elif metric_type == "range":
                         query = f"SELECT {group_by}, MAX({column}) - MIN({column}) as range_val FROM {self.table_name} GROUP BY {group_by}"
                     elif metric_type == "iqr":
                         query = f"SELECT {group_by}, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {column}) - PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY {column}) as iqr_val FROM {self.table_name} GROUP BY {group_by}"
                     elif metric_type == "skew":
                         # Skewness not supported in database mode
-                        raise ValueError(f"Skewness metric not supported in database mode - use dataframe processing")
+                        raise ValueError("Skewness metric not supported in database mode - use dataframe processing")
                     elif metric_type == "kurt":
                         # Kurtosis not supported in database mode
-                        raise ValueError(f"Kurtosis metric not supported in database mode - use dataframe processing")
+                        raise ValueError("Kurtosis metric not supported in database mode - use dataframe processing")
                     elif metric_type == "cv":
                         query = f"SELECT {group_by}, STDDEV({column}) / AVG({column}) as cv_val FROM {self.table_name} GROUP BY {group_by}"
                     elif metric_type == "zscore":
@@ -5677,7 +5672,7 @@ len(result['failed_column_names'])
             
             return float(correlation) if not np.isnan(correlation) else 0.0, float(p_value)
             
-        except Exception as e:
+        except Exception:
             return 0.0, 1.0
 
     def _create_correlation_description(self, passed: bool, failed_groups: list, total_groups: int, allowed_failures: int, max_correlation: float) -> str:
@@ -5789,7 +5784,7 @@ len(result['failed_column_names'])
                 
                 group_anomalies[group_key] = {
                     "passed": passed,
-                    "reason": f"Anomaly score within threshold" if passed else f"Anomaly score exceeds threshold",
+                    "reason": "Anomaly score within threshold" if passed else "Anomaly score exceeds threshold",
                     "current_value": current_value,
                     "anomaly_score": anomaly_score,
                     "threshold": threshold,
@@ -5876,7 +5871,7 @@ len(result['failed_column_names'])
                 
                 group_anomalies[group_key] = {
                     "passed": passed,
-                    "reason": f"Anomaly score within threshold" if passed else f"Anomaly score exceeds threshold",
+                    "reason": "Anomaly score within threshold" if passed else "Anomaly score exceeds threshold",
                     "current_value": current_value,
                     "anomaly_score": anomaly_score,
                     "threshold": threshold,
@@ -6256,7 +6251,7 @@ len(result['failed_column_names'])
                         "max_value": max_value,
                         "outlier_count": 0,
                         "total_values": 0,
-                        "description": f"Range validation: No data to analyze"
+                        "description": "Range validation: No data to analyze"
                     }
                     outlier_counts[column_name] = 0
                     continue
@@ -6657,7 +6652,7 @@ len(result['failed_column_names'])
                                 # Handle aggregation queries (like COUNT, SUM, etc.)
                                 result = group_df.select(self._get_check_config_value('custom_dataframe_query', None)).to_numpy()
                                 metric_value = float(result[0][0]) if len(result) > 0 else 0.0
-                        except Exception as e:
+                        except Exception:
                             # If query fails for this group, mark as failed
                             metric_value = None
                         
@@ -6695,7 +6690,7 @@ len(result['failed_column_names'])
                                 # Handle aggregation queries
                                 result = group_df.eval(self._get_check_config_value('custom_dataframe_query', None))
                                 metric_value = float(result) if result is not None else 0.0
-                        except Exception as e:
+                        except Exception:
                             # If query fails for this group, mark as failed
                             metric_value = None
                         
@@ -6910,7 +6905,6 @@ len(result['failed_column_names'])
         source_database = self._get_check_config_value('cross_table_source_database')
         validation_type = self._get_check_config_value('cross_table_validation_type', 'row_count')
         join_columns = self._get_check_config_value('cross_table_join_columns', [])
-        group_by = self._get_check_config_value('cross_table_group_by')
         
         # Add debugging
         context.log.info(f"Cross-table validation - source_table: {source_table}")
