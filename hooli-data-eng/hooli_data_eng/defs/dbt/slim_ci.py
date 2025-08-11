@@ -67,24 +67,16 @@ def post_github_comment(context: dg.OpExecutionContext, run_results: str):
     context.log.info("Starting GitHub comment operation")
     context.log.info(f"Available environment variables: GITHUB_TOKEN={'***' if os.getenv('GITHUB_TOKEN') else 'None'}, "
                     f"DAGSTER_GITHUB_TOKEN={'***' if os.getenv('DAGSTER_GITHUB_TOKEN') else 'None'}, "
-                    f"GITHUB_REPOSITORY={os.getenv('GITHUB_REPOSITORY') or 'None'}, "
-                    f"DAGSTER_GITHUB_REPOSITORY={os.getenv('DAGSTER_GITHUB_REPOSITORY') or 'None'}, "
-                    f"GITHUB_PR_NUMBER={os.getenv('GITHUB_PR_NUMBER') or 'None'}, "
-                    f"DAGSTER_GITHUB_PR_NUMBER={os.getenv('DAGSTER_GITHUB_PR_NUMBER') or 'None'}")
+                    f"DAGSTER_CLOUD_GIT_REPO={os.getenv('DAGSTER_CLOUD_GIT_REPO') or 'None'}, "
+                    f"DAGSTER_CLOUD_PULL_REQUEST_ID={os.getenv('DAGSTER_CLOUD_PULL_REQUEST_ID') or 'None'}")
     
     # Get configuration from environment variables
     github_token = (
         os.getenv("GITHUB_TOKEN") or
         os.getenv("DAGSTER_GITHUB_TOKEN")
     )
-    github_repo = (
-        os.getenv("GITHUB_REPOSITORY") or
-        os.getenv("DAGSTER_GITHUB_REPOSITORY")
-    )
-    pr_number = (
-        os.getenv("GITHUB_PR_NUMBER") or
-        os.getenv("DAGSTER_GITHUB_PR_NUMBER")
-    )
+    github_repo = os.getenv("DAGSTER_CLOUD_GIT_REPO")
+    pr_number = os.getenv("DAGSTER_CLOUD_PULL_REQUEST_ID")
     
     if not github_token:
         context.log.info("No GitHub token provided - GitHub commenting is disabled")
@@ -93,7 +85,7 @@ def post_github_comment(context: dg.OpExecutionContext, run_results: str):
         
     if not github_repo:
         context.log.info("No GitHub repository provided - GitHub commenting is disabled")
-        context.log.info("To enable GitHub comments, set GITHUB_REPOSITORY environment variable")
+        context.log.info("To enable GitHub comments, set DAGSTER_CLOUD_GIT_REPO environment variable")
         return
         
     if not pr_number:

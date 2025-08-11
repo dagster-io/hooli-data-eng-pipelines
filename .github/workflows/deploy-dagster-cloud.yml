@@ -286,8 +286,6 @@ jobs:
           organization_id: hooli
         env:
           DAGSTER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DAGSTER_GITHUB_REPOSITORY: ${{ github.repository }}
-          DAGSTER_GITHUB_PR_NUMBER: ${{ github.event.number }}
 
       # Summary and comment updates - note these always() run
       - name: Update PR comment for branch deployments
