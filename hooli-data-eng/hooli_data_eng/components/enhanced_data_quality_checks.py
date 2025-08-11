@@ -540,17 +540,23 @@ class DataFrameAdapter:
     
     def filter(self, col, val):
         """Filter dataframe by column value."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return self.df.filter(self.df[col] == val)
+            return self.df.filter(self.df[actual_column] == val)
         else:
-            return self.df[self.df[col] == val]
+            return self.df[self.df[actual_column] == val]
     
     def group_by(self, col):
         """Group dataframe by column."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return self.df.group_by(col)
+            return self.df.group_by(actual_column)
         else:
-            return self.df.groupby(col)
+            return self.df.groupby(actual_column)
     
     def select_columns(self, cols):
         """Select specific columns."""
@@ -589,36 +595,45 @@ class DataFrameAdapter:
     
     def count_nulls(self, col):
         """Count null values in a column."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return self.df.select(col).null_count().item()
+            return self.df.select(actual_column).null_count().item()
         else:
-            return self.df[col].isnull().sum()
+            return self.df[actual_column].isnull().sum()
     
     def get_column_values(self, col):
         """Get all values from a column."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return self.df.select(col).to_numpy().flatten()
+            return self.df.select(actual_column).to_numpy().flatten()
         else:
-            return self.df[col].values
+            return self.df[actual_column].values
     
     def get_column_statistics(self, col):
         """Get basic statistics for a column."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            stats = self.df.select(col).describe()
+            stats = self.df.select(actual_column).describe()
             return {
                 'mean': stats.select('mean').item(),
+                'count': stats.select('count').item(),
                 'std': stats.select('std').item(),
                 'min': stats.select('min').item(),
-                'max': stats.select('max').item(),
-                'count': stats.select('count').item()
+                'max': stats.select('max').item()
             }
         else:
             return {
-                'mean': self.df[col].mean(),
-                'std': self.df[col].std(),
-                'min': self.df[col].min(),
-                'max': self.df[col].max(),
-                'count': self.df[col].count()
+                'mean': self.df[actual_column].mean(),
+                'std': self.df[actual_column].std(),
+                'min': self.df[actual_column].min(),
+                'max': self.df[actual_column].max(),
+                'count': self.df[actual_column].count()
             }
     
     def sample(self, n, method="random"):
@@ -650,10 +665,13 @@ class DataFrameAdapter:
     
     def to_numpy(self, col):
         """Convert column to numpy array."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return self.df.select(col).to_numpy().flatten()
+            return self.df.select(actual_column).to_numpy().flatten()
         else:
-            return self.df[col].to_numpy()
+            return self.df[actual_column].to_numpy()
     
     def apply_condition(self, condition):
         """Apply a boolean condition to filter dataframe."""
@@ -664,31 +682,44 @@ class DataFrameAdapter:
     
     def aggregate(self, group_col, agg_dict):
         """Aggregate dataframe by group."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, group_col)
+        
         if self.is_polars:
-            return self.df.group_by(group_col).agg(agg_dict)
+            return self.df.group_by(actual_column).agg(agg_dict)
         else:
-            return self.df.groupby(group_col).agg(agg_dict)
+            return self.df.groupby(actual_column).agg(agg_dict)
     
     def get_value_counts(self, col):
         """Get value counts for a column."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return self.df.select(col).value_counts().to_dict()
+            return self.df.select(actual_column).value_counts().to_dict()
         else:
-            return self.df[col].value_counts().to_dict()
+            return self.df[actual_column].value_counts().to_dict()
     
     def is_numeric_column(self, col):
         """Check if column is numeric."""
+        # Get actual column name with case-insensitive matching
+        actual_column = _get_actual_column_name(self.df, col)
+        
         if self.is_polars:
-            return str(self.df.schema[col]) in ['Int64', 'Float64', 'Int32', 'Float32']
+            return str(self.df.schema[actual_column]) in ['Int64', 'Float64', 'Int32', 'Float32']
         else:
-            return pd.api.types.is_numeric_dtype(self.df[col])
+            return pd.api.types.is_numeric_dtype(self.df[actual_column])
     
     def get_correlation(self, col1, col2):
         """Get correlation between two columns."""
+        # Get actual column names with case-insensitive matching
+        actual_col1 = _get_actual_column_name(self.df, col1)
+        actual_col2 = _get_actual_column_name(self.df, col2)
+        
         if self.is_polars:
-            return self.df.select(col1, col2).corr().item()
+            return self.df.select(actual_col1, actual_col2).corr().item()
         else:
-            return self.df[col1].corr(self.df[col2])
+            return self.df[actual_col1].corr(self.df[actual_col2])
     
     def is_duplicated(self, df, subset=None):
         """Check for duplicated rows."""
