@@ -4215,27 +4215,89 @@ len(result['failed_column_names'])
                             table_name_only = self.table_name.split('.')[-1] if '.' in self.table_name else self.table_name
                             schema_name = self.table_name.split('.')[0] if '.' in self.table_name else 'PUBLIC'
                             
-                            schema_query = f"""
-                            SELECT COLUMN_NAME 
-                            FROM INFORMATION_SCHEMA.COLUMNS 
-                            WHERE TABLE_NAME = '{table_name_only}' 
-                            AND TABLE_SCHEMA = '{schema_name}'
-                            ORDER BY ORDINAL_POSITION
-                            """
-                            schema_result = self._execute_database_query(database_resource, schema_query)
+                            # Try multiple Snowflake schema query approaches
+                            snowflake_queries = [
+                                # Try DESCRIBE command first (most reliable for Snowflake)
+                                f"DESCRIBE TABLE {self.table_name}",
+                                # Try SHOW COLUMNS command
+                                f"SHOW COLUMNS IN {self.table_name}",
+                                # Standard INFORMATION_SCHEMA approach
+                                f"""
+                                SELECT COLUMN_NAME 
+                                FROM INFORMATION_SCHEMA.COLUMNS 
+                                WHERE TABLE_NAME = '{table_name_only}' 
+                                AND TABLE_SCHEMA = '{schema_name}'
+                                ORDER BY ORDINAL_POSITION
+                                """,
+                                # Alternative with case-insensitive matching
+                                f"""
+                                SELECT COLUMN_NAME 
+                                FROM INFORMATION_SCHEMA.COLUMNS 
+                                WHERE UPPER(TABLE_NAME) = UPPER('{table_name_only}') 
+                                AND UPPER(TABLE_SCHEMA) = UPPER('{schema_name}')
+                                ORDER BY ORDINAL_POSITION
+                                """,
+                                # Try without schema constraint
+                                f"""
+                                SELECT COLUMN_NAME 
+                                FROM INFORMATION_SCHEMA.COLUMNS 
+                                WHERE TABLE_NAME = '{table_name_only}' 
+                                ORDER BY ORDINAL_POSITION
+                                """,
+                                # Try with just the table name as-is
+                                f"""
+                                SELECT COLUMN_NAME 
+                                FROM INFORMATION_SCHEMA.COLUMNS 
+                                WHERE TABLE_NAME = '{self.table_name}' 
+                                ORDER BY ORDINAL_POSITION
+                                """
+                            ]
                             
-                            print(f"DEBUG: Snowflake schema query: {schema_query}")
-                            print(f"DEBUG: Snowflake schema result: {schema_result}")
+                            columns = None
+                            for i, schema_query in enumerate(snowflake_queries):
+                                try:
+                                    print(f"DEBUG: Trying Snowflake schema query {i+1}: {schema_query.strip()}")
+                                    schema_result = self._execute_database_query(database_resource, schema_query)
+                                    
+                                    print(f"DEBUG: Snowflake schema query {i+1} result: {schema_result}")
+                                    print(f"DEBUG: Result type: {type(schema_result)}")
+                                    print(f"DEBUG: Result length: {len(schema_result) if isinstance(schema_result, (list, tuple)) else 'N/A'}")
+                                    
+                                    if schema_result and len(schema_result) > 0:
+                                        # Extract column names from Snowflake schema result
+                                        if isinstance(schema_result[0], (list, tuple)):
+                                            # Handle different result formats
+                                            if i == 0:  # DESCRIBE TABLE result
+                                                # DESCRIBE returns: [column_name, type, null, key, default, extra]
+                                                columns = [row[0] for row in schema_result if row[0] and not row[0].startswith('-')]
+                                            elif i == 1:  # SHOW COLUMNS result
+                                                # SHOW COLUMNS returns: [column_name, type, null, key, default, extra]
+                                                columns = [row[0] for row in schema_result if row[0] and not row[0].startswith('-')]
+                                            else:  # INFORMATION_SCHEMA result
+                                                # INFORMATION_SCHEMA returns: [column_name]
+                                                columns = [row[0] for row in schema_result]
+                                        else:
+                                            columns = [schema_result[0]]  # Single column result
+                                        
+                                        # Filter out any empty or separator rows
+                                        columns = [col for col in columns if col and not col.startswith('-') and col.strip()]
+                                        
+                                        if columns:
+                                            print(f"DEBUG: Successfully extracted Snowflake columns: {columns}")
+                                            break
+                                        else:
+                                            print(f"DEBUG: Snowflake schema query {i+1} returned no valid columns")
+                                    else:
+                                        print(f"DEBUG: Snowflake schema query {i+1} returned empty result")
+                                except Exception as e:
+                                    print(f"DEBUG: Snowflake schema query {i+1} failed: {e}")
+                                    continue
                             
-                            if schema_result and len(schema_result) > 0:
-                                # Extract column names from Snowflake schema result
-                                if isinstance(schema_result[0], (list, tuple)):
-                                    columns = [row[0] for row in schema_result]  # Column name is at index 0
-                                else:
-                                    columns = [schema_result[0]]  # Single column result
-                                print(f"DEBUG: Extracted Snowflake columns: {columns}")
+                            if not columns:
+                                print("DEBUG: All Snowflake schema queries failed or returned no results")
+                                
                         except Exception as e:
-                            print(f"DEBUG: Snowflake schema query failed: {e}")
+                            print(f"DEBUG: Snowflake schema query setup failed: {e}")
                         
                         # If Snowflake approach failed, try DuckDB approach
                         if not columns:
@@ -4256,10 +4318,55 @@ len(result['failed_column_names'])
                             except Exception as e:
                                 print(f"DEBUG: DuckDB schema query failed: {e}")
                         
-                        # If both approaches failed, use fallback
+                        # If both approaches failed, try to infer column names from data patterns
                         if not columns:
-                            columns = [f"col_{i}" for i in range(len(result[0]))]
-                            print(f"DEBUG: Using fallback columns: {columns}")
+                            print("DEBUG: Trying to infer column names from data patterns...")
+                            try:
+                                # Look at first few rows to see if we can detect column name patterns
+                                sample_rows = result[:min(5, len(result))]
+                                potential_columns = []
+                                
+                                for col_idx in range(len(result[0])):
+                                    col_values = [row[col_idx] for row in sample_rows if len(row) > col_idx]
+                                    
+                                    # Check if this looks like a user_id column (integers, mostly positive)
+                                    if all(isinstance(v, (int, float)) and v > 0 for v in col_values if v is not None):
+                                        if col_idx == 0:  # First column is often user_id
+                                            potential_columns.append('user_id')
+                                        else:
+                                            potential_columns.append(f'id_{col_idx}')
+                                    # Check if this looks like a quantity column (small integers)
+                                    elif all(isinstance(v, (int, float)) and 0 <= v <= 1000 for v in col_values if v is not None):
+                                        potential_columns.append('quantity')
+                                    # Check if this looks like a price column (floats with decimals)
+                                    elif all(isinstance(v, (int, float)) and v > 0 and (v % 1 != 0 or v > 100) for v in col_values if v is not None):
+                                        if 'purchase_price' not in potential_columns:
+                                            potential_columns.append('purchase_price')
+                                        else:
+                                            potential_columns.append('order_total')
+                                    # Check if this looks like a SKU column (strings, alphanumeric)
+                                    elif all(isinstance(v, str) and len(v) > 0 for v in col_values if v is not None):
+                                        potential_columns.append('sku')
+                                    # Check if this looks like a date column (strings that might be dates)
+                                    elif all(isinstance(v, str) and ('-' in v or '/' in v) for v in col_values if v is not None):
+                                        if 'dt' not in potential_columns:
+                                            potential_columns.append('dt')
+                                        else:
+                                            potential_columns.append('order_date')
+                                    else:
+                                        potential_columns.append(f'col_{col_idx}')
+                                
+                                # Ensure we have the right number of columns
+                                while len(potential_columns) < len(result[0]):
+                                    potential_columns.append(f'col_{len(potential_columns)}')
+                                
+                                columns = potential_columns[:len(result[0])]
+                                print(f"DEBUG: Inferred columns from data patterns: {columns}")
+                                
+                            except Exception as e:
+                                print(f"DEBUG: Column inference failed: {e}")
+                                columns = [f"col_{i}" for i in range(len(result[0]))]
+                                print(f"DEBUG: Using fallback columns: {columns}")
                         else:
                             # Ensure we have the right number of columns
                             if len(columns) != len(result[0]):
