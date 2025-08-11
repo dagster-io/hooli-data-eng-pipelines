@@ -4,7 +4,6 @@ import requests
 import dagster as dg
 from dagster_dbt import DbtCliResource
 from hooli_data_eng.defs.dbt.resources import dbt_project, resource_def
-from hooli_data_eng.defs.dbt.translator import get_hooli_translator
 from hooli_data_eng.utils import get_env
 
 
@@ -24,7 +23,6 @@ def dbt_slim_ci(context: dg.OpExecutionContext, dbt: DbtCliResource):
         dbt_cli_task = dbt.cli(
             args=dbt_command,
             manifest=dbt_project.manifest_path,
-            dagster_dbt_translator=get_hooli_translator(),
         )
 
         # Yield all the events from dbt
@@ -205,6 +203,12 @@ All dbt models ran successfully!
         
         if response.status_code == 201:
             context.log.info(f"Successfully posted GitHub comment for PR #{pr_number}")
+        elif response.status_code == 403:
+            context.log.error(f"Failed to post GitHub comment: 403 Forbidden - {response.text}")
+            context.log.error("GitHub token does not have sufficient permissions. Required scopes:")
+            context.log.error("- For Classic PAT: 'repo' (or 'public_repo' for public repos)")
+            context.log.error("- For Fine-grained PAT: Write access to 'Issues' and 'Pull requests'")
+            context.log.error("Update your GITHUB_TOKEN secret with a token that has these permissions.")
         else:
             context.log.error(f"Failed to post GitHub comment: {response.status_code} - {response.text}")
             
