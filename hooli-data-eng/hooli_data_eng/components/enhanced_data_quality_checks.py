@@ -2677,20 +2677,19 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             )
         else:
             # Original non-grouped logic
-            with database_resource.get_connection() as conn:
-                result = conn.execute(f"SELECT COUNT(*) FROM {self.table_name}{where_sql}").fetchone()
-                row_count = result[0]
+            result = self._execute_database_query(database_resource, f"SELECT COUNT(*) FROM {self.table_name}{where_sql}")
+            row_count = result if isinstance(result, (int, float)) else result[0] if result else 0
             
-                passed = min_rows <= row_count <= (max_rows if max_rows else float('inf'))
-            
-            return AssetCheckResult(
-                passed=passed,
-                description=f"Row count: {row_count} (expected: {min_rows}-{max_rows or '∞'})",
-                metadata=build_metadata(
-                    query="row_count",
-                    query_result=row_count
-                )
+            passed = min_rows <= row_count <= (max_rows if max_rows else float('inf'))
+        
+        return AssetCheckResult(
+            passed=passed,
+            description=f"Row count: {row_count} (expected: {min_rows}-{max_rows or '∞'})",
+            metadata=build_metadata(
+                query="row_count",
+                query_result=row_count
             )
+        )
 
     def _execute_database_range_check(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
         """Execute range check on database using SQL."""
@@ -2706,72 +2705,71 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         range_validation_results = {}
         failed_columns = []
         
-        with database_resource.get_connection() as conn:
-            for column_config in range_columns:
-                column_name = column_config["column"]
-                min_value = column_config.get("min_value")
-                max_value = column_config.get("max_value")
-                
-                # Build range conditions for SQL
-                range_conditions = []
-                if min_value is not None:
-                    range_conditions.append(f"{column_name} >= {min_value}")
-                if max_value is not None:
-                    range_conditions.append(f"{column_name} <= {max_value}")
-                
-                # Count total non-null values
-                null_condition = f"{column_name} IS NOT NULL"
-                if where_sql:
-                    total_query = f"SELECT COUNT(*) FROM {self.table_name}{where_sql} AND {null_condition}"
-                else:
-                    total_query = f"SELECT COUNT(*) FROM {self.table_name} WHERE {null_condition}"
-                total_result = conn.execute(total_query).fetchone()
-                total_values = total_result[0]
-                
-                if total_values == 0:
-                    # No data to analyze
-                    range_validation_results[column_name] = {
-                        "passed": True,
-                        "min_value": min_value,
-                        "max_value": max_value,
-                        "outlier_count": 0,
-                        "total_values": 0,
-                        "description": "Range validation: No data to analyze"
-                    }
-                    continue
-                
-                # Count outliers (values outside the range)
-                outlier_conditions = []
-                if min_value is not None:
-                    outlier_conditions.append(f"{column_name} < {min_value}")
-                if max_value is not None:
-                    outlier_conditions.append(f"{column_name} > {max_value}")
-                
-                if outlier_conditions:
-                    outlier_condition = f"({' OR '.join(outlier_conditions)})"
-                    if where_sql:
-                        outlier_query = f"SELECT COUNT(*) FROM {self.table_name}{where_sql} AND {outlier_condition}"
-                    else:
-                        outlier_query = f"SELECT COUNT(*) FROM {self.table_name} WHERE {outlier_condition}"
-                    outlier_result = conn.execute(outlier_query).fetchone()
-                    outlier_count = outlier_result[0]
-                else:
-                    outlier_count = 0
-                
-                # Check if validation passed (no outliers)
-                passed = outlier_count == 0
-                
+        for column_config in range_columns:
+            column_name = column_config["column"]
+            min_value = column_config.get("min_value")
+            max_value = column_config.get("max_value")
+            
+            # Build range conditions for SQL
+            range_conditions = []
+            if min_value is not None:
+                range_conditions.append(f"{column_name} >= {min_value}")
+            if max_value is not None:
+                range_conditions.append(f"{column_name} <= {max_value}")
+            
+            # Count total non-null values
+            null_condition = f"{column_name} IS NOT NULL"
+            if where_sql:
+                total_query = f"SELECT COUNT(*) FROM {self.table_name}{where_sql} AND {null_condition}"
+            else:
+                total_query = f"SELECT COUNT(*) FROM {self.table_name} WHERE {null_condition}"
+            total_result = self._execute_database_query(database_resource, total_query)
+            total_values = total_result if isinstance(total_result, (int, float)) else total_result[0] if total_result else 0
+            
+            if total_values == 0:
+                # No data to analyze
                 range_validation_results[column_name] = {
-                    "passed": passed,
+                    "passed": True,
                     "min_value": min_value,
                     "max_value": max_value,
-                    "outlier_count": outlier_count,
-                    "total_values": total_values,
-                    "description": f"Range validation: {outlier_count} outliers found"
+                    "outlier_count": 0,
+                    "total_values": 0,
+                    "description": "Range validation: No data to analyze"
                 }
-                
-                if not passed:
-                    failed_columns.append(column_name)
+                continue
+            
+            # Count outliers (values outside the range)
+            outlier_conditions = []
+            if min_value is not None:
+                outlier_conditions.append(f"{column_name} < {min_value}")
+            if max_value is not None:
+                outlier_conditions.append(f"{column_name} > {max_value}")
+            
+            if outlier_conditions:
+                outlier_condition = f"({' OR '.join(outlier_conditions)})"
+                if where_sql:
+                    outlier_query = f"SELECT COUNT(*) FROM {self.table_name}{where_sql} AND {outlier_condition}"
+                else:
+                    outlier_query = f"SELECT COUNT(*) FROM {self.table_name} WHERE {outlier_condition}"
+                outlier_result = self._execute_database_query(database_resource, outlier_query)
+                outlier_count = outlier_result if isinstance(outlier_result, (int, float)) else outlier_result[0] if outlier_result else 0
+            else:
+                outlier_count = 0
+            
+            # Check if validation passed (no outliers)
+            passed = outlier_count == 0
+            
+            range_validation_results[column_name] = {
+                "passed": passed,
+                "min_value": min_value,
+                "max_value": max_value,
+                "outlier_count": outlier_count,
+                "total_values": total_values,
+                "description": f"Range validation: {outlier_count} outliers found"
+            }
+            
+            if not passed:
+                failed_columns.append(column_name)
         
         # Overall result
         total_columns = len(range_columns)
@@ -2878,10 +2876,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         database_resource = getattr(context.resources, self.database_resource_key)
         null_counts = {}
         
-        with database_resource.get_connection() as conn:
-            for column in columns:
-                result = conn.execute(f"SELECT COUNT(*) FROM {self.table_name} WHERE {column} IS NULL").fetchone()
-                null_counts[column] = result[0]
+        for column in columns:
+            result = self._execute_database_query(database_resource, f"SELECT COUNT(*) FROM {self.table_name} WHERE {column} IS NULL")
+            null_counts[column] = result if isinstance(result, (int, float)) else result[0] if result else 0
         
         total_nulls = sum(null_counts.values())
         passed = total_nulls == 0
@@ -5506,73 +5503,72 @@ len(result['failed_column_names'])
             # Group by specified column
             values = {}
             
-            with database_resource.get_connection() as conn:
-                if metric == "num_rows":
-                    # Count rows per group
-                    query = f"SELECT {group_by}, COUNT(*) as count FROM {self.table_name} GROUP BY {group_by}"
-                    result = conn.execute(query).fetchall()
-                    for row in result:
-                        values[str(row[0])] = float(row[1])
-                        
-                elif ":" in metric:
-                    metric_type, column = metric.split(":", 1)
+            if metric == "num_rows":
+                # Count rows per group
+                query = f"SELECT {group_by}, COUNT(*) as count FROM {self.table_name} GROUP BY {group_by}"
+                result = self._execute_database_query(database_resource, query)
+                for row in result:
+                    values[str(row[0])] = float(row[1])
                     
-                    if metric_type == "mean":
-                        query = f"SELECT {group_by}, AVG({column}) as mean_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "sum":
-                        query = f"SELECT {group_by}, SUM({column}) as sum_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "max":
-                        query = f"SELECT {group_by}, MAX({column}) as max_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "min":
-                        query = f"SELECT {group_by}, MIN({column}) as min_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "distinct_count":
-                        query = f"SELECT {group_by}, COUNT(DISTINCT {column}) as distinct_count FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "null_count":
-                        query = f"SELECT {group_by}, COUNT(*) - COUNT({column}) as null_count FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "null_pct":
-                        query = f"SELECT {group_by}, ((COUNT(*) - COUNT({column})) * 100.0 / COUNT(*)) as null_pct FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "std":
-                        query = f"SELECT {group_by}, STDDEV({column}) as std_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "var":
-                        query = f"SELECT {group_by}, VAR({column}) as var_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "median":
-                        query = f"SELECT {group_by}, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {column}) as median_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "mode":
-                        # Mode not supported in database mode
-                        raise ValueError("Mode metric not supported in database mode - use dataframe processing")
-                    elif metric_type == "range":
-                        query = f"SELECT {group_by}, MAX({column}) - MIN({column}) as range_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "iqr":
-                        query = f"SELECT {group_by}, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {column}) - PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY {column}) as iqr_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "skew":
-                        # Skewness not supported in database mode
-                        raise ValueError("Skewness metric not supported in database mode - use dataframe processing")
-                    elif metric_type == "kurt":
-                        # Kurtosis not supported in database mode
-                        raise ValueError("Kurtosis metric not supported in database mode - use dataframe processing")
-                    elif metric_type == "cv":
-                        query = f"SELECT {group_by}, STDDEV({column}) / AVG({column}) as cv_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "zscore":
-                        query = f"SELECT {group_by}, AVG({column}) / STDDEV({column}) as zscore_val FROM {self.table_name} GROUP BY {group_by}"
-                    elif metric_type == "outlier_count":
-                        query = f"""
-                        SELECT {group_by}, COUNT(*) as outlier_count FROM {self.table_name} 
-                        WHERE {column} < (AVG({column}) OVER (PARTITION BY {group_by}) - 3 * STDDEV({column}) OVER (PARTITION BY {group_by}))
-                           OR {column} > (AVG({column}) OVER (PARTITION BY {group_by}) + 3 * STDDEV({column}) OVER (PARTITION BY {group_by}))
-                        GROUP BY {group_by}
-                        """
-                    elif metric_type.startswith("p") and metric_type[1:].isdigit():
-                        percentile = int(metric_type[1:])
-                        if 0 <= percentile <= 100:
-                            query = f"SELECT {group_by}, PERCENTILE_CONT({percentile / 100.0}) WITHIN GROUP (ORDER BY {column}) as p{percentile}_val FROM {self.table_name} GROUP BY {group_by}"
-                        else:
-                            raise ValueError(f"Invalid percentile: {percentile}")
+            elif ":" in metric:
+                metric_type, column = metric.split(":", 1)
+                
+                if metric_type == "mean":
+                    query = f"SELECT {group_by}, AVG({column}) as mean_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "sum":
+                    query = f"SELECT {group_by}, SUM({column}) as sum_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "max":
+                    query = f"SELECT {group_by}, MAX({column}) as max_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "min":
+                    query = f"SELECT {group_by}, MIN({column}) as min_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "distinct_count":
+                    query = f"SELECT {group_by}, COUNT(DISTINCT {column}) as distinct_count FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "null_count":
+                    query = f"SELECT {group_by}, COUNT(*) - COUNT({column}) as null_count FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "null_pct":
+                    query = f"SELECT {group_by}, ((COUNT(*) - COUNT({column})) * 100.0 / COUNT(*)) as null_pct FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "std":
+                    query = f"SELECT {group_by}, STDDEV({column}) as std_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "var":
+                    query = f"SELECT {group_by}, VAR({column}) as var_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "median":
+                    query = f"SELECT {group_by}, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {column}) as median_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "mode":
+                    # Mode not supported in database mode
+                    raise ValueError("Mode metric not supported in database mode - use dataframe processing")
+                elif metric_type == "range":
+                    query = f"SELECT {group_by}, MAX({column}) - MIN({column}) as range_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "iqr":
+                    query = f"SELECT {group_by}, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {column}) - PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY {column}) as iqr_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "skew":
+                    # Skewness not supported in database mode
+                    raise ValueError("Skewness metric not supported in database mode - use dataframe processing")
+                elif metric_type == "kurt":
+                    # Kurtosis not supported in database mode
+                    raise ValueError("Kurtosis metric not supported in database mode - use dataframe processing")
+                elif metric_type == "cv":
+                    query = f"SELECT {group_by}, STDDEV({column}) / AVG({column}) as cv_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "zscore":
+                    query = f"SELECT {group_by}, AVG({column}) / STDDEV({column}) as zscore_val FROM {self.table_name} GROUP BY {group_by}"
+                elif metric_type == "outlier_count":
+                    query = f"""
+                    SELECT {group_by}, COUNT(*) as outlier_count FROM {self.table_name} 
+                    WHERE {column} < (AVG({column}) OVER (PARTITION BY {group_by}) - 3 * STDDEV({column}) OVER (PARTITION BY {group_by}))
+                       OR {column} > (AVG({column}) OVER (PARTITION BY {group_by}) + 3 * STDDEV({column}) OVER (PARTITION BY {group_by}))
+                    GROUP BY {group_by}
+                    """
+                elif metric_type.startswith("p") and metric_type[1:].isdigit():
+                    percentile = int(metric_type[1:])
+                    if 0 <= percentile <= 100:
+                        query = f"SELECT {group_by}, PERCENTILE_CONT({percentile / 100.0}) WITHIN GROUP (ORDER BY {column}) as p{percentile}_val FROM {self.table_name} GROUP BY {group_by}"
                     else:
-                        raise ValueError(f"Unsupported metric type: {metric_type}")
-                    
-                    result = conn.execute(query).fetchall()
-                    for row in result:
-                        values[str(row[0])] = float(row[1]) if row[1] is not None else 0.0
+                        raise ValueError(f"Invalid percentile: {percentile}")
+                else:
+                    raise ValueError(f"Unsupported metric type: {metric_type}")
+                
+                result = self._execute_database_query(database_resource, query)
+                for row in result:
+                    values[str(row[0])] = float(row[1]) if row[1] is not None else 0.0
                         
             return values
 
@@ -6538,10 +6534,9 @@ len(result['failed_column_names'])
             if not self.custom_sql_query:
                 raise ValueError("custom_sql_query is required for custom SQL monitor")
             
-            with database_resource.get_connection() as conn:
-                # Execute the SQL query directly against the database
-                result = conn.execute(self.custom_sql_query).fetchone()
-                query_result = result[0] if result else None
+            # Execute the SQL query directly against the database
+            result = self._execute_database_query(database_resource, self.custom_sql_query)
+            query_result = result if isinstance(result, (int, float)) else result[0] if result else None
                 
             # Build metadata
             metadata = {
