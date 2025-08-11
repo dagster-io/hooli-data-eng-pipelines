@@ -28,35 +28,37 @@ def get_slim_ci_job():
                 dagster_dbt_translator=get_hooli_translator(),
             )
 
-            yield from (
+            # Yield all the events from dbt
+            for event in (
                 dbt_cli_task
                 .stream()
                 .fetch_row_counts()
                 .fetch_column_metadata()
-            )
+            ):
+                yield event
             
             # Get run results and return as JSON string
             try:
                 run_results = dbt_cli_task.get_artifact("run_results.json")
                 context.log.info(f"dbt completed with {len(run_results.get('results', []))} model results")
-                return json.dumps(run_results)
+                yield dg.Output(json.dumps(run_results), "run_results")
             except Exception as e:
                 context.log.warning(f"Could not retrieve run_results.json: {str(e)}")
                 # Return basic success info if we can't get detailed results
-                return json.dumps({
+                yield dg.Output(json.dumps({
                     "status": "completed", 
                     "results": [], 
                     "message": "dbt completed but detailed results not available"
-                })
+                }), "run_results")
                 
         except Exception as e:
             context.log.error(f"dbt slim CI failed: {str(e)}")
             # Return error info so the GitHub comment can still be posted
-            return json.dumps({
+            yield dg.Output(json.dumps({
                 "error": str(e), 
                 "status": "failed",
                 "message": f"dbt slim CI job failed with error: {str(e)}"
-            })
+            }), "run_results")
 
     # This op will post a comment to GitHub with the dbt results
     @dg.op(ins={"run_results": dg.In(str)})
