@@ -4540,7 +4540,9 @@ len(result['failed_column_names'])
             if hasattr(database_resource, 'get_connection'):
                 # Pattern: database_resource.get_connection() -> connection
                 with database_resource.get_connection() as conn:
+                    # Try different connection patterns
                     if hasattr(conn, 'execute'):
+                        # Standard execute pattern (DuckDB, PostgreSQL, etc.)
                         result = conn.execute(query)
                         if hasattr(result, 'fetchall'):
                             return result.fetchall()
@@ -4566,8 +4568,53 @@ len(result['failed_column_names'])
                                 return df.values.tolist()
                         else:
                             return list(result)
+                    elif hasattr(conn, 'cursor'):
+                        # Snowflake pattern - connection has cursor method
+                        cursor = conn.cursor()
+                        cursor.execute(query)
+                        result = cursor.fetchall()
+                        cursor.close()
+                        if result and len(result) == 1 and len(result[0]) == 1:
+                            # Single value result (like COUNT(*))
+                            return result[0][0]
+                        return result
+                    elif hasattr(conn, 'query'):
+                        # Direct query method (some Snowflake adapters)
+                        result = conn.query(query)
+                        if hasattr(result, 'fetchall'):
+                            return result.fetchall()
+                        elif hasattr(result, 'fetchone'):
+                            row = result.fetchone()
+                            if row and len(row) == 1:
+                                return row[0]
+                            return row
+                        else:
+                            return list(result)
                     else:
-                        raise ValueError("Connection object must have execute() method")
+                        # Try to find any method that might execute queries
+                        for method_name in ['execute', 'query', 'run', 'sql']:
+                            if hasattr(conn, method_name):
+                                method = getattr(conn, method_name)
+                                if callable(method):
+                                    try:
+                                        result = method(query)
+                                        if hasattr(result, 'fetchall'):
+                                            return result.fetchall()
+                                        elif hasattr(result, 'fetchone'):
+                                            row = result.fetchone()
+                                            if row and len(row) == 1:
+                                                return row[0]
+                                            return row
+                                        else:
+                                            return list(result)
+                                    except Exception:
+                                        continue
+                        
+                        # If we get here, we couldn't find a working method
+                        raise ValueError(
+                            f"Connection object {type(conn)} doesn't have any supported query execution methods. "
+                            f"Available methods: {[m for m in dir(conn) if not m.startswith('_')]}"
+                        )
                         
             elif hasattr(database_resource, 'get_client'):
                 # Pattern: database_resource.get_client() -> client
@@ -4602,7 +4649,7 @@ len(result['failed_column_names'])
                     raise ValueError(
                         f"Unsupported database resource type: {type(database_resource)}. "
                         "Resource must implement one of these patterns:\n"
-                        "1. get_connection() -> connection with execute()\n"
+                        "1. get_connection() -> connection with execute() or cursor()\n"
                         "2. get_client() -> client with query() or execute_query()\n"
                         "3. execute() method directly\n"
                         "4. cursor() method (MySQL-style)"
