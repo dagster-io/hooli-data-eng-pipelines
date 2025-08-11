@@ -12,7 +12,6 @@ from hooli_data_eng.defs.dbt.resources import dbt_project
 from datetime import datetime
 from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
 from hooli_data_eng.defs.dbt.resources import resource_def
-from hooli_data_eng.defs.dbt.slim_ci import get_slim_ci_job
 from hooli_data_eng.defs.dbt.translator import get_hooli_translator
 
 from datetime import timedelta
@@ -138,7 +137,6 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
             asset_checks=checks,
             sensors=sensors,
             resources=resource_def[get_env()],
-            jobs=[get_slim_ci_job()],
         )
 
         defs = defs.map_resolved_asset_specs(
