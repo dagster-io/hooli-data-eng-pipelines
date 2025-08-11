@@ -96,6 +96,1229 @@ class SampleMethod(str, Enum):
 
 
 # ═══════════════════════════════════════════════════════════════
+# DATAFRAME HELPER METHODS (Unified Pandas/Polars operations)
+# ═══════════════════════════════════════════════════════════════
+
+def _is_polars(df) -> bool:
+    """Check if dataframe is a Polars DataFrame."""
+    return hasattr(df, 'select')
+
+
+def _get_unique_values(df, column: str) -> list:
+    """Get unique values from a column, works with both Pandas and Polars."""
+    if _is_polars(df):
+        return df.select(column).unique().to_numpy().flatten().tolist()
+    else:
+        return df[column].unique().tolist()
+
+
+def _get_groups(df, group_by: str) -> list:
+    """Get unique groups from group_by column."""
+    return _get_unique_values(df, group_by)
+
+
+def _get_column_values(df, column: str) -> list:
+    """Get all values from a column as a list."""
+    return _convert_to_numpy(df, column).tolist()
+
+
+def _get_dataframe_shape(df) -> tuple:
+    """Get dataframe shape (rows, columns)."""
+    if _is_polars(df):
+        return df.shape
+    else:
+        return df.shape
+
+
+def _get_dataframe_columns(df) -> list:
+    """Get list of column names."""
+    if _is_polars(df):
+        return df.columns
+    else:
+        return df.columns.tolist()
+
+
+def _get_dataframe_dtypes(df) -> dict:
+    """Get column data types."""
+    if _is_polars(df):
+        return {col: str(dtype) for col, dtype in df.schema.items()}
+    else:
+        return {col: str(dtype) for col, dtype in df.dtypes.items()}
+
+
+def _filter_dataframe_by_condition(df, condition) -> Any:
+    """Filter dataframe by condition, works with both Pandas and Polars."""
+    if _is_polars(df):
+        return df.filter(condition)
+    else:
+        return df[condition]
+
+
+def _group_dataframe(df, group_by: str) -> Any:
+    """Group dataframe by column."""
+    if _is_polars(df):
+        return df.group_by(group_by)
+    else:
+        return df.groupby(group_by)
+
+
+def _aggregate_grouped(df, agg_dict: dict) -> Any:
+    """Aggregate grouped dataframe."""
+    if _is_polars(df):
+        return df.agg(agg_dict)
+    else:
+        return df.agg(agg_dict)
+
+
+def _count_rows(df) -> int:
+    """Count total rows in dataframe."""
+    if _is_polars(df):
+        return df.height
+    else:
+        return len(df)
+
+
+def _count_null_values(df, column: str) -> int:
+    """Count null values in a column."""
+    if _is_polars(df):
+        return df.select(column).null_count().item()
+    else:
+        return df[column].isnull().sum()
+
+
+def _get_column_statistics(df, column: str) -> dict:
+    """Get basic statistics for a column."""
+    if _is_polars(df):
+        stats = df.select(column).describe()
+        return {
+            'count': stats['count'].item(),
+            'mean': stats['mean'].item(),
+            'std': stats['std'].item(),
+            'min': stats['min'].item(),
+            'max': stats['max'].item()
+        }
+    else:
+        desc = df[column].describe()
+        return {
+            'count': desc['count'],
+            'mean': desc['mean'],
+            'std': desc['std'],
+            'min': desc['min'],
+            'max': desc['max']
+        }
+
+
+def _sample_dataframe(df, n: int, method: str = "random") -> Any:
+    """Sample dataframe rows."""
+    if _is_polars(df):
+        if method == "random":
+            return df.sample(n=n)
+        else:  # top
+            return df.head(n)
+    else:
+        if method == "random":
+            return df.sample(n=min(n, len(df)))
+        else:  # top
+            return df.head(n)
+
+
+def _select_columns(df, columns: list) -> Any:
+    """Select specific columns from dataframe."""
+    if _is_polars(df):
+        return df.select(columns)
+    else:
+        return df[columns]
+
+
+def _sort_dataframe(df, by: str, ascending: bool = True) -> Any:
+    """Sort dataframe by column."""
+    if _is_polars(df):
+        return df.sort(by, descending=not ascending)
+    else:
+        return df.sort_values(by=by, ascending=ascending)
+
+
+def _drop_duplicates(df, subset: list = None) -> Any:
+    """Drop duplicate rows."""
+    if _is_polars(df):
+        return df.unique(subset=subset)
+    else:
+        return df.drop_duplicates(subset=subset)
+
+
+def _convert_to_numpy(df, column: str) -> np.ndarray:
+    """Convert column to numpy array."""
+    if _is_polars(df):
+        return df.select(column).to_numpy().flatten()
+    else:
+        return df[column].to_numpy()
+
+
+def _get_correlation(df, col1: str, col2: str) -> float:
+    """Calculate correlation between two columns."""
+    if _is_polars(df):
+        return df.select([col1, col2]).corr().item()
+    else:
+        return df[col1].corr(df[col2])
+
+
+def _apply_regex_filter(df, column: str, pattern: str) -> Any:
+    """Apply regex filter to column."""
+    if _is_polars(df):
+        return df.filter(df[column].str.contains(pattern))
+    else:
+        return df[df[column].str.contains(pattern, na=False)]
+
+
+def _get_value_counts(df, column: str) -> dict:
+    """Get value counts for a column."""
+    if _is_polars(df):
+        counts = df.select(column).value_counts()
+        return dict(zip(counts[column].to_list(), counts['count'].to_list()))
+    else:
+        return df[column].value_counts().to_dict()
+
+
+def _is_numeric_column(df, column: str) -> bool:
+    """Check if column contains numeric data."""
+    dtypes = _get_dataframe_dtypes(df)
+    column_dtype = dtypes.get(column, '').lower()
+    
+    # Check for numeric types
+    numeric_types = ['int64', 'int32', 'int16', 'int8', 'float64', 'float32', 'float16']
+    return column_dtype in numeric_types
+
+
+def _get_column_min_max(df, column: str) -> tuple:
+    """Get min and max values for a column."""
+    if _is_polars(df):
+        stats = df.select(column).describe()
+        return stats['min'].item(), stats['max'].item()
+    else:
+        return df[column].min(), df[column].max()
+
+
+def _get_column_mean(df, column: str) -> float:
+    """Get mean value for a column."""
+    if _is_polars(df):
+        return df.select(column).mean().item()
+    else:
+        return df[column].mean()
+
+
+def _get_column_sum(df, column: str) -> float:
+    """Get sum value for a column."""
+    if _is_polars(df):
+        return df.select(column).sum().item()
+    else:
+        return df[column].sum()
+
+
+def _get_column_max(df, column: str) -> float:
+    """Get max value for a column."""
+    if _is_polars(df):
+        return df.select(column).max().item()
+    else:
+        return df[column].max()
+
+
+def _get_column_min(df, column: str) -> float:
+    """Get min value for a column."""
+    if _is_polars(df):
+        return df.select(column).min().item()
+    else:
+        return df[column].min()
+
+
+def _get_column_std(df, column: str) -> float:
+    """Get standard deviation for a column."""
+    if _is_polars(df):
+        return df.select(column).std().item()
+    else:
+        return df[column].std()
+
+
+def _get_column_var(df, column: str) -> float:
+    """Get variance for a column."""
+    if _is_polars(df):
+        return df.select(column).var().item()
+    else:
+        return df[column].var()
+
+
+def _get_column_median(df, column: str) -> float:
+    """Get median value for a column."""
+    if _is_polars(df):
+        return df.select(column).median().item()
+    else:
+        return df[column].median()
+
+
+def _get_column_mode(df, column: str) -> float:
+    """Get mode value for a column."""
+    if _is_polars(df):
+        # Polars doesn't have mode, use pandas logic
+        mode_values = df[column].mode()
+        return float(mode_values[0]) if len(mode_values) > 0 else 0.0
+    else:
+        mode_values = df[column].mode()
+        return float(mode_values[0]) if len(mode_values) > 0 else 0.0
+
+
+def _get_column_range(df, column: str) -> float:
+    """Get range (max - min) for a column."""
+    min_val, max_val = _get_column_min_max(df, column)
+    return float(max_val - min_val) if max_val is not None and min_val is not None else 0.0
+
+
+def _get_column_iqr(df, column: str) -> float:
+    """Get interquartile range for a column."""
+    if _is_polars(df):
+        q75 = df.select(column).quantile(0.75).item()
+        q25 = df.select(column).quantile(0.25).item()
+    else:
+        q75 = df[column].quantile(0.75)
+        q25 = df[column].quantile(0.25)
+    return float(q75 - q25) if q75 is not None and q25 is not None else 0.0
+
+
+def _get_grouped_metric_values(df, metric: str, group_by: str) -> dict:
+    """Get metric values grouped by a column using helper methods."""
+    values = {}
+    
+    if metric == "num_rows":
+        # Count rows per group
+        grouped_df = _group_dataframe(df, group_by)
+        if _is_polars(df):
+            import polars as pl
+            result = grouped_df.agg(pl.count().alias("count"))
+            for row in result.iter_rows(named=True):
+                values[str(row[group_by])] = float(row["count"])
+        else:
+            result = grouped_df.size()
+            values = {str(k): float(v) for k, v in result.items()}
+    elif ":" in metric:
+        metric_type, column = metric.split(":", 1)
+        grouped_df = _group_dataframe(df, group_by)
+        
+        if _is_polars(df):
+            import polars as pl
+            
+            if metric_type == "mean":
+                result = grouped_df.agg(pl.col(column).mean().alias("mean_val"))
+                for row in result.iter_rows(named=True):
+                    values[str(row[group_by])] = float(row["mean_val"])
+            elif metric_type == "sum":
+                result = grouped_df.agg(pl.col(column).sum().alias("sum_val"))
+                for row in result.iter_rows(named=True):
+                    values[str(row[group_by])] = float(row["sum_val"])
+            elif metric_type == "max":
+                result = grouped_df.agg(pl.col(column).max().alias("max_val"))
+                for row in result.iter_rows(named=True):
+                    values[str(row[group_by])] = float(row["max_val"])
+            elif metric_type == "min":
+                result = grouped_df.agg(pl.col(column).min().alias("min_val"))
+                for row in result.iter_rows(named=True):
+                    values[str(row[group_by])] = float(row["min_val"])
+            elif metric_type == "distinct_count":
+                result = grouped_df.agg(pl.col(column).n_unique().alias("distinct_count"))
+                for row in result.iter_rows(named=True):
+                    values[str(row[group_by])] = float(row["distinct_count"])
+            elif metric_type == "null_count":
+                result = grouped_df.agg(pl.col(column).null_count().alias("null_count"))
+                for row in result.iter_rows(named=True):
+                    values[str(row[group_by])] = float(row["null_count"])
+            elif metric_type == "null_pct":
+                result = grouped_df.agg([
+                    pl.col(column).null_count().alias("nulls"),
+                    pl.count().alias("total")
+                ])
+                for row in result.iter_rows(named=True):
+                    pct = (row["nulls"] / row["total"] * 100) if row["total"] > 0 else 0
+                    values[str(row[group_by])] = float(pct)
+        else:
+            # Pandas implementation
+            if metric_type == "mean":
+                result = grouped_df[column].mean()
+                values = {str(k): float(v) for k, v in result.items()}
+            elif metric_type == "sum":
+                result = grouped_df[column].sum()
+                values = {str(k): float(v) for k, v in result.items()}
+            elif metric_type == "max":
+                result = grouped_df[column].max()
+                values = {str(k): float(v) for k, v in result.items()}
+            elif metric_type == "min":
+                result = grouped_df[column].min()
+                values = {str(k): float(v) for k, v in result.items()}
+            elif metric_type == "distinct_count":
+                result = grouped_df[column].nunique()
+                values = {str(k): float(v) for k, v in result.items()}
+            elif metric_type == "null_count":
+                result = grouped_df[column].isnull().sum()
+                values = {str(k): float(v) for k, v in result.items()}
+            elif metric_type == "null_pct":
+                result = grouped_df[column].apply(lambda x: (x.isnull().sum() / len(x) * 100) if len(x) > 0 else 0)
+                values = {str(k): float(v) for k, v in result.items()}
+    
+    return values
+
+
+# ═══════════════════════════════════════════════════════════════
+# DATAFRAME ADAPTER CLASS
+# ═══════════════════════════════════════════════════════════════
+
+class DataFrameAdapter:
+    """Adapter class to handle both Pandas and Polars dataframes uniformly.
+    
+    This class encapsulates the differences between Pandas and Polars dataframes,
+    providing a unified interface for common operations.
+    """
+    
+    def __init__(self, df):
+        """Initialize the adapter with a dataframe."""
+        self.df = df
+        self.is_polars = _is_polars(df)
+    
+    def get_groups(self, col):
+        """Get unique values from a column."""
+        if self.is_polars:
+            return self.df.select(col).unique().to_numpy().flatten()
+        else:
+            return self.df[col].unique()
+    
+    def filter(self, col, val):
+        """Filter dataframe by column value."""
+        if self.is_polars:
+            return self.df.filter(self.df[col] == val)
+        else:
+            return self.df[self.df[col] == val]
+    
+    def group_by(self, col):
+        """Group dataframe by column."""
+        if self.is_polars:
+            return self.df.group_by(col)
+        else:
+            return self.df.groupby(col)
+    
+    def select_columns(self, cols):
+        """Select specific columns."""
+        if self.is_polars:
+            return self.df.select(cols)
+        else:
+            return self.df[cols]
+    
+    def count_rows(self):
+        """Count total rows."""
+        if self.is_polars:
+            return self.df.height
+        else:
+            return len(self.df)
+    
+    def get_shape(self):
+        """Get dataframe shape."""
+        if self.is_polars:
+            return (self.df.height, len(self.df.columns))
+        else:
+            return self.df.shape
+    
+    def get_columns(self):
+        """Get column names."""
+        if self.is_polars:
+            return self.df.columns
+        else:
+            return list(self.df.columns)
+    
+    def get_dtypes(self):
+        """Get column data types."""
+        if self.is_polars:
+            return {col: str(dtype) for col, dtype in self.df.schema.items()}
+        else:
+            return {col: str(dtype) for col, dtype in self.df.dtypes.items()}
+    
+    def count_nulls(self, col):
+        """Count null values in a column."""
+        if self.is_polars:
+            return self.df.select(col).null_count().item()
+        else:
+            return self.df[col].isnull().sum()
+    
+    def get_column_values(self, col):
+        """Get all values from a column."""
+        if self.is_polars:
+            return self.df.select(col).to_numpy().flatten()
+        else:
+            return self.df[col].values
+    
+    def get_column_statistics(self, col):
+        """Get basic statistics for a column."""
+        if self.is_polars:
+            stats = self.df.select(col).describe()
+            return {
+                'mean': stats.select('mean').item(),
+                'std': stats.select('std').item(),
+                'min': stats.select('min').item(),
+                'max': stats.select('max').item(),
+                'count': stats.select('count').item()
+            }
+        else:
+            return {
+                'mean': self.df[col].mean(),
+                'std': self.df[col].std(),
+                'min': self.df[col].min(),
+                'max': self.df[col].max(),
+                'count': self.df[col].count()
+            }
+    
+    def sample(self, n, method="random"):
+        """Sample rows from dataframe."""
+        if self.is_polars:
+            if method == "random":
+                return self.df.sample(n=n)
+            else:  # top
+                return self.df.head(n)
+        else:
+            if method == "random":
+                return self.df.sample(n=n)
+            else:  # top
+                return self.df.head(n)
+    
+    def sort(self, by, ascending=True):
+        """Sort dataframe by column."""
+        if self.is_polars:
+            return self.df.sort(by, descending=not ascending)
+        else:
+            return self.df.sort_values(by, ascending=ascending)
+    
+    def drop_duplicates(self, subset=None):
+        """Drop duplicate rows."""
+        if self.is_polars:
+            return self.df.unique(subset=subset)
+        else:
+            return self.df.drop_duplicates(subset=subset)
+    
+    def to_numpy(self, col):
+        """Convert column to numpy array."""
+        if self.is_polars:
+            return self.df.select(col).to_numpy().flatten()
+        else:
+            return self.df[col].to_numpy()
+    
+    def apply_condition(self, condition):
+        """Apply a boolean condition to filter dataframe."""
+        if self.is_polars:
+            return self.df.filter(condition)
+        else:
+            return self.df[condition]
+    
+    def aggregate(self, group_col, agg_dict):
+        """Aggregate dataframe by group."""
+        if self.is_polars:
+            return self.df.group_by(group_col).agg(agg_dict)
+        else:
+            return self.df.groupby(group_col).agg(agg_dict)
+    
+    def get_value_counts(self, col):
+        """Get value counts for a column."""
+        if self.is_polars:
+            return self.df.select(col).value_counts().to_dict()
+        else:
+            return self.df[col].value_counts().to_dict()
+    
+    def is_numeric_column(self, col):
+        """Check if column is numeric."""
+        if self.is_polars:
+            return str(self.df.schema[col]) in ['Int64', 'Float64', 'Int32', 'Float32']
+        else:
+            return pd.api.types.is_numeric_dtype(self.df[col])
+    
+    def get_correlation(self, col1, col2):
+        """Get correlation between two columns."""
+        if self.is_polars:
+            return self.df.select(col1, col2).corr().item()
+        else:
+            return self.df[col1].corr(self.df[col2])
+    
+    def is_duplicated(self, df, subset=None):
+        """Check for duplicated rows."""
+        if self.is_polars:
+            if subset:
+                return df.select(subset).is_duplicated()
+            else:
+                return df.is_duplicated()
+        else:
+            return df.duplicated(subset=subset, keep=False)
+
+# ═══════════════════════════════════════════════════════════════
+# METADATA HELPER UTILITIES
+# ═══════════════════════════════════════════════════════════════
+
+def build_metadata(query, query_result, expected=None, comparison=None, df=None, group_by=None, groups=None, failed_groups=None, allowed_failures=0,
+                  additional_metadata=None, error=None, processing_mode=None, metric=None, metric_value=None, failure_reasons=None,
+                  total_nulls=None, null_counts=None, total_columns=None, validation_results=None, 
+                  correlation=None, p_value=None, entropy_value=None, benford_results=None, pattern_results=None,
+                  anomaly_score=None, threshold=None, method=None, confidence=None, significance_level=None):
+    """Build standardized metadata for AssetCheckResult objects.
+    
+    Args:
+        query: The query that was executed
+        query_result: The result of the query
+        expected: Expected result for comparison
+        comparison: Comparison operator used
+        df: Dataframe that was processed
+        group_by: Column used for grouping
+        groups: Dictionary of group results
+        failed_groups: List of failed groups
+        allowed_failures: Number of allowed failures
+        additional_metadata: Additional metadata dictionary to merge
+        error: Error message if check failed
+        processing_mode: Processing mode (sql, dataframe, etc.)
+        metric: Metric being checked
+        metric_value: Value of the metric
+        failure_reasons: List of failure reasons
+        total_nulls: Total number of null values
+        null_counts: Dictionary of null counts by column
+        total_columns: Total number of columns checked
+        validation_results: Validation results dictionary
+        correlation: Correlation coefficient
+        p_value: P-value for statistical tests
+        entropy_value: Entropy value
+        benford_results: Benford's Law results
+        pattern_results: Pattern matching results
+        anomaly_score: Anomaly detection score
+        threshold: Threshold value used
+        method: Method used for analysis
+        confidence: Confidence level
+        significance_level: Significance level for tests
+    
+    Returns:
+        dict: Standardized metadata dictionary
+    """
+    metadata = {
+        "query": MetadataValue.text(query),
+        "query_result": MetadataValue.text(str(query_result) if query_result is not None else "None"),
+    }
+    
+    # Add error if provided
+    if error:
+        metadata["error"] = MetadataValue.text(str(error))
+    
+    # Add dataframe information if provided
+    if df is not None:
+        metadata.update({
+            "dataframe_type": MetadataValue.text(type(df).__module__.split('.')[0]),
+            "filtered": MetadataValue.bool(df is not None)
+        })
+    
+    # Add processing mode if provided
+    if processing_mode:
+        metadata["processing_mode"] = MetadataValue.text(processing_mode)
+    
+    # Add comparison information if provided
+    if expected is not None:
+        metadata.update({
+            "expected_result": MetadataValue.text(str(expected)),
+            "comparison": MetadataValue.text(str(comparison))
+        })
+    
+    # Add metric information if provided
+    if metric:
+        metadata["metric"] = MetadataValue.text(metric)
+    if metric_value is not None:
+        metadata["metric_value"] = MetadataValue.float(float(metric_value))
+    
+    # Add failure reasons if provided
+    if failure_reasons:
+        metadata["failure_reasons"] = MetadataValue.json(failure_reasons)
+    
+    # Add null check information if provided
+    if total_nulls is not None:
+        metadata["total_nulls"] = MetadataValue.int(total_nulls)
+    if null_counts:
+        metadata["null_counts"] = MetadataValue.json(null_counts)
+    
+    # Add validation information if provided
+    if total_columns is not None:
+        metadata["total_columns"] = MetadataValue.int(total_columns)
+    if validation_results:
+        metadata["validation_results"] = MetadataValue.json(validation_results)
+    
+    # Add statistical test information if provided
+    if correlation is not None:
+        metadata["correlation"] = MetadataValue.float(float(correlation))
+    if p_value is not None:
+        metadata["p_value"] = MetadataValue.float(float(p_value))
+    
+    # Add entropy information if provided
+    if entropy_value is not None:
+        metadata["entropy_value"] = MetadataValue.float(float(entropy_value))
+    
+    # Add Benford's Law results if provided
+    if benford_results:
+        metadata["benford_results"] = MetadataValue.json(benford_results)
+    
+    # Add pattern matching results if provided
+    if pattern_results:
+        metadata["pattern_results"] = MetadataValue.json(pattern_results)
+    
+    # Add anomaly detection information if provided
+    if anomaly_score is not None:
+        metadata["anomaly_score"] = MetadataValue.float(float(anomaly_score))
+    if threshold is not None:
+        metadata["threshold"] = MetadataValue.float(float(threshold))
+    
+    # Add method information if provided
+    if method:
+        metadata["method"] = MetadataValue.text(str(method))
+    if confidence is not None:
+        metadata["confidence"] = MetadataValue.float(float(confidence))
+    if significance_level is not None:
+        metadata["significance_level"] = MetadataValue.float(float(significance_level))
+    
+    # Add grouping information if provided
+    if group_by:
+        metadata.update({
+            "group_by": MetadataValue.text(group_by),
+            "total_groups": MetadataValue.int(len(groups) if groups else 0),
+            "failed_groups_count": MetadataValue.int(len(failed_groups) if failed_groups else 0),
+            "allowed_failures": MetadataValue.int(allowed_failures)
+        })
+        
+        # Add group results if available
+        if groups:
+            metadata["group_results"] = MetadataValue.json({str(k): float(v) for k, v in groups.items()})
+        
+        # Add failed groups details if available
+        if failed_groups:
+            metadata["failed_groups"] = MetadataValue.json(failed_groups)
+    
+    # Add any additional metadata if provided
+    if additional_metadata:
+        metadata.update(additional_metadata)
+    
+    return metadata
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED CHECK EXECUTOR UTILITY
+# ═══════════════════════════════════════════════════════════════
+
+class SharedCheckExecutor:
+    """Utility class for executing data quality checks with common patterns.
+    
+    This class abstracts the logic of:
+    - Fetching and filtering data
+    - Handling grouped vs non-grouped queries
+    - Executing code safely (exec + local vars)
+    - Comparing results via _compare_values
+    """
+    
+    def __init__(self, component):
+        """Initialize with the component instance for access to configuration."""
+        self.component = component
+    
+    def execute_dataframe_check(
+        self,
+        context: AssetCheckExecutionContext,
+        df: Any,
+        query: str,
+        expected_result: Optional[Any] = None,
+        comparison: Union[str, ComparisonOperator] = ComparisonOperator.EQUALS,
+        group_by: Optional[str] = None,
+        allowed_failures: int = 0,
+        description: str = "Dataframe check"
+    ) -> AssetCheckResult:
+        """Execute a dataframe check with support for grouped and non-grouped scenarios.
+        
+        Args:
+            context: Asset check execution context
+            df: Input dataframe (Pandas or Polars)
+            query: Query to execute (Python code or dataframe expression)
+            expected_result: Expected result for comparison
+            comparison: Comparison operator
+            group_by: Column to group by (None for non-grouped)
+            allowed_failures: Number of groups allowed to fail
+            description: Description for the check
+            
+        Returns:
+            AssetCheckResult with check results
+        """
+        try:
+            # Apply filtering
+            filtered_df = self.component._filter_dataframe(df)
+            
+            if group_by:
+                return self._execute_grouped_dataframe_check(
+                    context, filtered_df, query, expected_result, 
+                    comparison, group_by, allowed_failures, description
+                )
+            else:
+                return self._execute_non_grouped_dataframe_check(
+                    context, filtered_df, query, expected_result, 
+                    comparison, description
+                )
+                
+        except Exception as e:
+            return AssetCheckResult(
+                passed=False,
+                description=f"{description} failed: {str(e)}",
+                metadata={"error": MetadataValue.text(str(e))}
+            )
+    
+    def _execute_grouped_dataframe_check(
+        self,
+        context: AssetCheckExecutionContext,
+        df: Any,
+        query: str,
+        expected_result: Optional[Any],
+        comparison: Union[str, ComparisonOperator],
+        group_by: str,
+        allowed_failures: int,
+        description: str
+    ) -> AssetCheckResult:
+        """Execute dataframe check with grouping."""
+        group_results = {}
+        failed_groups = []
+        total_groups = 0
+        
+        # Get unique groups using helper method
+        groups = _get_groups(df, group_by)
+        total_groups = len(groups)
+        
+        for group_name in groups:
+            # Filter data for this group
+            if _is_polars(df):
+                group_df = df.filter(df[group_by] == group_name)
+            else:
+                group_df = df[df[group_by] == group_name]
+            
+            # Execute query for this group
+            try:
+                metric_value = self._execute_safe_query(group_df, query)
+                group_results[str(group_name)] = metric_value
+                
+                # Check if this group passes validation
+                if expected_result is not None:
+                    if not self.component._compare_values(str(metric_value), str(expected_result), comparison):
+                        failed_groups.append({
+                            "group": str(group_name),
+                            "actual": metric_value,
+                            "expected": expected_result
+                        })
+            except Exception as e:
+                failed_groups.append({
+                    "group": str(group_name),
+                    "error": str(e)
+                })
+        
+        # Determine overall pass/fail
+        passed = len(failed_groups) <= allowed_failures
+        
+        return AssetCheckResult(
+            passed=passed,
+            description=f"{description} grouped by {group_by}: {total_groups - len(failed_groups)}/{total_groups} groups passed",
+            metadata=build_metadata(
+                query=query,
+                query_result=group_results,
+                df=df,
+                group_by=group_by,
+                groups=group_results,
+                failed_groups=failed_groups,
+                allowed_failures=allowed_failures
+            )
+        )
+    
+    def _execute_non_grouped_dataframe_check(
+        self,
+        context: AssetCheckExecutionContext,
+        df: Any,
+        query: str,
+        expected_result: Optional[Any],
+        comparison: Union[str, ComparisonOperator],
+        description: str
+    ) -> AssetCheckResult:
+        """Execute dataframe check without grouping."""
+        return self._run_dataframe_query(
+            df=df,
+            query=query,
+            expected_result=expected_result,
+            comparison=comparison,
+            description=description
+        )
+    
+    def _run_dataframe_query(
+        self,
+        df: Any,
+        query: str,
+        expected_result: Optional[Any] = None,
+        comparison: Union[str, ComparisonOperator] = ComparisonOperator.EQUALS,
+        description: str = "Dataframe query"
+    ) -> AssetCheckResult:
+        """Unified method to run dataframe queries with error handling and result comparison.
+        
+        This method encapsulates the common logic for:
+        - Safe query execution
+        - Error handling
+        - Result comparison
+        - Metadata creation
+        
+        Args:
+            df: Input dataframe (Pandas or Polars)
+            query: Python code to execute
+            expected_result: Expected result for comparison
+            comparison: Comparison operator
+            description: Description for the check
+            
+        Returns:
+            AssetCheckResult with check results
+        """
+        try:
+            # Execute the query safely
+            query_result = self._execute_safe_query(df, query)
+            
+            # Compare with expected result if provided
+            passed = True
+            if expected_result is not None:
+                passed = self._compare_values(
+                    str(query_result), str(expected_result), comparison
+                )
+            
+            # Create metadata
+            metadata = build_metadata(
+                query=query,
+                query_result=query_result,
+                expected=expected_result,
+                comparison=comparison,
+                df=df
+            )
+            
+            return AssetCheckResult(
+                passed=passed,
+                description=f"{description}: {query_result}",
+                metadata=metadata
+            )
+            
+        except Exception as e:
+            return AssetCheckResult(
+                passed=False,
+                description=f"{description} failed: {str(e)}",
+                metadata=build_metadata(
+                    query=query,
+                    query_result="ERROR",
+                    error=str(e)
+                )
+            )
+    
+    def _execute_safe_query(self, df: Any, query: str) -> Any:
+        """Execute query safely with fallback mechanisms.
+        
+        Args:
+            df: Dataframe to execute query on
+            query: Query to execute (Python code or dataframe expression)
+            
+        Returns:
+            Query result
+        """
+        import pandas as pd
+        import numpy as np
+        
+        try:
+            # First attempt: Execute as Python code with df available
+            local_vars = {'df': df, 'pd': pd, 'np': np, 'self': self.component}
+            
+            # Check if query contains multiple lines or comments (complex code)
+            if '\n' in query or '#' in query:
+                # For complex code, modify the query to capture the result
+                lines = query.strip().split('\n')
+                # Find the last non-comment line
+                last_line = None
+                for line in reversed(lines):
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        last_line = line
+                        break
+                
+                if last_line:
+                    # Modify the query to capture the result
+                    modified_query = query + f"\nquery_result = {last_line}"
+                    exec(modified_query, {}, local_vars)
+                    return local_vars.get('query_result')
+                else:
+                    # If no non-comment lines found, execute as-is
+                    exec(query, {}, local_vars)
+                    return local_vars.get('result', None)
+            else:
+                # For simple expressions, try eval first
+                try:
+                    return eval(query, {}, local_vars)
+                except:
+                    # If eval fails, try exec
+                    exec(f"result = {query}", {}, local_vars)
+                    return local_vars['result']
+                    
+        except Exception as e:
+            # Fallback: Try dataframe-specific methods
+            try:
+                if _is_polars(df):
+                    # For Polars, try select() method
+                    result = df.select(query).to_numpy()
+                    # Return first value if it's a single value
+                    if len(result) == 1 and len(result[0]) == 1:
+                        return result[0][0]
+                    return result
+                else:
+                    # For Pandas, try eval() method
+                    return df.eval(query)
+            except Exception as eval_error:
+                # Final fallback: Try direct column access
+                try:
+                    if query in df.columns:
+                        return df[query].iloc[0] if len(df) > 0 else None
+                    else:
+                        raise eval_error
+                except Exception:
+                    raise Exception(f"Query execution failed: {str(e)} (eval also failed: {str(eval_error)})")
+
+    def _run_dataframe_query(
+        self,
+        df: Any,
+        query: str,
+        expected_result: Optional[Any] = None,
+        comparison: Union[str, ComparisonOperator] = ComparisonOperator.EQUALS,
+        description: str = "Dataframe query"
+    ) -> AssetCheckResult:
+        """Unified method to run dataframe queries with error handling and result comparison.
+        
+        This method encapsulates the common logic for:
+        - Safe query execution
+        - Error handling
+        - Result comparison
+        - Metadata creation
+        
+        Args:
+            df: Input dataframe (Pandas or Polars)
+            query: Python code to execute
+            expected_result: Expected result for comparison
+            comparison: Comparison operator
+            description: Description for the check
+            
+        Returns:
+            AssetCheckResult with check results
+        """
+        try:
+            # Execute the query safely
+            query_result = self._execute_safe_query(df, query)
+            
+            # Handle detailed result structure for data type validation
+            if isinstance(query_result, dict) and 'failed_count' in query_result:
+                # This is a detailed result from data type validation
+                failed_count = query_result['failed_count']
+                passed = True
+                if expected_result is not None:
+                    passed = self.component._compare_values(
+                        str(failed_count), str(expected_result), comparison
+                    )
+                
+                # Create metadata with detailed information (exclude verbose query for data type validation)
+                metadata = build_metadata(
+                    query="Data type validation check",  # Simplified query description
+                    query_result=failed_count,  # Use count for comparison
+                    expected=expected_result,
+                    comparison=comparison,
+                    df=df,
+                    total_columns=query_result.get('total_columns'),
+                    validation_results=query_result.get('type_validation_results'),
+                    additional_metadata={
+                        'failed_columns': query_result.get('failed_columns', []),
+                        'description': query_result.get('description', ''),
+                        'detailed_results': query_result
+                    }
+                )
+            else:
+                # Standard result handling
+                passed = True
+                if expected_result is not None:
+                    passed = self.component._compare_values(
+                        str(query_result), str(expected_result), comparison
+                    )
+                
+                # Create metadata
+                metadata = build_metadata(
+                    query=query,
+                    query_result=query_result,
+                    expected=expected_result,
+                    comparison=comparison,
+                    df=df
+                )
+            
+            return AssetCheckResult(
+                passed=passed,
+                description=f"{description}: {query_result}",
+                metadata=metadata
+            )
+            
+        except Exception as e:
+            return AssetCheckResult(
+                passed=False,
+                description=f"{description} failed: {str(e)}",
+                metadata=build_metadata(
+                    query=query,
+                    query_result="ERROR",
+                    error=str(e)
+                )
+            )
+    
+    def execute_database_check(
+        self,
+        context: AssetCheckExecutionContext,
+        query: str,
+        expected_result: Optional[Any] = None,
+        comparison: Union[str, ComparisonOperator] = ComparisonOperator.EQUALS,
+        group_by: Optional[str] = None,
+        allowed_failures: int = 0,
+        description: str = "Database check"
+    ) -> AssetCheckResult:
+        """Execute a database check with support for grouped and non-grouped scenarios.
+        
+        Args:
+            context: Asset check execution context
+            query: SQL query to execute
+            expected_result: Expected result for comparison
+            comparison: Comparison operator
+            group_by: Column to group by (None for non-grouped)
+            allowed_failures: Number of groups allowed to fail
+            description: Description for the check
+            
+        Returns:
+            AssetCheckResult with check results
+        """
+        try:
+            # Get database resource
+            database_resource = getattr(context.resources, self.component.database_resource_key)
+            
+            # Execute query
+            result = self.component._execute_database_query(database_resource, query)
+            
+            if group_by:
+                return self._execute_grouped_database_check(
+                    context, result, expected_result, comparison, 
+                    group_by, allowed_failures, description
+                )
+            else:
+                return self._execute_non_grouped_database_check(
+                    context, result, expected_result, comparison, description
+                )
+                
+        except Exception as e:
+            return AssetCheckResult(
+                passed=False,
+                description=f"{description} failed: {str(e)}",
+                metadata={"error": MetadataValue.text(str(e))}
+            )
+    
+    def _execute_grouped_database_check(
+        self,
+        context: AssetCheckExecutionContext,
+        result: list,
+        expected_result: Optional[Any],
+        comparison: Union[str, ComparisonOperator],
+        group_by: str,
+        allowed_failures: int,
+        description: str
+    ) -> AssetCheckResult:
+        """Execute database check with grouping."""
+        # Convert result to dataframe for grouping
+        import pandas as pd
+        
+        if not result:
+            return AssetCheckResult(
+                passed=False,
+                description=f"{description}: No data returned",
+                metadata={"error": MetadataValue.text("No data returned from query")}
+            )
+        
+        # Convert to dataframe (assuming first row contains headers)
+        if isinstance(result[0], (list, tuple)):
+            df = pd.DataFrame(result[1:], columns=result[0])
+        else:
+            df = pd.DataFrame(result)
+        
+        # Now use dataframe grouping logic
+        return self._execute_grouped_dataframe_check(
+            context, df, f"df['{group_by}']", expected_result,
+            comparison, group_by, allowed_failures, description
+        )
+    
+    def _execute_non_grouped_database_check(
+        self,
+        context: AssetCheckExecutionContext,
+        result: list,
+        expected_result: Optional[Any],
+        comparison: Union[str, ComparisonOperator],
+        description: str
+    ) -> AssetCheckResult:
+        """Execute database check without grouping."""
+        try:
+            # Convert result to string for comparison
+            if isinstance(result, list):
+                if len(result) == 1:
+                    # Handle single value results (like COUNT queries)
+                    single_result = result[0]
+                    if isinstance(single_result, (list, tuple)):
+                        # If it's a tuple/list with multiple values, handle intelligently
+                        if len(single_result) == 1:
+                            query_result = str(single_result[0])
+                        elif len(single_result) == 2:
+                            # For queries like "SELECT COUNT(*), COUNT(DISTINCT col) FROM table"
+                            # Check if this looks like a uniqueness check (total vs unique)
+                            if isinstance(single_result[0], (int, float)) and isinstance(single_result[1], (int, float)):
+                                total_count = single_result[0]
+                                unique_count = single_result[1]
+                                # Calculate the difference (duplicates)
+                                duplicates = total_count - unique_count
+                                query_result = str(duplicates)
+                            else:
+                                query_result = str(single_result)
+                        else:
+                            query_result = str(single_result)
+                    else:
+                        query_result = str(single_result)
+                else:
+                    query_result = str(result)
+            else:
+                query_result = str(result)
+            
+            # If no expected result specified, just return the query result
+            if expected_result is None:
+                return AssetCheckResult(
+                    passed=True,
+                    description=f"{description}: {query_result}",
+                    metadata=build_metadata(
+                        query="database_query",
+                        query_result=query_result
+                    )
+                )
+            
+            # Perform comparison if expected result is specified
+            passed = self.component._compare_values(query_result, str(expected_result), comparison)
+            
+            return AssetCheckResult(
+                passed=passed,
+                description=f"{description}: {query_result} (expected: {expected_result})",
+                metadata=build_metadata(
+                    query="database_query",
+                    query_result=query_result,
+                    expected=expected_result,
+                    comparison=comparison
+                )
+            )
+            
+        except Exception as e:
+            return AssetCheckResult(
+                passed=False,
+                description=f"{description} failed: {str(e)}",
+                metadata={"error": MetadataValue.text(str(e))}
+            )
+
+# ═══════════════════════════════════════════════════════════════
 # CHECK CONFIGURATION MODELS (Pydantic models for type safety)
 # ═══════════════════════════════════════════════════════════════
 
@@ -1381,32 +2604,31 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Row count check: {len(failed_groups)}/{total_groups} groups failed",
-                metadata={
-                    "total_groups": MetadataValue.int(total_groups),
-                    "failed_groups": MetadataValue.json(failed_groups),
-                    "group_by": MetadataValue.text(group_by),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "filtered": MetadataValue.bool(filtered_df is not df),
-                }
+                metadata=build_metadata(
+                    query="row_count",
+                    query_result=len(failed_groups),
+                    df=filtered_df,
+                    group_by=group_by,
+                    groups={},
+                    failed_groups=failed_groups,
+                    allowed_failures=0
+                )
             )
         else:
             # Original non-grouped logic
-            # Auto-detect dataframe type
-            if hasattr(filtered_df, 'height'):  # Polars
-                row_count = filtered_df.height
-            else:  # Pandas
-                row_count = len(filtered_df)
+            # Use helper method for consistent dataframe operations
+            row_count = _count_rows(filtered_df)
             
             passed = min_rows <= row_count <= (max_rows if max_rows else float('inf'))
             
             return AssetCheckResult(
                 passed=passed,
                 description=f"Row count: {row_count} (expected: {min_rows}-{max_rows or '∞'})",
-                metadata={
-                    "row_count": MetadataValue.int(row_count),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "filtered": MetadataValue.bool(filtered_df is not df),
-                }
+                metadata=build_metadata(
+                    query="row_count",
+                    query_result=row_count,
+                    df=filtered_df
+                )
             )
 
     def _execute_database_row_count(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -1447,13 +2669,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Row count check: {len(failed_groups)}/{total_groups} groups failed (allowed: {allowed_failures})",
-                metadata={
-                    "total_groups": MetadataValue.int(total_groups),
-                    "failed_groups": MetadataValue.json(failed_groups),
-                    "group_by": MetadataValue.text(group_by),
-                    "allowed_failures": MetadataValue.int(allowed_failures),
-                    "processing_mode": MetadataValue.text("sql"),
-                }
+                metadata=build_metadata(
+                    query="row_count",
+                    query_result=len(failed_groups),
+                    group_by=group_by,
+                    groups={},
+                    failed_groups=failed_groups,
+                    allowed_failures=allowed_failures
+                )
             )
         else:
             # Original non-grouped logic
@@ -1466,10 +2689,10 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Row count: {row_count} (expected: {min_rows}-{max_rows or '∞'})",
-                metadata={
-                    "row_count": MetadataValue.int(row_count),
-                    "processing_mode": MetadataValue.text("sql"),
-                }
+                metadata=build_metadata(
+                    query="row_count",
+                    query_result=row_count
+                )
             )
 
     def _execute_database_range_check(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -1560,12 +2783,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         return AssetCheckResult(
             passed=overall_passed,
             description=f"Range validation: {total_columns - len(failed_columns)}/{total_columns} columns passed",
-            metadata={
-                "failed_column_names": MetadataValue.json(failed_columns),
-                "total_columns": MetadataValue.int(total_columns),
-                "validation_results": MetadataValue.json(range_validation_results),
-                "processing_mode": MetadataValue.text("sql"),
-            }
+            metadata=build_metadata(
+                query="range_validation",
+                query_result=len(failed_columns),
+                total_columns=total_columns,
+                validation_results=range_validation_results,
+                processing_mode="sql",
+                additional_metadata={"failed_column_names": MetadataValue.json(failed_columns)}
+            )
         )
 
     def _execute_dataframe_null_check(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
@@ -1583,11 +2808,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             failed_groups = []
             total_groups = 0
             
-            # Get unique groups
-            if hasattr(filtered_df, 'select'):  # Polars
-                groups = filtered_df.select(filtered_df[group_by].unique()).to_numpy().flatten()
-            else:  # Pandas
-                groups = filtered_df[group_by].unique()
+            # Get unique groups using helper method
+            groups = _get_unique_values(filtered_df, group_by)
             
             total_groups = len(groups)
             
@@ -1603,10 +2825,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 group_total_nulls = 0
                 
                 for column in columns:
-                    if hasattr(group_df, 'select'):  # Polars
-                        null_count = group_df.select(group_df[column].null_count()).to_numpy()[0][0]
-                    else:  # Pandas
-                        null_count = group_df[column].isnull().sum()
+                    null_count = _count_null_values(group_df, column)
                     group_null_counts[column] = null_count
                     group_total_nulls += null_count
                 
@@ -1623,23 +2842,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Null check: {len(failed_groups)}/{total_groups} groups failed",
-                metadata={
-                    "total_groups": MetadataValue.int(total_groups),
-                    "failed_groups": MetadataValue.json(failed_groups),
-                    "group_by": MetadataValue.text(group_by),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "filtered": MetadataValue.bool(filtered_df is not df),
-                }
+                metadata=build_metadata(
+                    query="null_check",
+                    query_result=len(failed_groups),
+                    df=filtered_df,
+                    group_by=group_by,
+                    groups={},
+                    failed_groups=failed_groups,
+                    allowed_failures=0
+                )
             )
         else:
             # Original non-grouped logic
             null_counts = {}
             
             for column in columns:
-                if hasattr(filtered_df, 'select'):  # Polars
-                    null_count = filtered_df.select(filtered_df[column].null_count()).to_numpy()[0][0]
-                else:  # Pandas
-                    null_count = filtered_df[column].isnull().sum()
+                null_count = _count_null_values(filtered_df, column)
                 null_counts[column] = null_count
             
             total_nulls = sum(null_counts.values())
@@ -1648,12 +2866,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Null check: {total_nulls} null values found",
-                metadata={
-                    "total_nulls": MetadataValue.int(total_nulls),
-                    "null_counts": MetadataValue.json(null_counts),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "filtered": MetadataValue.bool(filtered_df is not df),
-                }
+                metadata=build_metadata(
+                    query="null_check",
+                    query_result=total_nulls,
+                    df=filtered_df
+                )
             )
 
     def _execute_database_null_check(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -1727,14 +2944,15 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 return AssetCheckResult(
                     passed=passed,
                     description=f"Static threshold check: {len(failed_groups)}/{total_groups} groups failed",
-                    metadata={
-                        "metric": MetadataValue.text(metric),
-                        "total_groups": MetadataValue.int(total_groups),
-                        "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(group_by),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
+                    metadata=build_metadata(
+                        query=f"static_threshold_{metric}",
+                        query_result=len(failed_groups),
+                        df=filtered_df,
+                        group_by=group_by,
+                        groups={},
+                        failed_groups=failed_groups,
+                        allowed_failures=0
+                    )
                 )
             else:
                 # Original non-grouped logic
@@ -1756,20 +2974,22 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 return AssetCheckResult(
                     passed=passed,
                     description=f"Static threshold check ({'PASSED' if passed else 'FAILED'})",
-                    metadata={
-                        "metric": MetadataValue.text(metric),
-                        "metric_value": MetadataValue.float(float(metric_value)),
-                        "failure_reasons": MetadataValue.json(failure_reasons),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
+                    metadata=build_metadata(
+                        query=f"static_threshold_{metric}",
+                        query_result=metric_value,
+                        df=filtered_df
+                    )
                 )
                 
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Static threshold check failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="static_threshold",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_database_static_threshold(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -1810,19 +3030,21 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Static threshold check ({'PASSED' if passed else 'FAILED'})",
-                metadata={
-                    "metric": MetadataValue.text(metric),
-                    "metric_value": MetadataValue.float(float(metric_value)),
-                    "failure_reasons": MetadataValue.json(failure_reasons),
-                    "processing_mode": MetadataValue.text("sql"),
-                }
+                metadata=build_metadata(
+                    query=f"static_threshold_{metric}",
+                    query_result=metric_value
+                )
             )
                 
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Static threshold check failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="static_threshold",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     # ═══════════════════════════════════════════════════════════════
@@ -1840,20 +3062,25 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=result["passed"],
                 description=f"Benford's Law check: {result['description']}",
-                metadata={
-                    "max_deviation": MetadataValue.float(float(result["max_deviation"])),
-                    "threshold": MetadataValue.float(self._get_check_config_value('benford_threshold')),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "processing_mode": MetadataValue.text("dataframe"),
-                    "filtered": MetadataValue.bool(filtered_df is not df),
-                }
+                metadata=build_metadata(
+                    query="benford_law",
+                    query_result=result["max_deviation"],
+                    df=filtered_df,
+                    threshold=self._get_check_config_value('benford_threshold'),
+                    processing_mode="dataframe",
+                    benford_results=result
+                )
             )
             
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Benford's Law check failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="benford_law",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_database_to_dataframe_benford_law(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -1870,20 +3097,26 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=result["passed"],
                 description=f"Benford's Law check: {result['description']}",
-                metadata={
-                    "max_deviation": MetadataValue.float(float(result["max_deviation"])),
-                    "threshold": MetadataValue.float(self._get_check_config_value('benford_threshold', 0.05)),
-                    "data_size": MetadataValue.int(len(df)),
-                    "dataframe_type": MetadataValue.text(type(df).__module__.split('.')[0]),
-                    "processing_mode": MetadataValue.text("database_to_dataframe"),
-                }
+                metadata=build_metadata(
+                    query="benford_law",
+                    query_result=result["max_deviation"],
+                    df=df,
+                    threshold=self._get_check_config_value('benford_threshold', 0.05),
+                    processing_mode="database_to_dataframe",
+                    benford_results=result,
+                    additional_metadata={"data_size": MetadataValue.int(len(df))}
+                )
             )
             
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Benford's Law check failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="benford_law",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_dataframe_entropy(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
@@ -1911,11 +3144,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 group_results = {}
                 failed_groups = []
                 
-                # Group by the specified column
-                if hasattr(filtered_df, 'groupby'):  # Pandas
-                    groups = filtered_df.groupby(group_by)
-                else:  # Polars
-                    groups = filtered_df.group_by(group_by)
+                # Group by the specified column using helper method
+                groups = _group_dataframe(filtered_df, group_by)
                 
                 for group_name, group_df in groups:
                     group_entropy = self._calculate_shannon_entropy(group_df, column)
@@ -1986,7 +3216,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=False,
                 description=f"Entropy analysis failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="entropy_analysis",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_database_to_dataframe_entropy(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -2019,11 +3253,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 group_results = {}
                 failed_groups = []
                 
-                # Group by the specified column
-                if hasattr(filtered_df, 'groupby'):  # Pandas
-                    groups = filtered_df.groupby(group_by)
-                else:  # Polars
-                    groups = filtered_df.group_by(group_by)
+                # Group by the specified column using DataFrameAdapter
+                adapter = DataFrameAdapter(filtered_df)
+                groups = adapter.group_by(group_by)
                 
                 for group_name, group_df in groups:
                     group_entropy = self._calculate_shannon_entropy(group_df, column)
@@ -2050,17 +3282,21 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 return AssetCheckResult(
                     passed=passed,
                     description=description,
-                    metadata={
-                        "group_results": MetadataValue.text(str(group_results)),
-                        "failed_groups": MetadataValue.text(str(failed_groups)),
-                        "total_groups": MetadataValue.int(total_groups),
-                        "allowed_failures": MetadataValue.int(allowed_failures),
-                        "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
-                        "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
-                        "data_size": MetadataValue.int(len(filtered_df)),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "processing_mode": MetadataValue.text("database_to_dataframe"),
-                    }
+                    metadata=build_metadata(
+                        query="entropy_analysis",
+                        query_result=group_results,
+                        df=filtered_df,
+                        group_by=group_by,
+                        groups=group_results,
+                        failed_groups=failed_groups,
+                        allowed_failures=allowed_failures,
+                        processing_mode="database_to_dataframe",
+                        additional_metadata={
+                            "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
+                            "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
+                            "data_size": MetadataValue.int(len(filtered_df))
+                        }
+                    )
                 )
             else:
                 # Simple entropy analysis (no grouping)
@@ -2076,14 +3312,18 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=passed,
                 description=f"Entropy analysis: {entropy:.4f}",
-                metadata={
-                    "entropy": MetadataValue.float(float(entropy)),
-                    "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
-                    "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
-                    "data_size": MetadataValue.int(len(filtered_df)),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "processing_mode": MetadataValue.text("database_to_dataframe"),
-                }
+                metadata=build_metadata(
+                    query="entropy_analysis",
+                    query_result=entropy,
+                    df=filtered_df,
+                    processing_mode="database_to_dataframe",
+                    entropy_value=entropy,
+                    additional_metadata={
+                        "min_entropy": MetadataValue.float(min_entropy) if min_entropy else MetadataValue.null(),
+                        "max_entropy": MetadataValue.float(max_entropy) if max_entropy else MetadataValue.null(),
+                        "data_size": MetadataValue.int(len(filtered_df))
+                    }
+                )
             )
             
         except Exception as e:
@@ -2157,21 +3397,27 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=result["passed"],
                 description=f"Correlation check: {result['description']}",
-                metadata={
-                    "correlation": MetadataValue.float(float(result["correlation"])),
-                    "p_value": MetadataValue.float(float(result["p_value"])),
-                    "method": MetadataValue.text(result["method"]),
-                    "data_size": MetadataValue.int(len(df)),
-                    "dataframe_type": MetadataValue.text(type(df).__module__.split('.')[0]),
-                    "processing_mode": MetadataValue.text("database_to_dataframe"),
-                }
+                metadata=build_metadata(
+                    query="correlation_analysis",
+                    query_result=result["correlation"],
+                    df=df,
+                    correlation=result["correlation"],
+                    p_value=result["p_value"],
+                    method=result["method"],
+                    processing_mode="database_to_dataframe",
+                    additional_metadata={"data_size": MetadataValue.int(len(df))}
+                )
             )
             
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Correlation check failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="correlation_check",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_dataframe_value_set_validation(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
@@ -2187,19 +3433,13 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 total_groups = 0
                 
                 # Get unique groups
-                if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')].unique()).to_numpy().flatten()
-                else:  # Pandas
-                    groups = filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')].unique()
+                groups = _get_unique_values(filtered_df, self._get_check_config_value('value_set_group_by', 'group_by'))
                 
                 total_groups = len(groups)
                 
                 for group in groups:
-                    # Filter data for this group
-                    if hasattr(filtered_df, 'filter'):  # Polars
-                        group_df = filtered_df.filter(filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')] == group)
-                    else:  # Pandas
-                        group_df = filtered_df[filtered_df[self._get_check_config_value('value_set_group_by', None)] == group]
+                    # Filter data for this group using helper method
+                    group_df = _filter_dataframe_by_condition(filtered_df, filtered_df[self._get_check_config_value('value_set_group_by', 'group_by')] == group)
                     
                     # Run value set validation analysis for this group
                     result = self._analyze_value_set_validation(group_df, self._get_check_config_value('value_set_column', 'column'), self._get_check_config_value('value_set_allowed_values', []))
@@ -2219,13 +3459,18 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 return AssetCheckResult(
                     passed=passed,
                     description=f"Value set validation: {len(failed_groups)}/{total_groups} groups failed",
-                    metadata={
-                        "total_groups": MetadataValue.int(total_groups),
-                        "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(self._get_check_config_value('value_set_group_by', None)),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
+                    metadata=build_metadata(
+                        query="value_set_validation",
+                        query_result=len(failed_groups),
+                        df=filtered_df,
+                        group_by=self._get_check_config_value('value_set_group_by', None),
+                        groups=None,  # We don't have group_results here
+                        failed_groups=failed_groups,
+                        allowed_failures=0,
+                        additional_metadata={
+                            "total_groups": MetadataValue.int(total_groups)
+                        }
+                    )
                 )
             else:
                 # Original non-grouped logic
@@ -2248,7 +3493,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=False,
                 description=f"Value set validation failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="value_set_validation",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_database_to_dataframe_value_set_validation(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -2280,11 +3529,15 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             return AssetCheckResult(
                 passed=False,
                 description=f"Value set validation failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="value_set_validation",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     def _execute_dataframe_pattern_matching(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-        """Execute pattern matching validation on dataframe."""
+        """Execute pattern matching validation on dataframe using unified logic."""
         # Get configuration from the current check config
         check_config = getattr(self, '_current_check_config', None)
         if check_config is None:
@@ -2298,113 +3551,74 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             group_by = check_config.group_by
             min_pct = check_config.match_percentage
         
-        filtered_df = df  # Default to original df
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
             # Debug: Log dataframe info
-            context.log.info(f"Pattern matching - Original df shape: {len(df) if hasattr(df, '__len__') else 'unknown'}")
-            context.log.info(f"Pattern matching - Filtered df shape: {len(filtered_df) if hasattr(filtered_df, '__len__') else 'unknown'}")
+            context.log.info(f"Pattern matching - Original df shape: {_get_dataframe_shape(df)}")
+            context.log.info(f"Pattern matching - Filtered df shape: {_get_dataframe_shape(filtered_df)}")
             context.log.info(f"Pattern matching - Column to check: {column}")
-            context.log.info(f"Pattern matching - Available columns: {list(filtered_df.columns) if hasattr(filtered_df, 'columns') else 'unknown'}")
+            context.log.info(f"Pattern matching - Available columns: {_get_dataframe_columns(filtered_df)}")
             
             # Check if column exists
-            if hasattr(filtered_df, 'columns') and column not in filtered_df.columns:
+            if column not in _get_dataframe_columns(filtered_df):
                 return AssetCheckResult(
                     passed=False,
                     description=f"Pattern matching failed: Column '{column}' not found in dataframe",
-                    metadata={
-                        "error": MetadataValue.text(f"Column '{column}' not found. Available columns: {list(filtered_df.columns)}"),
-                        "total_count": MetadataValue.int(0),
-                        "match_count": MetadataValue.int(0),
-                        "match_percentage": MetadataValue.float(0.0),
-                        "required_percentage": MetadataValue.float(min_pct),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                        **self._get_pattern_info()
-                    }
+                    metadata=build_metadata(
+                        query="pattern_matching",
+                        query_result=0,
+                        df=filtered_df,
+                        error=f"Column '{column}' not found. Available columns: {_get_dataframe_columns(filtered_df)}",
+                        pattern_results=self._get_pattern_info(),
+                        additional_metadata={
+                            "total_count": MetadataValue.int(0),
+                            "match_count": MetadataValue.int(0),
+                            "match_percentage": MetadataValue.float(0.0),
+                            "required_percentage": MetadataValue.float(min_pct)
+                        }
+                    )
                 )
             
-            # Check if we need to group by
-            if group_by:
-                # Check each group independently
-                failed_groups = []
-                total_groups = 0
-                
-                # Get unique groups
-                if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(filtered_df[group_by].unique()).to_numpy().flatten()
-                else:  # Pandas
-                    groups = filtered_df[group_by].unique()
-                
-                total_groups = len(groups)
-                
-                for group in groups:
-                    # Filter data for this group
-                    if hasattr(filtered_df, 'filter'):  # Polars
-                        group_df = filtered_df.filter(filtered_df[group_by] == group)
-                    else:  # Pandas
-                        group_df = filtered_df[filtered_df[group_by] == group]
-                    
-                    # Run pattern matching analysis for this group
-                    regex_pattern = self._get_pattern_regex()
-                    result = self._analyze_pattern_matching(group_df, column, regex_pattern, min_pct)
-                    
-                    # If this group fails the pattern check, add it to failed groups
-                    if not result["passed"]:
-                        failed_groups.append({
-                            "group": str(group),
-                            "match_percentage": float(result["match_percentage"]),
-                            "required_percentage": min_pct,
-                            "match_count": int(result["matching_values"]),
-                            "total_count": int(result["total_values"])
-                        })
-                
-                passed = len(failed_groups) == 0
-                
-                # Get pattern information for metadata
-                pattern_info = self._get_pattern_info()
-                
-                return AssetCheckResult(
-                    passed=passed,
-                    description=f"Pattern matching: {len(failed_groups)}/{total_groups} groups failed",
-                    metadata={
-                        "total_groups": MetadataValue.int(total_groups),
-                        "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(group_by),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                        **pattern_info
-                    }
-                )
-            else:
-                # Original non-grouped logic
-                regex_pattern = self._get_pattern_regex()
-                result = self._analyze_pattern_matching(filtered_df, column, regex_pattern, min_pct)
-                
-                # Get pattern information for metadata
-                pattern_info = self._get_pattern_info()
-                
-                return AssetCheckResult(
-                    passed=bool(result["passed"]),
-                    description=f"Pattern matching: {result['description']}",
-                    metadata={
-                        "match_percentage": MetadataValue.float(float(result["match_percentage"])),
-                        "required_percentage": MetadataValue.float(min_pct),
-                        "match_count": MetadataValue.int(int(result["matching_values"])),
-                        "total_count": MetadataValue.int(int(result["total_values"])),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                        **pattern_info
-                    }
-                )
+            # Create a custom query that performs pattern matching analysis
+            regex_pattern = self._get_pattern_regex()
+            pattern_info = self._get_pattern_info()
+            
+            # Build the analysis query
+            analysis_query = f"""
+# Pattern matching analysis for column '{column}' with regex '{regex_pattern}'
+# Expected minimum percentage: {min_pct}%
+
+# Get the pattern matching result
+result = self._analyze_pattern_matching(df, '{column}', '{regex_pattern}', {min_pct})
+
+# Return the match percentage for comparison
+result['match_percentage']
+"""
+            
+            # Use SharedCheckExecutor for unified grouped/non-grouped execution
+            executor = SharedCheckExecutor(self)
+            return executor.execute_dataframe_check(
+                context=context,
+                df=filtered_df,
+                query=analysis_query,
+                expected_result=min_pct,
+                comparison="greater_than_or_equal",
+                group_by=group_by,
+                allowed_failures=0,
+                description="Pattern matching validation"
+            )
             
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Pattern matching failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="pattern_matching",
+                    query_result=0,
+                    error=str(e)
+                )
             )
 
     def _execute_database_to_dataframe_pattern_matching(self, context: AssetCheckExecutionContext) -> AssetCheckResult:
@@ -2585,7 +3799,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             )
 
     def _execute_dataframe_data_type(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-        """Execute data type validation on dataframe."""
+        """Execute data type validation on dataframe using unified logic."""
         # Get configuration using helper method
         columns = self._get_check_config_value('data_type_columns', [])
         group_by = self._get_check_config_value('data_type_group_by')
@@ -2596,116 +3810,103 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             
             # Debug: Log the data_type_columns configuration (removed sensitive data logging)
             context.log.info(f"Data type validation - data_type_columns: {columns}")
-            context.log.info(f"Data type validation - available columns: {list(filtered_df.columns) if hasattr(filtered_df, 'columns') else 'unknown'}")
-            context.log.info(f"Data type validation - dataframe shape: {filtered_df.shape if hasattr(filtered_df, 'shape') else 'unknown'}")
+            context.log.info(f"Data type validation - available columns: {_get_dataframe_columns(filtered_df)}")
+            context.log.info(f"Data type validation - dataframe shape: {_get_dataframe_shape(filtered_df)}")
             
-            # Check if we need to group by
-            if group_by:
-                # Check each group independently
-                failed_groups = []
-                total_groups = 0
-                
-                # Get unique groups
-                if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(filtered_df[group_by].unique()).to_numpy().flatten()
-                else:  # Pandas
-                    groups = filtered_df[group_by].unique()
-                
-                total_groups = len(groups)
-                
-                for group in groups:
-                    # Filter data for this group
-                    if hasattr(filtered_df, 'filter'):  # Polars
-                        group_df = filtered_df.filter(filtered_df[group_by] == group)
-                    else:  # Pandas
-                        group_df = filtered_df[filtered_df[group_by] == group]
-                    
-                    # Run data type validation analysis for this group
-                    result = self._analyze_data_type_validation(group_df, columns)
-                    
-                    # If this group fails the validation, add it to failed groups
-                    if not result["passed"]:
-                        failed_groups.append({
-                            "group": str(group),
-                            "failed_column_names": result["failed_column_names"],
-                            "total_columns": int(result["total_columns"]),
-                            "validation_results": result["type_validation_results"]
-                        })
-                
-                passed = len(failed_groups) == 0
-                
-                return AssetCheckResult(
-                    passed=passed,
-                    description=f"Data type validation: {len(failed_groups)}/{total_groups} groups failed",
-                    metadata={
-                        "total_groups": MetadataValue.int(total_groups),
-                        "failed_groups": MetadataValue.json(failed_groups),
-                        "group_by": MetadataValue.text(group_by),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
-                )
-            else:
-                # Original non-grouped logic
-                result = self._analyze_data_type_validation(filtered_df, columns)
-                
-                return AssetCheckResult(
-                    passed=bool(result["passed"]),
-                    description=f"Data type validation: {result['description']}",
-                    metadata={
-                        "failed_column_names": MetadataValue.json(result["failed_column_names"]),
-                        "total_columns": MetadataValue.int(int(result["total_columns"])),
-                        "validation_results": MetadataValue.json(result["type_validation_results"]),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
-                )
+            # Build the analysis query
+            analysis_query = f"""
+# Data type validation analysis for columns: {columns}
+# Expected: All columns should have correct data types
+
+# Get the data type validation result
+result = self._analyze_data_type_validation(df, {columns})
+
+# Create detailed result with both count and detailed information
+detailed_result = {{
+    'failed_count': len(result['failed_column_names']),
+    'failed_columns': result['failed_column_names'],
+    'type_validation_results': result['type_validation_results'],
+    'total_columns': result['total_columns'],
+    'description': result['description']
+}}
+
+# Return the detailed result for comparison (failed_count = 0 means passed)
+detailed_result
+"""
+            
+            # Use SharedCheckExecutor for unified grouped/non-grouped execution
+            executor = SharedCheckExecutor(self)
+            return executor.execute_dataframe_check(
+                context=context,
+                df=filtered_df,
+                query=analysis_query,
+                expected_result=0,
+                comparison="equals",
+                group_by=group_by,
+                allowed_failures=0,
+                description="Data type validation"
+            )
             
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Data type validation failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="data_type_validation",
+                    query_result=0,
+                    error=str(e)
+                )
             )
 
     def _execute_dataframe_range_check(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
-        """Execute range validation on dataframe."""
+        """Execute range validation on dataframe using unified logic."""
         try:
             # Apply WHERE clause filtering
             filtered_df = self._filter_dataframe(df)
             
             # Get configuration using helper method
             range_columns = self._get_check_config_value('range_columns', [])
+            group_by = self._get_check_config_value('range_group_by')
             
             # Debug: Log the range_columns configuration
             context.log.info(f"Range validation - range_columns: {range_columns}")
             context.log.info(f"Range validation - asset_key: {getattr(self, '_asset_name', 'N/A')}")
-            context.log.info(f"Range validation - dataframe shape: {filtered_df.shape}")
+            context.log.info(f"Range validation - dataframe shape: {_get_dataframe_shape(filtered_df)}")
             
-            result = self._analyze_range_validation(filtered_df, range_columns)
+            # Build the analysis query
+            analysis_query = f"""
+# Range validation analysis for columns: {range_columns}
+# Expected: All columns should be within their specified ranges
+
+# Get the range validation result
+result = self._analyze_range_validation(df, {range_columns})
+
+# Return the number of failed columns for comparison (0 = passed)
+len(result['failed_column_names'])
+"""
             
-            # Debug: Log the result
-            context.log.info(f"Range validation result - total_columns: {result.get('total_columns', 'N/A')}")
-            context.log.info(f"Range validation result - passed: {result.get('passed', 'N/A')}")
-            
-            return AssetCheckResult(
-                passed=bool(result["passed"]),
-                description=f"Range validation: {result['description']}",
-                metadata={
-                    "failed_column_names": MetadataValue.json(result["failed_column_names"]),
-                    "total_columns": MetadataValue.int(int(result["total_columns"])),
-                    "validation_results": MetadataValue.json(result["range_validation_results"]),
-                    "outlier_counts": MetadataValue.json(result["outlier_counts"]),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                    "filtered": MetadataValue.bool(filtered_df is not df),
-                }
+            # Use SharedCheckExecutor for unified grouped/non-grouped execution
+            executor = SharedCheckExecutor(self)
+            return executor.execute_dataframe_check(
+                context=context,
+                df=filtered_df,
+                query=analysis_query,
+                expected_result=0,
+                comparison="equals",
+                group_by=group_by,
+                allowed_failures=0,
+                description="Range validation"
             )
             
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Range validation failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="range_validation",
+                    query_result=0,
+                    error=str(e)
+                )
             )
 
     def _execute_dataframe_uniqueness_check(self, context: AssetCheckExecutionContext, df) -> AssetCheckResult:
@@ -2715,7 +3916,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             filtered_df = self._filter_dataframe(df)
             
             # Get configuration using helper method
-            uniqueness_columns = self._get_check_config_value('uniqueness_columns', [])
+            uniqueness_columns = self._get_check_config_value('columns', [])
             
             result = self._analyze_uniqueness_validation(filtered_df, uniqueness_columns)
             
@@ -2922,11 +4123,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             )
 
     def _execute_custom_dataframe_check(self, context: AssetCheckExecutionContext, df, check_cfg: dict) -> AssetCheckResult:
-        """Execute custom dataframe check from configuration."""
+        """Execute custom dataframe check from configuration using unified query execution."""
         try:
-            # Apply WHERE clause filtering
-            filtered_df = self._filter_dataframe(df)
-            
             # Extract configuration from check_cfg
             # Handle both dict and Pydantic model
             if isinstance(check_cfg, CustomDataframeCheckConfig):
@@ -2944,138 +4142,40 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 group_by = check_cfg.get('group_by')
                 allowed_failures = check_cfg.get('allowed_failures', 0)
             
-            # Execute the query
+            # Use unified query execution
             if group_by:
-                # Grouped scenario
-                group_results = {}
-                failed_groups = []
-                total_groups = 0
-                
-                if hasattr(filtered_df, 'select'):  # Polars
-                    groups = filtered_df.select(group_by).unique().to_numpy().flatten()
-                    total_groups = len(groups)
-                    
-                    for group_name in groups:
-                        group_df = filtered_df.filter(filtered_df[group_by] == group_name)
-                        try:
-                            # Execute the query as Python code with df available
-                            local_vars = {'df': group_df, 'pd': pd, 'np': np}
-                            exec(f"result = {query}", {}, local_vars)
-                            metric_value = float(local_vars['result'])
-                            group_results[group_name] = metric_value
-                            
-                            # Check if this group passes
-                            if expected_result is not None:
-                                if not self._compare_values(str(metric_value), str(expected_result), comparison):
-                                    failed_groups.append({
-                                        "group": group_name,
-                                        "actual": metric_value,
-                                        "expected": expected_result
-                                    })
-                        except Exception as e:
-                            failed_groups.append({
-                                "group": group_name,
-                                "error": str(e)
-                            })
-                else:  # Pandas
-                    groups = filtered_df[group_by].unique()
-                    total_groups = len(groups)
-                    
-                    for group_name in groups:
-                        group_df = filtered_df[filtered_df[group_by] == group_name]
-                        try:
-                            # Execute the query as Python code with df available
-                            local_vars = {'df': group_df, 'pd': pd, 'np': np}
-                            exec(f"result = {query}", {}, local_vars)
-                            metric_value = float(local_vars['result'])
-                            group_results[group_name] = metric_value
-                            
-                            # Check if this group passes
-                            if expected_result is not None:
-                                if not self._compare_values(str(metric_value), str(expected_result), comparison):
-                                    failed_groups.append({
-                                        "group": group_name,
-                                        "actual": metric_value,
-                                        "expected": expected_result
-                                    })
-                        except Exception as e:
-                            failed_groups.append({
-                                "group": group_name,
-                                "error": str(e)
-                            })
-                
-                passed = len(failed_groups) <= allowed_failures
-                
-                return AssetCheckResult(
-                    passed=passed,
-                    description=f"{description}: {len(failed_groups)}/{total_groups} groups failed",
-                    metadata={
-                        "query": MetadataValue.text(query),
-                        "group_by": MetadataValue.text(group_by),
-                        "total_groups": MetadataValue.int(total_groups),
-                        "failed_groups_count": MetadataValue.int(len(failed_groups)),
-                        "allowed_failures": MetadataValue.int(allowed_failures),
-                        "group_results": MetadataValue.json({str(k): float(v) for k, v in group_results.items()}),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
+                # For grouped checks, use the existing executor
+                executor = SharedCheckExecutor(self)
+                return executor.execute_dataframe_check(
+                    context=context,
+                    df=df,
+                    query=query,
+                    expected_result=expected_result,
+                    comparison=comparison,
+                    group_by=group_by,
+                    allowed_failures=allowed_failures,
+                    description=description
                 )
             else:
-                # Non-grouped scenario
-                try:
-                    # Execute the query as Python code with df available
-                    local_vars = {'df': filtered_df, 'pd': pd, 'np': np}
-                    exec(f"result = {query}", {}, local_vars)
-                    query_result = str(local_vars['result'])
-                except Exception as e:
-                    # Fallback to eval for simple expressions
-                    try:
-                        if hasattr(filtered_df, 'select'):  # Polars
-                            result = filtered_df.select(query).to_numpy()
-                        else:  # Pandas
-                            result = filtered_df.eval(query)
-                        query_result = str(result)
-                    except Exception as eval_error:
-                        return AssetCheckResult(
-                            passed=False,
-                            description=f"Custom dataframe check failed: {str(e)} (eval also failed: {str(eval_error)})",
-                            metadata={"error": MetadataValue.text(str(e)), "eval_error": MetadataValue.text(str(eval_error))}
-                        )
-                
-                # If no expected result specified, just return the query result
-                if expected_result is None:
-                    return AssetCheckResult(
-                        passed=True,
-                        description=f"{description}: {query_result}",
-                        metadata={
-                            "query": MetadataValue.text(query),
-                            "query_result": MetadataValue.text(query_result),
-                            "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                            "filtered": MetadataValue.bool(filtered_df is not df),
-                        }
-                    )
-                
-                # Perform comparison if expected result is specified
-                passed = self._compare_values(query_result, str(expected_result), comparison)
-                
-                return AssetCheckResult(
-                    passed=passed,
-                    description=f"{description}: {query_result} (expected: {expected_result})",
-                    metadata={
-                        "query": MetadataValue.text(query),
-                        "query_result": MetadataValue.text(query_result),
-                        "expected_result": MetadataValue.text(str(expected_result)),
-                        "comparison": MetadataValue.text(self._safe_enum_to_string(comparison)),
-                        "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split('.')[0]),
-                        "filtered": MetadataValue.bool(filtered_df is not df),
-                    }
+                # For non-grouped checks, use the unified method
+                executor = SharedCheckExecutor(self)
+                return executor._run_dataframe_query(
+                    df=df,
+                    query=query,
+                    expected_result=expected_result,
+                    comparison=comparison,
+                    description=description
                 )
                 
         except Exception as e:
             return AssetCheckResult(
                 passed=False,
                 description=f"Custom dataframe check failed: {str(e)}",
-                metadata={"error": MetadataValue.text(str(e))}
+                metadata=build_metadata(
+                    query="custom_dataframe_check",
+                    query_result="ERROR",
+                    error=str(e)
+                )
             )
 
     # ═══════════════════════════════════════════════════════════════
@@ -3198,9 +4298,12 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         return " AND ".join(conditions) if conditions else ""
 
     def _filter_dataframe(self, df) -> Any:
-        """Apply WHERE clause filtering to dataframe."""
+        """Apply WHERE clause filtering and sampling to dataframe."""
         # If no filtering is needed, return original dataframe
         if not self.where_clause and not (self.time_filter_column and (self.hours_back or self.days_back)):
+            # Apply sampling if configured
+            if self.sample_size:
+                return _sample_dataframe(df, self.sample_size, self.sample_method.value)
             return df
         
         # For dataframe filtering, we need to convert WHERE clause to dataframe operations
@@ -3231,112 +4334,64 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # For now, we'll skip custom WHERE clauses for dataframe filtering
             pass
         
+        # Apply sampling if configured
+        if self.sample_size:
+            filtered_df = _sample_dataframe(filtered_df, self.sample_size, self.sample_method.value)
+        
         return filtered_df
 
     def _compute_dataframe_metric(self, df, metric: str) -> float:
         """Compute metric value for dataframe (pandas or polars)."""
         if metric == "num_rows":
-            if hasattr(df, 'height'):  # Polars
-                return float(df.height)
-            else:  # Pandas
-                return float(len(df))
+            return float(_count_rows(df))
                 
         elif ":" in metric:
             metric_type, column = metric.split(":", 1)
             
             # NULL-related metrics
             if metric_type == "null_count":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].null_count()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].isnull().sum())
+                return float(_count_null_values(df, column))
                     
             elif metric_type == "null_pct":
-                if hasattr(df, 'select'):  # Polars
-                    null_count = df.select(df[column].null_count()).to_numpy()[0][0]
-                    total = df.height
-                else:  # Pandas
-                    null_count = df[column].isnull().sum()
-                    total = len(df)
+                null_count = _count_null_values(df, column)
+                total = _count_rows(df)
                 return float((null_count / total * 100) if total > 0 else 0)
                 
             # DISTINCT metrics
             elif metric_type == "distinct_count":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].n_unique()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].nunique())
+                return float(len(_get_unique_values(df, column)))
                     
             # AGGREGATION metrics
             elif metric_type == "mean":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].mean()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].mean())
-                    
+                return float(_get_column_mean(df, column))
+                
             elif metric_type == "sum":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].sum()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].sum())
-                    
+                return float(_get_column_sum(df, column))
+                
             elif metric_type == "max":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].max()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].max())
-                    
+                return float(_get_column_max(df, column))
+                
             elif metric_type == "min":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].min()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].min())
+                return float(_get_column_min(df, column))
                     
             # STATISTICAL metrics
             elif metric_type == "std":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].std()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].std())
-                    
+                return float(_get_column_std(df, column))
+                
             elif metric_type == "var":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].var()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].var())
-                    
+                return float(_get_column_var(df, column))
+                
             elif metric_type == "median":
-                if hasattr(df, 'select'):  # Polars
-                    return float(df.select(df[column].median()).to_numpy()[0][0])
-                else:  # Pandas
-                    return float(df[column].median())
-                    
+                return float(_get_column_median(df, column))
+                
             elif metric_type == "mode":
-                if hasattr(df, 'select'):  # Polars
-                    # Polars doesn't have mode, use pandas logic
-                    mode_values = df[column].mode()
-                    return float(mode_values[0]) if len(mode_values) > 0 else 0.0
-                else:  # Pandas
-                    mode_values = df[column].mode()
-                    return float(mode_values[0]) if len(mode_values) > 0 else 0.0
-                    
+                return float(_get_column_mode(df, column))
+                
             elif metric_type == "range":
-                if hasattr(df, 'select'):  # Polars
-                    max_val = df.select(df[column].max()).to_numpy()[0][0]
-                    min_val = df.select(df[column].min()).to_numpy()[0][0]
-                else:  # Pandas
-                    max_val = df[column].max()
-                    min_val = df[column].min()
-                return float(max_val - min_val) if max_val is not None and min_val is not None else 0.0
-                    
+                return float(_get_column_range(df, column))
+                
             elif metric_type == "iqr":
-                if hasattr(df, 'select'):  # Polars
-                    q75 = df.select(df[column].quantile(0.75)).to_numpy()[0][0]
-                    q25 = df.select(df[column].quantile(0.25)).to_numpy()[0][0]
-                else:  # Pandas
-                    q75 = df[column].quantile(0.75)
-                    q25 = df[column].quantile(0.25)
-                return float(q75 - q25) if q75 is not None and q25 is not None else 0.0
+                return float(_get_column_iqr(df, column))
                     
             elif metric_type == "skew":
                 if hasattr(df, 'select'):  # Polars
@@ -3500,7 +4555,14 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                         elif hasattr(result, 'fetchone'):
                             # For single-row results (like COUNT queries)
                             row = result.fetchone()
-                            return [row] if row else []
+                            if row:
+                                # If it's a single value (like COUNT(*)), extract it
+                                if len(row) == 1:
+                                    return row[0]  # Return the actual value, not a tuple
+                                else:
+                                    return row  # Return the tuple for multi-column results
+                            else:
+                                return None
                         elif hasattr(result, 'df'):
                             # DuckDB with pandas
                             df = result.df()
@@ -3924,82 +4986,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             value = self._compute_dataframe_metric(df, metric)
             return {"__total__": float(value)}
         else:
-            # Group by specified column
-            values = {}
-            
-            if hasattr(df, 'select'):  # Polars
-                import polars as pl
-                
-                if metric == "num_rows":
-                    # Count rows per group
-                    grouped = df.group_by(group_by).agg(pl.count().alias("count"))
-                    for row in grouped.iter_rows(named=True):
-                        values[str(row[group_by])] = float(row["count"])
-                elif ":" in metric:
-                    metric_type, column = metric.split(":", 1)
-                    if metric_type == "mean":
-                        grouped = df.group_by(group_by).agg(pl.col(column).mean().alias("mean_val"))
-                        for row in grouped.iter_rows(named=True):
-                            values[str(row[group_by])] = float(row["mean_val"])
-                    elif metric_type == "sum":
-                        grouped = df.group_by(group_by).agg(pl.col(column).sum().alias("sum_val"))
-                        for row in grouped.iter_rows(named=True):
-                            values[str(row[group_by])] = float(row["sum_val"])
-                    elif metric_type == "max":
-                        grouped = df.group_by(group_by).agg(pl.col(column).max().alias("max_val"))
-                        for row in grouped.iter_rows(named=True):
-                            values[str(row[group_by])] = float(row["max_val"])
-                    elif metric_type == "min":
-                        grouped = df.group_by(group_by).agg(pl.col(column).min().alias("min_val"))
-                        for row in grouped.iter_rows(named=True):
-                            values[str(row[group_by])] = float(row["min_val"])
-                    elif metric_type == "distinct_count":
-                        grouped = df.group_by(group_by).agg(pl.col(column).n_unique().alias("distinct_count"))
-                        for row in grouped.iter_rows(named=True):
-                            values[str(row[group_by])] = float(row["distinct_count"])
-                    elif metric_type == "null_count":
-                        grouped = df.group_by(group_by).agg(pl.col(column).null_count().alias("null_count"))
-                        for row in grouped.iter_rows(named=True):
-                            values[str(row[group_by])] = float(row["null_count"])
-                    elif metric_type == "null_pct":
-                        grouped = df.group_by(group_by).agg([
-                            pl.col(column).null_count().alias("nulls"),
-                            pl.count().alias("total")
-                        ])
-                        for row in grouped.iter_rows(named=True):
-                            pct = (row["nulls"] / row["total"] * 100) if row["total"] > 0 else 0
-                            values[str(row[group_by])] = float(pct)
-                    
-            else:  # Pandas
-                if metric == "num_rows":
-                    # Count rows per group
-                    grouped = df.groupby(group_by).size()
-                    values = {str(k): float(v) for k, v in grouped.items()}
-                elif ":" in metric:
-                    metric_type, column = metric.split(":", 1)
-                    if metric_type == "mean":
-                        grouped = df.groupby(group_by)[column].mean()
-                        values = {str(k): float(v) for k, v in grouped.items()}
-                    elif metric_type == "sum":
-                        grouped = df.groupby(group_by)[column].sum()
-                        values = {str(k): float(v) for k, v in grouped.items()}
-                    elif metric_type == "max":
-                        grouped = df.groupby(group_by)[column].max()
-                        values = {str(k): float(v) for k, v in grouped.items()}
-                    elif metric_type == "min":
-                        grouped = df.groupby(group_by)[column].min()
-                        values = {str(k): float(v) for k, v in grouped.items()}
-                    elif metric_type == "distinct_count":
-                        grouped = df.groupby(group_by)[column].nunique()
-                        values = {str(k): float(v) for k, v in grouped.items()}
-                    elif metric_type == "null_count":
-                        grouped = df.groupby(group_by)[column].isnull().sum()
-                        values = {str(k): float(v) for k, v in grouped.items()}
-                    elif metric_type == "null_pct":
-                        grouped = df.groupby(group_by)[column].apply(lambda x: x.isnull().sum() / len(x) * 100)
-                        values = {str(k): float(v) for k, v in grouped.items()}
-            
-            return values
+            # Group by specified column using helper method
+            return _get_grouped_metric_values(df, metric, group_by)
 
     def _load_historical_data(self, context: AssetCheckExecutionContext, check_name: str, metric: str, group_by: Optional[str] = None, history: int = 10) -> dict:
         """Load historical data for all checks from Dagster asset check metadata."""
@@ -4325,7 +5313,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             context.log.info(f"Percent delta - Current values empty: {not current_values}")
             context.log.info(f"Percent delta - Metric: {metric}")
             context.log.info(f"Percent delta - Group by: {group_by}")
-            context.log.info(f"Percent delta - DataFrame shape: {df.shape}")
+            context.log.info(f"Percent delta - DataFrame shape: {_get_dataframe_shape(df)}")
             
             # Step 2: Load historical data
             historical_data = self._load_historical_data(context, "percent_delta", metric, group_by, self._get_check_config_value('percent_delta_history', 10))
@@ -4647,15 +5635,18 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     def _calculate_correlation(self, df, column_x: str, column_y: str) -> tuple:
         """Calculate correlation between two columns using specified method."""
         try:
+            # Use helper method to select columns
+            selected_df = _select_columns(df, [column_x, column_y])
+            
             # Handle different dataframe types
             if hasattr(df, 'select'):  # Polars
                 # Convert to pandas for correlation calculation
-                df_pandas = df.select([column_x, column_y]).to_pandas()
+                df_pandas = selected_df.to_pandas()
                 x_values = df_pandas[column_x].dropna()
                 y_values = df_pandas[column_y].dropna()
             else:  # Pandas
-                x_values = df[column_x].dropna()
-                y_values = df[column_y].dropna()
+                x_values = selected_df[column_x].dropna()
+                y_values = selected_df[column_y].dropna()
             
             # Align the series (same length)
             common_index = x_values.index.intersection(y_values.index)
@@ -4710,13 +5701,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
     def _analyze_value_set_validation(self, df, column: str, allowed_values: List[str]) -> dict:
         """Analyze value set validation for a column."""
         try:
-            # Get unique values in the column
-            if hasattr(df, 'select'):  # Polars
-                unique_values = df[column].unique().to_list()
-                total_values = df.height
-            else:  # Pandas
-                unique_values = df[column].unique().tolist()
-                total_values = len(df)
+            # Get unique values in the column using helper methods
+            unique_values = _get_unique_values(df, column)
+            total_values = _count_rows(df)
             
             # Count valid and invalid values
             valid_values = 0
@@ -4725,17 +5712,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             for value in unique_values:
                 if str(value) in allowed_values:
                     # Count occurrences of this valid value
-                    if hasattr(df, 'select'):  # Polars
-                        count = df.filter(df[column] == value).height
-                    else:  # Pandas
-                        count = (df[column] == value).sum()
+                    count = _count_rows(_filter_dataframe_by_condition(df, df[column] == value))
                     valid_values += count
                 else:
                     # Count occurrences of this invalid value
-                    if hasattr(df, 'select'):  # Polars
-                        count = df.filter(df[column] == value).height
-                    else:  # Pandas
-                        count = (df[column] == value).sum()
+                    count = _count_rows(_filter_dataframe_by_condition(df, df[column] == value))
                     invalid_values.append({"value": str(value), "count": int(count)})
             
             # Calculate percentage of valid values
@@ -5056,11 +6037,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
         try:
             import re
             
-            # Get total number of values
-            if hasattr(df, 'height'):  # Polars
-                total_values = df.height
-            else:  # Pandas
-                total_values = len(df)
+            # Get total number of values using helper method
+            total_values = _count_rows(df)
             
             # Count matching and non-matching values
             matching_values = 0
@@ -5069,33 +6047,31 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             # Compile regex pattern
             pattern = re.compile(regex_pattern)
             
-            # Check each value in the column
-            if hasattr(df, 'select'):  # Polars
-                # Get unique values to avoid counting duplicates multiple times
-                unique_values = df[column].unique().to_list()
-                for value in unique_values:
-                    str_value = str(value)
-                    if pattern.match(str_value):
-                        # Count occurrences of this matching value
-                        count = df.filter(df[column] == value).height
-                        matching_values += count
+            # Get unique values using helper method to avoid counting duplicates multiple times
+            unique_values = _get_unique_values(df, column)
+            
+            for value in unique_values:
+                str_value = str(value)
+                if pattern.match(str_value):
+                    # Count occurrences of this matching value using DataFrameAdapter
+                    adapter = DataFrameAdapter(df)
+                    filtered_df = adapter.filter(column, value)
+                    if filtered_df is not None:
+                        filtered_adapter = DataFrameAdapter(filtered_df)
+                        count = filtered_adapter.count_rows()
                     else:
-                        # Count occurrences of this non-matching value
-                        count = df.filter(df[column] == value).height
-                        non_matching_values.append({"value": str_value, "count": int(count)})
-            else:  # Pandas
-                # Get unique values to avoid counting duplicates multiple times
-                unique_values = df[column].unique().tolist()
-                for value in unique_values:
-                    str_value = str(value)
-                    if pattern.match(str_value):
-                        # Count occurrences of this matching value
-                        count = (df[column] == value).sum()
-                        matching_values += count
+                        count = 0
+                    matching_values += count
+                else:
+                    # Count occurrences of this non-matching value using DataFrameAdapter
+                    adapter = DataFrameAdapter(df)
+                    filtered_df = adapter.filter(column, value)
+                    if filtered_df is not None:
+                        filtered_adapter = DataFrameAdapter(filtered_df)
+                        count = filtered_adapter.count_rows()
                     else:
-                        # Count occurrences of this non-matching value
-                        count = (df[column] == value).sum()
-                        non_matching_values.append({"value": str_value, "count": int(count)})
+                        count = 0
+                    non_matching_values.append({"value": str_value, "count": int(count)})
             
             # Calculate percentage of matching values
             match_percentage = (matching_values / total_values * 100) if total_values > 0 else 0.0
@@ -5133,11 +6109,11 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             type_validation_results = {}
             failed_columns = []
             
-            # Debug: Log available columns
-            available_columns = list(df.columns) if hasattr(df, 'columns') else []
+            # Debug: Log available columns using helper method
+            available_columns = _get_dataframe_columns(df)
             
-            # Check if DataFrame is empty
-            is_empty = len(df) == 0 if hasattr(df, '__len__') else True
+            # Check if DataFrame is empty using helper method
+            is_empty = _count_rows(df) == 0
             
             for column_config in data_type_columns:
                 column_name = column_config["column"]
@@ -5154,11 +6130,9 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     failed_columns.append(column_name)
                     continue
                 
-                # Get actual data type of the column
-                if hasattr(df, 'select'):  # Polars
-                    actual_type = str(df[column_name].dtype)
-                else:  # Pandas
-                    actual_type = str(df[column_name].dtype)
+                # Get actual data type of the column using helper method
+                dtypes = _get_dataframe_dtypes(df)
+                actual_type = str(dtypes.get(column_name, "unknown"))
                 
                 # Special handling for empty DataFrames
                 if is_empty:
@@ -5268,11 +6242,8 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                 min_value = column_config.get("min_value")
                 max_value = column_config.get("max_value")
                 
-                # Get column data
-                if hasattr(df, 'select'):  # Polars
-                    column_data = df[column_name].to_numpy()
-                else:  # Pandas
-                    column_data = df[column_name].values
+                # Get column data using helper method
+                column_data = _get_column_values(df, column_name)
                 
                 # Remove null values for analysis
                 column_data = column_data[~pd.isna(column_data)]
@@ -5379,7 +6350,7 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     continue
                 
                 # Check if all columns exist in dataframe
-                missing_columns = [col for col in columns_to_check if col not in df.columns]
+                missing_columns = [col for col in columns_to_check if col not in _get_dataframe_columns(df)]
                 if missing_columns:
                     uniqueness_validation_results[check_name] = {
                         "passed": False,
@@ -5392,15 +6363,17 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
                     failed_checks.append(check_name)
                     continue
                 
-                # Check for duplicates
-                if hasattr(df, 'select'):  # Polars
-                    # For Polars, we need to handle differently
-                    subset_df = df.select(columns_to_check)
-                    duplicate_mask = subset_df.is_duplicated()
-                    duplicate_count = duplicate_mask.sum()
-                else:  # Pandas
-                    duplicate_mask = df.duplicated(subset=columns_to_check, keep=False)
-                    duplicate_count = duplicate_mask.sum()
+                # Check for duplicates using DataFrameAdapter
+                adapter = DataFrameAdapter(df)
+                subset_df = adapter.select_columns(columns_to_check)
+                duplicate_mask = adapter.is_duplicated(subset_df, columns_to_check)
+                filtered_df = adapter.apply_condition(duplicate_mask)
+                # Count rows in the filtered dataframe (duplicates)
+                if filtered_df is not None:
+                    filtered_adapter = DataFrameAdapter(filtered_df)
+                    duplicate_count = filtered_adapter.count_rows()
+                else:
+                    duplicate_count = 0
                 
                 # Check if validation passed (no duplicates)
                 passed = duplicate_count == 0
@@ -5618,61 +6591,31 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             )
 
     def _execute_custom_sql_check(self, context: AssetCheckExecutionContext, check_cfg: Union[dict, CustomSqlCheckConfig], db_key: str) -> AssetCheckResult:
-        """Execute custom SQL check against the database."""
+        """Execute custom SQL check against the database using SharedCheckExecutor."""
         try:
-            database_resource = getattr(context.resources, db_key)
-            
             # Extract configuration from check_cfg
             if isinstance(check_cfg, CustomSqlCheckConfig):
                 sql_query = check_cfg.sql_query
                 expected_result = check_cfg.expected_result
                 comparison = check_cfg.comparison
+                description = check_cfg.name or 'Custom SQL check'
             else:
                 sql_query = check_cfg.get('sql_query')
                 expected_result = check_cfg.get('expected_result')
                 comparison = check_cfg.get('comparison', 'equals')
+                description = check_cfg.get('name', 'Custom SQL check')
             
             if not sql_query:
                 raise ValueError("sql_query is required for custom SQL check")
             
-            with database_resource.get_connection() as conn:
-                # Execute the SQL query directly against the database
-                result = conn.execute(sql_query).fetchone()
-                query_result = result[0] if result else None
-                
-            # Build metadata
-            metadata = {
-                "query": MetadataValue.text(sql_query),
-                "query_result": MetadataValue.text(str(query_result)),
-            }
-            
-            # If no expected result specified, just return the query result
-            if expected_result is None:
-                return AssetCheckResult(
-                    passed=True,
-                    description=f"Custom SQL query executed successfully: {query_result}",
-                    metadata=metadata
-                )
-            
-            # Perform comparison if expected result is specified
-            expected_result_str = str(expected_result)
-            passed = self._compare_values(str(query_result), expected_result_str, comparison)
-            
-            description = f"Custom SQL query result: {query_result}, Expected: {expected_result_str}, Comparison: {comparison}"
-            if passed:
-                description += " - PASSED"
-            else:
-                description += " - FAILED"
-            
-            metadata.update({
-                "expected_result": MetadataValue.text(expected_result_str),
-                "comparison": MetadataValue.text(self._safe_enum_to_string(comparison)),
-            })
-            
-            return AssetCheckResult(
-                passed=passed,
-                description=description,
-                metadata=metadata
+            # Use SharedCheckExecutor for unified execution
+            executor = SharedCheckExecutor(self)
+            return executor.execute_database_check(
+                context=context,
+                query=sql_query,
+                expected_result=expected_result,
+                comparison=comparison,
+                description=description
             )
             
         except Exception as e:
@@ -6322,61 +7265,32 @@ class EnhancedDataQualityChecks(dg.Component, dg.Model, dg.Resolvable):
             )
 
     def _execute_dataframe_query_check(self, context: AssetCheckExecutionContext, df, check_cfg: Union[dict, DataframeQueryCheckConfig]) -> AssetCheckResult:
-        """Execute a dataframe query check against the dataframe."""
+        """Execute a dataframe query check against the dataframe using SharedCheckExecutor."""
         try:
-            # Get configuration using helper method
-            query = self._get_check_config_value('query', '')
-            expected = self._get_check_config_value('expected_result', None)
-            comparison = self._get_check_config_value('comparison', 'equals')
-            description = self._get_check_config_value('name', '')
-            blocking = self._get_check_config_value('blocking', False)
-            
-            filtered_df = self._filter_dataframe(df)
-            
-            # Handle different dataframe types
-            import pandas as pd
-            if isinstance(filtered_df, pd.DataFrame):
-                # Pandas dataframe
-                result_df = filtered_df.query(query)
-                actual_result = len(result_df)
+            # Extract configuration from check_cfg
+            if isinstance(check_cfg, DataframeQueryCheckConfig):
+                query = check_cfg.query
+                expected_result = check_cfg.expected_result
+                comparison = check_cfg.comparison
+                description = check_cfg.name or 'Dataframe query check'
             else:
-                # Polars or other dataframe - convert to pandas for query
-                try:
-                    pdf = filtered_df.to_pandas()
-                    result_df = pdf.query(query)
-                    actual_result = len(result_df)
-                except Exception:
-                    # Fallback: try to evaluate the query as a boolean expression
-                    # This handles simple queries like "year_of_birth >= 2020"
-                    try:
-                        # For simple boolean expressions, we can evaluate them
-                        import pandas as pd
-                        pdf = filtered_df.to_pandas() if hasattr(filtered_df, 'to_pandas') else pd.DataFrame(filtered_df)
-                        # Create a boolean mask from the query
-                        mask = pdf.eval(query)
-                        result_df = pdf[mask]
-                        actual_result = len(result_df)
-                    except Exception as eval_error:
-                        # Last resort: try to parse the query manually
-                        actual_result = 0
-                        context.log.warning(f"Could not execute dataframe query '{query}': {eval_error}")
-                
-            passed = self._compare_values(actual_result, expected, comparison)
-            desc = f"Dataframe Query Check: {description}"
-            if not passed:
-                desc += f" - FAILED (Expected: {expected}, Got: {actual_result})"
-                
-            return AssetCheckResult(
-                passed=passed,
-                metadata={
-                    "query": MetadataValue.text(query),
-                    "expected_result": MetadataValue.text(str(expected)),
-                    "actual_result": MetadataValue.int(actual_result),
-                    "comparison": MetadataValue.text(self._safe_enum_to_string(comparison)),
-                    "dataframe_type": MetadataValue.text(type(filtered_df).__module__.split(".")[0]),
-                    "blocking": MetadataValue.bool(blocking)
-                },
-                description=desc
+                query = check_cfg.get('query', '')
+                expected_result = check_cfg.get('expected_result', None)
+                comparison = check_cfg.get('comparison', 'equals')
+                description = check_cfg.get('name', 'Dataframe query check')
+            
+            if not query:
+                raise ValueError("query is required for dataframe query check")
+            
+            # Use SharedCheckExecutor for unified execution
+            executor = SharedCheckExecutor(self)
+            return executor.execute_dataframe_check(
+                context=context,
+                df=df,
+                query=query,
+                expected_result=expected_result,
+                comparison=comparison,
+                description=description
             )
         except Exception as e:
             return AssetCheckResult(

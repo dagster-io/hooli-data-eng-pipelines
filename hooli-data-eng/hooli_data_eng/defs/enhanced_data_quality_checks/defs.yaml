@@ -251,14 +251,14 @@ attributes:
       # Custom SQL checks
       custom_sql_check:
         - name: "users_cleaned_no_test_users"
-          sql_query: "SELECT COUNT(*) as test_users FROM analytics.users_cleaned WHERE is_test_user = true"
+          sql_query: "SELECT COUNT(*) as test_users FROM analytics.users_cleaned WHERE user_id < 0"
           expected_result: 0
           comparison: "equals"
-          description: "Ensure no test users in cleaned data"
+          description: "Ensure no invalid user IDs in cleaned data"
           blocking: true
         - name: "users_cleaned_unique_users"
-          sql_query: "SELECT COUNT(*) as total_users, COUNT(DISTINCT user_id) as unique_users FROM analytics.users_cleaned"
+          sql_query: "SELECT COUNT(*) - COUNT(DISTINCT user_id) as duplicate_users FROM analytics.users_cleaned"
           expected_result: 0
-          comparison: "greater_than"
-          description: "Ensure user_id uniqueness"
+          comparison: "equals"
+          description: "Ensure user_id uniqueness (no duplicates)"
           blocking: false
