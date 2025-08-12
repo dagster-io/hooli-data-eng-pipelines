@@ -129,7 +129,7 @@ The dbt slim CI job encountered an error during execution. Please check the [Dag
                 status = result.get("status", "unknown")
                 execution_time = result.get("execution_time", 0)
                 
-                if status == "success":
+                if status in ["success", "pass"]:  # Both models (success) and tests (pass) are successful
                     successful_models.append({
                         "name": model_name,
                         "execution_time": execution_time
