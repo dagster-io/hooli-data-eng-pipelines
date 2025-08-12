@@ -120,6 +120,7 @@ The dbt slim CI job encountered an error during execution. Please check the [Dag
         else:
             # Parse successful results
             successful_models = []
+            warning_models = []
             failed_models = []
             total_elapsed_time = results.get("elapsed_time", 0)
             
@@ -133,6 +134,13 @@ The dbt slim CI job encountered an error during execution. Please check the [Dag
                         "name": model_name,
                         "execution_time": execution_time
                     })
+                elif status == "warn":
+                    warning_models.append({
+                        "name": model_name,
+                        "status": status,
+                        "message": result.get("message", "No warning message"),
+                        "execution_time": execution_time
+                    })
                 else:
                     failed_models.append({
                         "name": model_name,
@@ -141,6 +149,7 @@ The dbt slim CI job encountered an error during execution. Please check the [Dag
                         "execution_time": execution_time
                     })
             
+            # Only consider it a failure if there are actual failures (not warnings)
             if failed_models:
                 comment_body = f"""## ❌ dbt Slim CI Completed with Failures
 
@@ -153,6 +162,16 @@ The dbt slim CI job encountered an error during execution. Please check the [Dag
                 else:
                     comment_body += "None\n"
                 
+                if warning_models:
+                    comment_body += f"""
+### ⚠️ Models with Warnings ({len(warning_models)})
+"""
+                    for model in warning_models:
+                        execution_time_str = f" ({model['execution_time']:.2f}s)" if model['execution_time'] else ""
+                        comment_body += f"- `{model['name']}`{execution_time_str} - Status: `{model['status']}`\n"
+                        if model['message']:
+                            comment_body += f"  - Warning: {model['message']}\n"
+                
                 comment_body += f"""
 ### ❌ Failed Models ({len(failed_models)})
 """
@@ -161,6 +180,27 @@ The dbt slim CI job encountered an error during execution. Please check the [Dag
                     comment_body += f"- `{model['name']}`{execution_time_str} - Status: `{model['status']}`\n"
                     if model['message']:
                         comment_body += f"  - Error: {model['message']}\n"
+            
+            elif warning_models:
+                comment_body = f"""## ⚠️ dbt Slim CI Completed with Warnings
+
+### ✅ Successful Models ({len(successful_models)})
+"""
+                if successful_models:
+                    for model in successful_models:
+                        execution_time_str = f" ({model['execution_time']:.2f}s)" if model['execution_time'] else ""
+                        comment_body += f"- `{model['name']}`{execution_time_str}\n"
+                else:
+                    comment_body += "None\n"
+                
+                comment_body += f"""
+### ⚠️ Models with Warnings ({len(warning_models)})
+"""
+                for model in warning_models:
+                    execution_time_str = f" ({model['execution_time']:.2f}s)" if model['execution_time'] else ""
+                    comment_body += f"- `{model['name']}`{execution_time_str} - Status: `{model['status']}`\n"
+                    if model['message']:
+                        comment_body += f"  - Warning: {model['message']}\n"
             
             else:
                 comment_body = f"""## ✅ dbt Slim CI Successful
