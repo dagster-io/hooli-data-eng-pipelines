@@ -4,6 +4,7 @@ import requests
 import dagster as dg
 from dagster_dbt import DbtCliResource
 from hooli_data_eng.defs.dbt.resources import dbt_project, resource_def
+from hooli_data_eng.defs.dbt.translator import get_slim_ci_translator
 from hooli_data_eng.utils import get_env
 
 
@@ -23,6 +24,7 @@ def dbt_slim_ci(context: dg.OpExecutionContext, dbt: DbtCliResource):
         dbt_cli_task = dbt.cli(
             args=dbt_command,
             manifest=dbt_project.manifest_path,
+            dagster_dbt_translator=get_slim_ci_translator(),
         )
 
         # Yield all the events from dbt

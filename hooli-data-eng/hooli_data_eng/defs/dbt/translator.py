@@ -106,3 +106,12 @@ def get_hooli_translator():
             enable_code_references=True,
         )
     )
+
+
+def get_slim_ci_translator():
+    """Translator for slim CI that has same asset key logic but no code references."""
+    return CustomDagsterDbtTranslator(
+        settings=DagsterDbtTranslatorSettings(
+            enable_code_references=False,  # Disable for slim CI
+        )
+    )
