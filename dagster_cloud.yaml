@@ -3,7 +3,7 @@ locations:
     code_source:
       module_name: hooli_data_eng.definitions
     build:
-      directory: ./src
+      directory: ./hooli-data-eng/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
     container_context:
       k8s:
