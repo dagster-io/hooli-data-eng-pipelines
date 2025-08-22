@@ -43,10 +43,8 @@ sling = ["dagster-sling"]
 
 powerbi = ["dagster-powerbi"]
 
-
-
-[tool.setuptools]
-packages = { find = { exclude = ["hooli_data_eng_tests"] } }
+[tool.hatch.build.targets.wheel]
+packages = ["src/hooli_data_eng"]
 
 [tool.setuptools.package-data]
 "hooli_data_eng" = ["dbt_project/*"]
@@ -60,9 +58,6 @@ directory_type = "project"
 [tool.dg.project]
 root_module = "hooli_data_eng"
 code_location_target_module = "hooli_data_eng.definitions"
-
-[tool.dg.project.python_environment]
-uv_managed = true
 
 [dependency-groups]
 dev = [

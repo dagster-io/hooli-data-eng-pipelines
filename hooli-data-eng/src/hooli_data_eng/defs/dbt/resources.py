@@ -4,7 +4,7 @@ from dagster_dbt import DbtProject, DbtCliResource
 from hooli_data_eng.utils import get_env
 
 
-dbt_project_path = Path(__file__).parent.parent.parent.parent.parent.joinpath(
+dbt_project_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath(
     "dbt_project"
 )
 DBT_PROJECT_DIR = os.fspath(dbt_project_path)
