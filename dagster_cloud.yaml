@@ -3,7 +3,7 @@ locations:
     code_source:
       module_name: hooli_data_eng.definitions
     build:
-      directory: .
+      directory: ./hooli-data-eng/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
     container_context:
       k8s:
@@ -20,40 +20,40 @@ locations:
     code_source:
       module_name: hooli_basics.definitions
     build:
-      directory: ./hooli-basics
+      directory: ./hooli-basics/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: batch_enrichment
     code_source:
       package_name: hooli_batch_enrichment
     build:
-      directory: ./hooli-batch-enrichment
+      directory: ./hooli-batch-enrichment/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: snowflake_insights
     code_source:
        module_name: hooli_snowflake_insights.definitions
     build:
-      directory: ./hooli-snowflake-insights
+      directory: ./hooli-snowflake-insights/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: hooli_data_ingest
     code_source:
       package_name: hooli_data_ingest
     build:
-      directory: ./hooli-data-ingest
+      directory: ./hooli-data-ingest/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: hooli_bi
     code_source:
       package_name: hooli_bi
     build:
-      directory: ./hooli-bi
+      directory: ./hooli-bi/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
 
   - location_name: hooli_airlift
     code_source:
       module_name: hooli_airlift.definitions
     build:
-      directory: ./hooli-airlift
+      directory: ./hooli-airlift/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod

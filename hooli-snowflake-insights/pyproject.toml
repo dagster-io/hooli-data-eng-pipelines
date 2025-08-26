@@ -23,14 +23,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["hooli_snowflake_insights"]
-
-[tool.dagster]
-module_name = "hooli_snowflake_insights.definitions"
-code_location_name = "hooli_snowflake_insights"
-
-[tool.setuptools]
-packages = { find = { exclude = ["hooli_snowflake_insights_tests"] } }
+packages = ["src/hooli_snowflake_insights"]
 
 [tool.dg]
 directory_type = "project"
@@ -38,6 +31,3 @@ directory_type = "project"
 [tool.dg.project]
 root_module = "hooli_snowflake_insights"
 code_location_target_module = "hooli_snowflake_insights.definitions"
-
-[tool.dg.project.python_environment]
-uv_managed = true
