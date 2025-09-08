@@ -10,7 +10,7 @@ ENV UV_PROJECT_ENVIRONMENT=/usr/local
 # Copy from the cache instead of linking since it's a mounted volume
 #ENV UV_LINK_MODE=copy
 
-
+ 
 #RUN apt-get update && apt-get install -y git gcc default-jre
 RUN apt-get update && \
     apt-get install -y default-jre && \
