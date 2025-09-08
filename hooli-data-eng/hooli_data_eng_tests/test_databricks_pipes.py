@@ -4,7 +4,7 @@ from hooli_data_eng.resources import client
 from dagster_databricks import PipesDatabricksClient
 
 # to meaningfully run this test you must set
-# DAGSTER_CLOUD_DEPLOYMENT_NAME="data-eng-prod"
+# DAGSTER_CLOUD_DEPLOYMENT_NAME="data-eng-staging"
 # and also set
 # DATABRICKS_HOST="your host"
 # DATABRICKS_TOKEN="your token"

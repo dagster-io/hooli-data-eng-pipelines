@@ -9,7 +9,7 @@ def get_kind() -> str:
         str: The storage kind ('snowflake' or 'duckdb').
     """
     if (
-        os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod"
+        os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-staging"
         or os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1"
     ):
         return "snowflake"

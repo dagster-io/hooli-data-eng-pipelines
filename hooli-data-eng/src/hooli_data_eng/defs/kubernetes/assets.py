@@ -45,7 +45,7 @@ def k8s_pod_asset(
 
     return pipes_k8s_client.run(
         context=context,
-        namespace="data-eng-prod",
+        namespace="data-eng-staging",
         base_pod_spec=pod_spec,
         extras=extras,
     ).get_materialize_result()

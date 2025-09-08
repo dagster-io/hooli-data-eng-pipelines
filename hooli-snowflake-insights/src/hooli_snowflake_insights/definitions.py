@@ -19,7 +19,7 @@ from dagster_snowflake import SnowflakeResource
 def get_env():
     if os.getenv("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "") == "1":
         return "BRANCH"
-    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-prod":
+    if os.getenv("DAGSTER_CLOUD_DEPLOYMENT_NAME", "") == "data-eng-staging":
         return "PROD"
     return "LOCAL"
 
