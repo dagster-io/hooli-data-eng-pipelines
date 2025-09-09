@@ -1,0 +1,7 @@
+type: dagster.UvRunComponent
+
+attributes:
+  execution:
+    path: fetch_data.py
+  assets:
+    - key: fetched_posts_data
