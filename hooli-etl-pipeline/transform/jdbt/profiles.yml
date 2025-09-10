@@ -12,7 +12,7 @@ jdbt:
       account: "{{ env_var('SNOWFLAKE_ACCOUNT', '') }}"
       # User/password auth
       user: "{{ env_var('SNOWFLAKE_USER', '') }}"
-      password: "{{ env_var('SNOWFLAKE_PASSWORD', '') }}"
+      private_key: "{{ env_var('SNOWFLAKE_KEY', '') }}"
       database: DEMO_DB2
       warehouse: TINY_WAREHOUSE
       schema: analytics
@@ -23,7 +23,7 @@ jdbt:
       account: "{{ env_var('SNOWFLAKE_ACCOUNT', '') }}"
       # User/password auth
       user: "{{ env_var('SNOWFLAKE_USER', '') }}"
-      password: "{{ env_var('SNOWFLAKE_PASSWORD', '') }}"
+      private_key: "{{ env_var('SNOWFLAKE_KEY', '') }}"
       database: DEMO_DB2_BRANCH
       warehouse: TINY_WAREHOUSE
       schema: analytics
