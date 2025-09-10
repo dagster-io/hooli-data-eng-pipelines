@@ -21,12 +21,8 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.dagster]
-module_name = "hooli_airlift.definitions"
-code_location_name = "hooli_airlift"
-
 [tool.hatch.build.targets.wheel]
-packages = ["hooli_airlift"]
+packages = ["src/hooli_airlift"]
 
 [tool.dg]
 directory_type = "project"
@@ -34,7 +30,3 @@ directory_type = "project"
 [tool.dg.project]
 root_module = "hooli_airlift"
 code_location_target_module = "hooli_airlift.definitions"
-
-[tool.dg.project.python_environment]
-uv_managed = true
-
