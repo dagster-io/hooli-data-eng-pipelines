@@ -112,7 +112,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster --upgrade;
+          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster dagster-snowflake --upgrade;
 
       - name: Validate configuration
         id: ci-validate
