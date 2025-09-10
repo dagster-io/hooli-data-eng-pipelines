@@ -33,14 +33,14 @@ resource_def = {
         "snowflake_insights": SnowflakeResource(
             account=EnvVar("SNOWFLAKE_ACCOUNT"),
             user=EnvVar("SNOWFLAKE_USER"),
-            password=EnvVar("SNOWFLAKE_PASSWORD"),
+            private_key=EnvVar("SNOWFLAKE_KEY"),
         ),
     },
     "PROD": {
         "snowflake_insights": SnowflakeResource(
             account=EnvVar("SNOWFLAKE_ACCOUNT"),
             user=EnvVar("SNOWFLAKE_USER"),
-            password=EnvVar("SNOWFLAKE_PASSWORD"),
+            private_key=EnvVar("SNOWFLAKE_KEY"),
         ),
     },
 }
