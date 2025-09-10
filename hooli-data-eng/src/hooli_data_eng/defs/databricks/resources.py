@@ -84,8 +84,8 @@ db_step_launcher = databricks_pyspark_step_launcher.configured(
                 "scope": "dagster-test",
             },
             {
-                "name": "SNOWFLAKE_PASSWORD",
-                "key": "snowflake_password",
+                "name": "SNOWFLAKE_KEY",
+                "key": "snowflake_key",
                 "scope": "dagster-test",
             },
             {

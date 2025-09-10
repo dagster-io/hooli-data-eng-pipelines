@@ -82,7 +82,7 @@ if get_env() != "LOCAL":
                 type="snowflake",
                 host=EnvVar("SNOWFLAKE_HOST"),
                 user=EnvVar("SNOWFLAKE_USER"),
-                password=EnvVar("SNOWFLAKE_PASSWORD"),
+                private_key=EnvVar("SNOWFLAKE_KEY"),
                 role=EnvVar("SNOWFLAKE_ROLE"),
                 database="DEMO_DB2" if get_env() == "PROD" else "DEMO_DB2_BRANCH",
                 schema="RAW_DATA",
