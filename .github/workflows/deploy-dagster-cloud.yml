@@ -271,7 +271,7 @@ jobs:
       - name: Get branch deployment
         id: get-branch-deployment
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v1.11.9
         with:
           organization_id: 'hooli'
 
