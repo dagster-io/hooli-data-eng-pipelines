@@ -1,13 +1,9 @@
 import json
-import textwrap
-from typing import Any, Mapping, Union, Literal, Optional
+from typing import Union, Literal, Optional
 import dagster as dg
 from hooli_data_eng.utils import get_env
 from dagster_dbt import (
     DbtCliResource,
-    DagsterDbtTranslator,
-    default_metadata_from_dbt_resource_props,
-    DagsterDbtTranslatorSettings,
 )
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
@@ -16,6 +12,7 @@ from hooli_data_eng.defs.dbt.resources import dbt_project
 from datetime import datetime
 from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
 from hooli_data_eng.defs.dbt.resources import resource_def
+from hooli_data_eng.defs.dbt.translator import get_hooli_translator
 
 from datetime import timedelta
 from dagster.preview.freshness import apply_freshness_policy
@@ -27,97 +24,6 @@ from dagster.preview.freshness import FreshnessPolicy
 # this project includes assets with hourly and daily partitions
 daily_partitions = dg.DailyPartitionsDefinition(start_date="2023-05-25")
 weekly_partitions = dg.WeeklyPartitionsDefinition(start_date="2023-05-25")
-
-
-def get_allow_outdated_and_missing_parents_condition():
-    became_missing_or_any_parents_updated = (
-        dg.AutomationCondition.missing().newly_true().with_label("became missing")
-        | dg.AutomationCondition.any_deps_match(
-            dg.AutomationCondition.newly_updated()
-            | dg.AutomationCondition.will_be_requested()
-        ).with_label("any parents updated")
-    )
-
-    return (
-        dg.AutomationCondition.in_latest_time_window()
-        & became_missing_or_any_parents_updated.since(
-            dg.AutomationCondition.newly_requested()
-            | dg.AutomationCondition.newly_updated()
-        )
-        & ~dg.AutomationCondition.in_progress()
-    ).with_label(
-        "update non-partitioned asset while allowing some missing or outdated parent partitions"
-    )
-
-
-class CustomDagsterDbtTranslator(DagsterDbtTranslator):
-    def get_description(self, dbt_resource_props: Mapping[str, Any]) -> str:
-        description = f"dbt model for: {dbt_resource_props['name']} \n \n"
-
-        return description + textwrap.indent(
-            dbt_resource_props.get("raw_code", ""), "\t"
-        )
-
-    def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> dg.AssetKey:
-        node_path = dbt_resource_props["path"]
-        prefix = node_path.split("/")[0]
-
-        if node_path == "models/sources.yml":
-            prefix = "RAW_DATA"
-
-        if node_path == "MARKETING/company_perf.sql":
-            prefix = "ANALYTICS"
-
-        return dg.AssetKey([prefix, dbt_resource_props["name"]])
-
-    def get_group_name(self, dbt_resource_props: Mapping[str, Any]):
-        node_path = dbt_resource_props["path"]
-        prefix = node_path.split("/")[0]
-
-        if node_path == "models/sources.yml":
-            prefix = "RAW_DATA"
-
-        if node_path == "MARKETING/company_perf.sql":
-            prefix = "ANALYTICS"
-        return prefix
-
-    def get_metadata(self, dbt_resource_props: Mapping[str, Any]) -> Mapping[str, Any]:
-        metadata = {"partition_expr": "order_date"}
-
-        if dbt_resource_props["name"] == "orders_cleaned":
-            metadata = {"partition_expr": "dt"}
-
-        if dbt_resource_props["name"] == "users_cleaned":
-            metadata = {"partition_expr": "created_at"}
-
-        default_metadata = default_metadata_from_dbt_resource_props(dbt_resource_props)
-
-        return {**default_metadata, **metadata}
-
-    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]):
-        if dbt_resource_props["name"] in [
-            "company_stats",
-            "locations_cleaned",
-            "weekly_order_summary",
-            "order_stats",
-        ]:
-            return get_allow_outdated_and_missing_parents_condition()
-
-        if dbt_resource_props["name"] in ["sku_stats"]:
-            return dg.AutomationCondition.on_cron("0 0 1 * *")
-
-        if dbt_resource_props["name"] in ["company_perf"]:
-            return dg.AutomationCondition.any_downstream_conditions()
-
-    def get_owners(self, dbt_resource_props: Mapping[str, Any]):
-        return (
-            [
-                dbt_resource_props.get["groups"]["owner"]["email"],
-                f"team:{dbt_resource_props['groups']['name']}",
-            ]
-            if dbt_resource_props.get("groups") is not None
-            else []
-        )
 
 
 def _process_partitioned_dbt_assets(
@@ -149,15 +55,6 @@ def _process_partitioned_dbt_assets(
     for result in run_results_json["results"]:
         model_name = result.get("unique_id")
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
-
-
-def get_hooli_translator():
-    return CustomDagsterDbtTranslator(
-        settings=DagsterDbtTranslatorSettings(
-            enable_asset_checks=True,
-            enable_code_references=True,
-        )
-    )
 
 
 class DbtSelection(dg.Resolvable, dg.Model):
@@ -240,7 +137,6 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
             asset_checks=checks,
             sensors=sensors,
             resources=resource_def[get_env()],
-            jobs=[get_slim_ci_job()],
         )
 
         defs = defs.map_resolved_asset_specs(
@@ -293,35 +189,3 @@ def build_code_version_sensor(target_assets: dg.AssetsDefinition):
             )
 
     return dbt_code_version_sensor
-
-
-def get_slim_ci_job():
-    # This op will be used to run slim CI
-    @dg.op(out={})
-    def dbt_slim_ci(dbt: DbtCliResource):
-        dbt_command = [
-            "build",
-            "--select",
-            "state:modified.body+",
-            "--defer",
-            "--state",
-            dbt.state_path,
-        ]
-
-        yield from (
-            dbt.cli(
-                args=dbt_command,
-                manifest=dbt_project.manifest_path,
-                dagster_dbt_translator=get_hooli_translator(),
-            )
-            .stream()
-            .fetch_row_counts()
-            .fetch_column_metadata()
-        )
-
-    # This job will be triggered by Pull Request and should only run new or changed dbt models
-    @dg.job
-    def dbt_slim_ci_job():
-        dbt_slim_ci()
-
-    return dbt_slim_ci_job
