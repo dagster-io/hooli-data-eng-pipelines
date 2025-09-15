@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DAGSTER_CLOUD_ORGANIZATION: "hooli"
-  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.JARED_DAGSTER_CLOUD_API_TOKEN }}
   DAGSTER_PROJECT_DIR: "."
   DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
