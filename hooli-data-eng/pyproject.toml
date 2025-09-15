@@ -46,6 +46,7 @@ powerbi = ["dagster-powerbi"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/hooli_data_eng"]
 
+
 [tool.setuptools.package-data]
 "hooli_data_eng" = ["dbt_project/*"]
 
