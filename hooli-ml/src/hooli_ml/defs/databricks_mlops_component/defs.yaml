@@ -3,8 +3,8 @@ type: hooli_ml.components.DatabricksAssetBundleComponent
 attributes:
   databricks_config_path: '{{ project_root }}/databricks_mlops/databricks_mlops/databricks.yml'
   workspace:
-    host: https://dbc-edf81ed6-5bff.cloud.databricks.com
-    token: api2d4841e87c88b6f9392a13384814f1aa
+    host: 
+    token: 
 
   assets_by_task_key:
     batch_inference_job:
