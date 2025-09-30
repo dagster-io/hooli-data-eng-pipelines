@@ -11,6 +11,10 @@ path = "hooli-basics"
 [[workspace.projects]]
 path = "hooli-etl-pipeline"
 
+[[workspace.projects]]
+path = "hooli-ml"
+
+
 # currently failing bc of strange import error or package versions
 #[[workspace.projects]]
 #path = "hooli-interoperability"
