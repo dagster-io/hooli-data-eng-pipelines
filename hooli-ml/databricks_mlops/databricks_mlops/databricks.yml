@@ -27,7 +27,7 @@ include:
   #- ./resources/spark-example.yaml
   # TODO: uncomment once monitoring inference table has been created
   # Temporarily commented out until predictions table exists
-  # - ./resources/monitoring-resource.yml
+  - ./resources/monitoring-resource.yml
 
 # Deployment Target specific values for workspace
 targets:
