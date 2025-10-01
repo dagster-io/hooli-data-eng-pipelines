@@ -260,6 +260,10 @@ jobs:
         # with:
         #   command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
       #Deploy
+      - name: Clean stale state files
+        if: steps.prerun.outputs.result != 'skip'
+        run: rm -rf dagster_statedir/
+
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
