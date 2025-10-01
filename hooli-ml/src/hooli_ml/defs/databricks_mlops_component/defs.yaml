@@ -3,17 +3,14 @@ type: hooli_ml.components.DatabricksAssetBundleComponent
 attributes:
   databricks_config_path: '{{ project_root }}/databricks_mlops/databricks_mlops/databricks.yml'
   workspace:
-    host: 
-    token: 
+    host: "{{ env.DATABRICKS_HOST }}"
+    token: "{{ env.DATABRICKS_TOKEN }}"
 
   assets_by_task_key:
     batch_inference_job:
       - key: batch_inference_job
         description: batch_inference_job from batch_inference_job job (notebook
             task)
-        kinds:
-          - databricks
-          - notebook
         deps:
           - pickup_features
           - dropoff_features
@@ -21,66 +18,40 @@ attributes:
     Train:
       - key: train
         description: Train from model_training_job job (notebook task)
-        kinds:
-          - databricks
-          - notebook
         deps:
           - pickup_features
           - dropoff_features
     ModelValidation:
       - key: model_validation
         description: ModelValidation from model_training_job job (notebook task)
-        kinds:
-          - databricks
-          - notebook
         deps:
           - train
     ModelDeployment:
       - key: model_deployment
         description: ModelDeployment from model_training_job job (notebook task)
-        kinds:
-          - databricks
-          - notebook
         deps:
           - model_validation
     PickupFeatures:
       - key: pickup_features
         description: PickupFeatures from write_feature_table_job job (notebook task)
-        kinds:
-          - databricks
-          - notebook
-        # metadata:
-        #   - dagster/table_name: '{{ catalog_name }}.databricks_mlops.trip_pickup_features'
 
     DropoffFeatures:
       - key: dropoff_features
         description: DropoffFeatures from write_feature_table_job job (notebook
           task)
-        kinds:
-          - databricks
-          - notebook
     monitored_metric_violation_check:
       - key: monitored_metric_violation_check
         description: monitored_metric_violation_check from retraining_job job (notebook
           task)
-        kinds:
-          - databricks
-          - notebook
         deps:
           - model_deployment
     is_metric_violated:
       - key: is_metric_violated
         description: is_metric_violated from retraining_job job (condition task)
-        kinds:
-          - databricks
-          - condition
         deps:
           - monitored_metric_violation_check
     trigger_retraining:
       - key: trigger_retraining
         description: trigger_retraining from retraining_job job (job task)
-        kinds:
-          - databricks
-          - job
         deps:
           - is_metric_violated
