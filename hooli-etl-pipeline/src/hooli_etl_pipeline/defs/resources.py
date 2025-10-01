@@ -66,32 +66,34 @@ class DataImportResource(dg.ConfigurableResource):
 
 
 resource_def = {
-    "LOCAL": {
-        "database": DuckDBResource(database="/tmp/jaffle_platform.duckdb"),
-        "data_importer": DataImportResource(),
-    },
-    "BRANCH": {
-        "database": SnowflakeResource(
-            database="DEMO_DB2_BRANCH",
-            schema=dg.EnvVar("SNOWFLAKE_SCHEMA"),
-            account=dg.EnvVar("SNOWFLAKE_ACCOUNT"),
-            user=dg.EnvVar("SNOWFLAKE_USER"),
-            password=dg.EnvVar("SNOWFLAKE_PASSWORD"),
-            warehouse="TINY_WAREHOUSE",
-        ),
-        "data_importer": DataImportResource(),
-    },
-    "PROD": {
-        "database": SnowflakeResource(
-            database="DEMO_DB2",
-            schema=dg.EnvVar("SNOWFLAKE_SCHEMA"),
-            account=dg.EnvVar("SNOWFLAKE_ACCOUNT"),
-            user=dg.EnvVar("SNOWFLAKE_USER"),
-            password=dg.EnvVar("SNOWFLAKE_PASSWORD"),
-            warehouse="TINY_WAREHOUSE",
-        ),
-        "data_importer": DataImportResource(),
-    },
+        "LOCAL": {
+            "database": DuckDBResource(
+                database="/tmp/jaffle_platform.duckdb"
+            ),
+            "data_importer": DataImportResource(),
+        },
+        "BRANCH": {
+            "database": SnowflakeResource(
+                database="DEMO_DB2_BRANCH",
+                schema=dg.EnvVar("SNOWFLAKE_SCHEMA"),
+                account=dg.EnvVar("SNOWFLAKE_ACCOUNT"),
+                user=dg.EnvVar("SNOWFLAKE_USER"),
+                private_key=dg.EnvVar("SNOWFLAKE_KEY"),
+                warehouse="TINY_WAREHOUSE",
+            ),
+            "data_importer": DataImportResource(),
+        },
+        "PROD": {
+            "database": SnowflakeResource(
+                database="DEMO_DB2",
+                schema=dg.EnvVar("SNOWFLAKE_SCHEMA"),
+                account=dg.EnvVar("SNOWFLAKE_ACCOUNT"),
+                user=dg.EnvVar("SNOWFLAKE_USER"),
+                private_key=dg.EnvVar("SNOWFLAKE_KEY"),
+                warehouse="TINY_WAREHOUSE",
+            ),
+            "data_importer": DataImportResource(),
+        }
 }
 
 
