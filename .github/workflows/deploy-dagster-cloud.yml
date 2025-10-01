@@ -126,10 +126,6 @@ jobs:
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
-      - name: Clean stale state files
-        if: steps.prerun.outputs.result != 'skip'
-        run: rm -rf dagster_statedir/
-
       - name: Initialize build session
         id: ci-init
         if: steps.prerun.outputs.result != 'skip'
