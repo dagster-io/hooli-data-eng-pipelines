@@ -269,7 +269,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         with:
-         command: "ci deploy $LOCATIONS --read-git-state"
+         command: "ci deploy $LOCATIONS"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
