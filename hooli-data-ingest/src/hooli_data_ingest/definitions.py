@@ -18,7 +18,7 @@ defs = Definitions(
         with_source_code_references([my_sling_assets]),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli-data-ingest/hooli_data_ingest/definitions.py",
+            file_anchor_path_in_repository="hooli-data-ingest/src/hooli_data_ingest/definitions.py",
         ),
     ),
     schedules=[daily_sling_assets],

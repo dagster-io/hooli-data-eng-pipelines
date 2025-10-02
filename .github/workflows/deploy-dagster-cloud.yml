@@ -19,13 +19,15 @@ env:
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
   IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DAGSTER_CLOUD_GIT_ORIGIN_URL: "https://github.com/dagster-io/hooli-data-eng-pipelines"
+  DAGSTER_CLOUD_GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-22.04
     steps:
       - name: Pre-run checks
         id: prerun
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.11.12
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -122,18 +124,20 @@ jobs:
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v1.11.12
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
           deployment: 'data-eng-prod'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -256,29 +260,31 @@ jobs:
               eval "$line"
             fi
           done
-        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         # with:
         #   command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
       #Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         with:
          command: "ci deploy $LOCATIONS"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Get branch deployment as input to job trigger below
       - name: Get branch deployment
         id: get-branch-deployment
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v1.11.12
         with:
           organization_id: 'hooli'
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
-        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v1.11.12
         with:
           location_name: data-eng-pipeline
           deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
@@ -289,13 +295,13 @@ jobs:
       - name: Update PR comment for branch deployments
         id: ci-notify
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         with:
           command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
 
       - name: Generate summary
         id: ci-summary
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         with:
           command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"

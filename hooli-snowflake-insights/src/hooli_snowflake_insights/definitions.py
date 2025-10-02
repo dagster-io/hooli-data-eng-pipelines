@@ -61,7 +61,7 @@ defs = Definitions(
         ),
         file_path_mapping=AnchorBasedFilePathMapping(
             local_file_anchor=Path(__file__),
-            file_anchor_path_in_repository="hooli_snowflake_insights/definitions.py",
+            file_anchor_path_in_repository="hooli-snowflake-insights/src/hooli_snowflake_insights/definitions.py",
         ),
     ),
     schedules=[

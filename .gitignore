@@ -178,3 +178,4 @@ dbt_project/logs
 
 .DS_Store
 /dagster-data
+dagster_statedir/

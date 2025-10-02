@@ -12,10 +12,12 @@ from dagster_dbt import (
 from dagster_dbt.asset_decorator import dbt_assets
 from dagster_dbt.freshness_builder import build_freshness_checks_from_dbt_assets
 from dagster_cloud.dagster_insights import dbt_with_snowflake_insights
+from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
 from hooli_data_eng.defs.dbt.resources import dbt_project
 from datetime import datetime
 from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
 from hooli_data_eng.defs.dbt.resources import resource_def
+from pathlib import Path
 
 from datetime import timedelta
 from dagster.preview.freshness import apply_freshness_policy
@@ -236,7 +238,13 @@ class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
                 sensors.append(build_code_version_sensor(_dbt_asset))
 
         defs = dg.Definitions(
-            assets=assets,
+            assets=link_code_references_to_git_if_cloud(
+                dg.with_source_code_references(assets),
+                file_path_mapping=dg.AnchorBasedFilePathMapping(
+                    local_file_anchor=Path(__file__),
+                    file_anchor_path_in_repository="hooli-data-eng/src/hooli_data_eng/defs/dbt/component.py",
+                ),
+            ),
             asset_checks=checks,
             sensors=sensors,
             resources=resource_def[get_env()],
