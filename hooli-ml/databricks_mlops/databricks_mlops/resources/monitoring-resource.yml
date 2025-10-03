@@ -41,7 +41,7 @@ resources:
         - task_key: monitored_metric_violation_check
           #<<: *new_cluster
           notebook_task:
-            notebook_path: ../monitoring/notebooks/MonitoredMetricViolationCheck.py
+            notebook_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}/files/monitoring/notebooks/MonitoredMetricViolationCheck.py
             base_parameters:
               env: ${bundle.target}
               table_name_under_monitor: ${var.catalog_name}.databricks_mlops.predictions

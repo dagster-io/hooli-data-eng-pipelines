@@ -20,7 +20,7 @@ resources:
         - task_key: batch_inference_job
           #<<: *new_cluster
           notebook_task:
-            notebook_path: ../deployment/batch_inference/notebooks/BatchInference.py
+            notebook_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}/files/deployment/batch_inference/notebooks/BatchInference.py
             base_parameters:
               env: ${bundle.target}
               input_table_name: ${bundle.target}.databricks_mlops.feature_store_inference_input  # TODO: create input table for inference

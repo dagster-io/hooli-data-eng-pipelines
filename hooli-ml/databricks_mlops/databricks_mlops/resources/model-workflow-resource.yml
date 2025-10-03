@@ -23,7 +23,7 @@ resources:
         - task_key: Train
           #job_cluster_key: model_training_job_cluster
           notebook_task:
-            notebook_path: ../training/notebooks/TrainWithFeatureStore.py
+            notebook_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}/files/training/notebooks/TrainWithFeatureStore.py
             base_parameters:
               env: ${bundle.target}
               # TODO: Update training_data_path
@@ -39,7 +39,7 @@ resources:
           depends_on:
             - task_key: Train
           notebook_task:
-            notebook_path: ../validation/notebooks/ModelValidation.py
+            notebook_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}/files/validation/notebooks/ModelValidation.py
             base_parameters:
               experiment_name: ${var.experiment_name}
               # The `run_mode` defines whether model validation is enabled or not.
@@ -82,7 +82,7 @@ resources:
           depends_on:
             - task_key: ModelValidation
           notebook_task:
-            notebook_path: ../deployment/model_deployment/notebooks/ModelDeployment.py
+            notebook_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}/files/deployment/model_deployment/notebooks/ModelDeployment.py
             base_parameters:
               env: ${bundle.target}
               # git source information of current ML resource deployment. It will be persisted as part of the workflow run
