@@ -7,6 +7,30 @@ import sys
 import time
 import requests
 
+def get_warehouse_id(host: str, token: str) -> str:
+    """Get the first available SQL warehouse"""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    url = f"{host}/api/2.0/sql/warehouses"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to get warehouses: {response.text}")
+
+    warehouses = response.json().get("warehouses", [])
+    if not warehouses:
+        raise Exception("No SQL warehouses found. Please create a SQL warehouse first.")
+
+    # Use the first available warehouse
+    warehouse_id = warehouses[0]["id"]
+    warehouse_name = warehouses[0].get("name", "unknown")
+    print(f"Using SQL warehouse: {warehouse_name} (ID: {warehouse_id})")
+    return warehouse_id
+
+
 def execute_sql(host: str, token: str, catalog_name: str):
     """Execute SQL to create schema and predictions table if they don't exist"""
 
@@ -32,13 +56,16 @@ COMMENT 'ML model predictions table for monitoring and inference tracking';
         "Content-Type": "application/json"
     }
 
+    # Get an available warehouse
+    warehouse_id = get_warehouse_id(host, token)
+
     # Use SQL Statement Execution API
     # https://docs.databricks.com/api/workspace/statementexecution/executestatement
     url = f"{host}/api/2.0/sql/statements"
 
     payload = {
         "statement": sql_statements,
-        "warehouse_id": None,  # Uses the default warehouse
+        "warehouse_id": warehouse_id,
         "wait_timeout": "30s"
     }
 
