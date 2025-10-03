@@ -246,6 +246,16 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
           echo "$HOME/.databricks/bin" >> $GITHUB_PATH
 
+      - name: Initialize Predictions Table (Staging)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'pull_request'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          # Create schema and predictions table if they don't exist
+          sed 's/${catalog_name}/staging/g' scripts/init_predictions_table.sql | databricks sql -q -
+
       - name: Deploy Databricks Bundle (Staging)
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'pull_request'
         working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
@@ -254,6 +264,16 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           databricks bundle deploy -t staging
+
+      - name: Initialize Predictions Table (Production)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/gtm20'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          # Create schema and predictions table if they don't exist (prod uses 'workspace' catalog)
+          sed 's/${catalog_name}/workspace/g' scripts/init_predictions_table.sql | databricks sql -q -
 
       - name: Deploy Databricks Bundle (Production)
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/gtm20'

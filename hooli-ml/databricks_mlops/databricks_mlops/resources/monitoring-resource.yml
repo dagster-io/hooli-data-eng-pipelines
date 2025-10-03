@@ -19,7 +19,7 @@ common_permissions: &permissions
 resources:
   quality_monitors:
     databricks_mlops_quality_monitor:
-      table_name: dev.databricks_mlops.predictions
+      table_name: ${var.catalog_name}.databricks_mlops.predictions
       # TODO: Update the output schema name as per your requirements
       output_schema_name: ${bundle.target}.databricks_mlops
       # TODO: Update the below parameters as per your requirements
@@ -44,7 +44,7 @@ resources:
             notebook_path: ../monitoring/notebooks/MonitoredMetricViolationCheck.py
             base_parameters:
               env: ${bundle.target}
-              table_name_under_monitor: dev.databricks_mlops.predictions
+              table_name_under_monitor: ${var.catalog_name}.databricks_mlops.predictions
               # TODO: Update the metric to be monitored and violation threshold
               metric_to_monitor: root_mean_squared_error
               metric_violation_threshold: 100
