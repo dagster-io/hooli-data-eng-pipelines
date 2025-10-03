@@ -1,0 +1,38 @@
+[project]
+name = "hooli_ml"
+requires-python = ">=3.9,<3.13"
+version = "0.1.0"
+dependencies = [
+    "dagster>=1.11.0",
+    "dagster-dg-cli>=1.11.0",
+    "databricks-sdk",
+    "dagster-cloud",
+    "dagster-webserver>=1.11.0",
+    "databricks>=0.2",
+    "requests>=2.32.4",
+    "dagster-databricks>=0.27.0",
+]
+
+[dependency-groups]
+dev = [
+    "dagster-webserver",
+    "dagster-dg-cli",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "hooli_ml"
+
+[tool.dg.project.python_environment]
+uv_managed = true
+
+[project.entry-points]
+"dagster_dg.plugin" = { hooli_ml = "hooli_ml.components" }
+
+

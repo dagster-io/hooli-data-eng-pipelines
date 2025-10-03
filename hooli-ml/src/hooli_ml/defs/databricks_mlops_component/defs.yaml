@@ -1,0 +1,61 @@
+type: hooli_ml.components.DatabricksAssetBundleComponent
+
+attributes:
+  databricks_config_path: '{{ project_root }}/databricks_mlops/databricks_mlops/databricks.yml'
+  workspace:
+    host: "{{ env.DATABRICKS_HOST }}"
+    token: "{{ env.DATABRICKS_TOKEN }}"
+
+  assets_by_task_key:
+    batch_inference_job:
+      - key: batch_inference_job
+        description: batch_inference_job from batch_inference_job job (notebook
+            task)
+        deps:
+          - pickup_features
+          - dropoff_features
+          - model_deployment
+    Train:
+      - key: train
+        description: Train from model_training_job job (notebook task)
+        deps:
+          - pickup_features
+          - dropoff_features
+    ModelValidation:
+      - key: model_validation
+        description: ModelValidation from model_training_job job (notebook task)
+        deps:
+          - train
+    ModelDeployment:
+      - key: model_deployment
+        description: ModelDeployment from model_training_job job (notebook task)
+        deps:
+          - model_validation
+    PickupFeatures:
+      - key: pickup_features
+        description: PickupFeatures from write_feature_table_job job (notebook task)
+        deps:
+          - ANALYTICS/orders_augmented
+
+    DropoffFeatures:
+      - key: dropoff_features
+        description: DropoffFeatures from write_feature_table_job job (notebook
+          task)
+        deps:
+          - ANALYTICS/orders_augmented
+    monitored_metric_violation_check:
+      - key: monitored_metric_violation_check
+        description: monitored_metric_violation_check from retraining_job job (notebook
+          task)
+        deps:
+          - model_deployment
+    is_metric_violated:
+      - key: is_metric_violated
+        description: is_metric_violated from retraining_job job (condition task)
+        deps:
+          - monitored_metric_violation_check
+    trigger_retraining:
+      - key: trigger_retraining
+        description: trigger_retraining from retraining_job job (job task)
+        deps:
+          - is_metric_violated
