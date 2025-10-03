@@ -34,11 +34,15 @@ attributes:
     PickupFeatures:
       - key: pickup_features
         description: PickupFeatures from write_feature_table_job job (notebook task)
+        deps:
+          - ANALYTICS/orders_augmented
 
     DropoffFeatures:
       - key: dropoff_features
         description: DropoffFeatures from write_feature_table_job job (notebook
           task)
+        deps:
+          - ANALYTICS/orders_augmented
     monitored_metric_violation_check:
       - key: monitored_metric_violation_check
         description: monitored_metric_violation_check from retraining_job job (notebook
