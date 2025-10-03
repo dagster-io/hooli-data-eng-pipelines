@@ -118,7 +118,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster dagster-snowflake dagster-duckdb pandas --upgrade;
+          uv pip install requests dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster dagster-snowflake dagster-duckdb pandas --upgrade;
 
       - name: Validate configuration
         id: ci-validate
@@ -253,8 +253,7 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          # Create schema and predictions table if they don't exist
-          sed 's/${catalog_name}/staging/g' scripts/init_predictions_table.sql | databricks sql -q -
+          python scripts/init_predictions_table.py staging
 
       - name: Deploy Databricks Bundle (Staging)
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'pull_request'
@@ -272,8 +271,8 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          # Create schema and predictions table if they don't exist (prod uses 'workspace' catalog)
-          sed 's/${catalog_name}/workspace/g' scripts/init_predictions_table.sql | databricks sql -q -
+          pip install requests
+          python scripts/init_predictions_table.py workspace
 
       - name: Deploy Databricks Bundle (Production)
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/gtm20'
