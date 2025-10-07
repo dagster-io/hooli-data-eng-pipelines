@@ -4,7 +4,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm
 WORKDIR /opt/dagster/app
 
 # Enable bytecode compilation
-#ENV UV_COMPILE_BYTECODE=1 
+#ENV UV_COMPILE_BYTECODE=1  
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
 # Copy from the cache instead of linking since it's a mounted volume

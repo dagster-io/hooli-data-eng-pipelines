@@ -153,7 +153,7 @@ jobs:
         run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=prod" >> $GITHUB_ENV
 
       - name: Set PYTHONPATH
-        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng:$(pwd)/hooli-etl-pipeline/src/" >> $GITHUB_ENV
+        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/hooli-data-eng/src/:$(pwd)/hooli-etl-pipeline/src/" >> $GITHUB_ENV
 
       - name: Prepare dbt project for hooli-data-eng
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -220,7 +220,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-data-eng/hooli_data_eng/utils/example_container
+          context: ./hooli-data-eng/src/hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
