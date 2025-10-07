@@ -17,7 +17,7 @@ from hooli_data_eng.defs.dbt.resources import dbt_project
 from datetime import datetime
 from hooli_data_eng.defs.dbt.dbt_code_version import get_current_dbt_code_version
 from hooli_data_eng.defs.dbt.resources import resource_def
-from pathlib import Path
+from pathlib import Path 
 
 from datetime import timedelta
 from dagster.preview.freshness import apply_freshness_policy
