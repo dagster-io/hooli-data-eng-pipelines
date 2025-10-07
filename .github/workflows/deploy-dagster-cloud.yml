@@ -159,8 +159,8 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         run: |
           source .venv/bin/activate
-          dagster-dbt project prepare-and-package --file hooli-data-eng/hooli_data_eng/src/defs/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/hooli_data_eng/src/defs/dbt/resources.py --source-deployment prod
+          dagster-dbt project prepare-and-package --file hooli-data-eng/src/hooli_data_eng/defs/dbt/resources.py
+          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/src/hooli_data_eng/defs/dbt/resources.py --source-deployment prod
 
       - name: Prepare dbt project for hooli-etl-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-etl-pipeline_any_changed == 'true'
