@@ -11,7 +11,7 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 env:
-  DAGSTER_CLOUD_ORGANIZATION: "hooli-eu"
+  #DAGSTER_CLOUD_ORGANIZATION: "hooli-eu"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_EU_API_TOKEN }}
   DAGSTER_CLOUD_URL: "https://hooli-eu.eu.dagster.cloud/"
   DAGSTER_PROJECT_DIR: "."
@@ -120,7 +120,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.13
         with:
-          command: "ci check --url ${{ env.DAGSTER_CLOUD_URL }} --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
+          command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
