@@ -20,7 +20,7 @@ from hooli_data_eng.defs.dbt.resources import dbt_project, resource_def
 from hooli_data_eng.utils import get_env
 
 # many dbt assets use an incremental approach to avoid
-# re-processing all data on each run
+# re-processing all data on each  run
 # this approach can be modelled in dagster using partitions
 # this project includes assets with hourly and daily partitions
 daily_partitions = dg.DailyPartitionsDefinition(start_date="2023-05-25")
