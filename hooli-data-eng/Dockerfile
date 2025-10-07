@@ -11,6 +11,7 @@ ENV UV_PROJECT_ENVIRONMENT=/usr/local
 #ENV UV_LINK_MODE=copy
 
 
+
 #RUN apt-get update && apt-get install -y git gcc default-jre
 RUN apt-get update && \
     apt-get install -y default-jre && \
