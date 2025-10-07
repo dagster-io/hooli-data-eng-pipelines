@@ -24,7 +24,7 @@ from dagster.preview.freshness import apply_freshness_policy
 from dagster.preview.freshness import FreshnessPolicy
 
 # many dbt assets use an incremental approach to avoid
-# re-processing all data on each run
+# re-processing all data on each run 
 # this approach can be modelled in dagster using partitions
 # this project includes assets with hourly and daily partitions
 daily_partitions = dg.DailyPartitionsDefinition(start_date="2023-05-25")
