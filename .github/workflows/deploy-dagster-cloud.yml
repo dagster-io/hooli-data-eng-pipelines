@@ -11,9 +11,9 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 env:
-  DAGSTER_CLOUD_ORGANIZATION: "hooli-eu.eu"
+  DAGSTER_CLOUD_ORGANIZATION: "hooli-eu"
+  DAGSTER_ENV_OPTION: "eu"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_EU_API_TOKEN }}
-  DAGSTER_CLOUD_URL: "https://hooli-eu.eu.dagster.cloud/"
   DAGSTER_PROJECT_DIR: "."
   DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
   # The IMAGE_REGISTRY should match the registry: in dagster_cloud.yaml
