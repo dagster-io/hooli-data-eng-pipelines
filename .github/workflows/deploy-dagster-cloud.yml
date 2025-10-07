@@ -220,7 +220,7 @@ jobs:
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./hooli-data-eng/hooli_data_eng/utils/example_container
+          context: ./hooli-data-eng/src/hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
 
