@@ -1,61 +1,128 @@
-type: hooli_ml.components.DatabricksAssetBundleComponent
+  type: dagster_databricks.DatabricksWorkspaceComponent
 
-attributes:
-  databricks_config_path: '{{ project_root }}/databricks_mlops/databricks_mlops/databricks.yml'
-  workspace:
-    host: "{{ env.DATABRICKS_HOST }}"
-    token: "{{ env.DATABRICKS_TOKEN }}"
+  attributes:
+    workspace:
+      host: "{{ env.DATABRICKS_HOST }}"
+      token: "{{ env.DATABRICKS_TOKEN }}"
+    assets_by_job_task_key:
+      "[dev christian] dev-databricks_mlops-batch-inference-job":
+        batch_inference_job:
+          - key: batch_inference_job
+            description: batch_inference_job from batch_inference_job job (notebook task)
+            deps:
+              - pickup_features
+              - dropoff_features
+              - model_deployment
+      "[dev christian] dev-databricks_mlops-model-training-job":
+        Train:
+          - key: train
+            description: Train from model_training_job job (notebook task)
+            deps:
+              - pickup_features
+              - dropoff_features
+        ModelValidation:
+          - key: model_validation
+            description: ModelValidation from model_training_job job (notebook task)
+            deps:
+              - train
+        ModelDeployment:
+          - key: model_deployment
+            description: ModelDeployment from model_training_job job (notebook task)
+            deps:
+              - model_validation
+      "[dev christian] dev-databricks_mlops-write-feature-table-job":
+        PickupFeatures:
+          - key: pickup_features
+            description: PickupFeatures from write_feature_table_job job (notebook task)
+            deps:
+              - ANALYTICS/orders_augmented
+        DropoffFeatures:
+          - key: dropoff_features
+            description: DropoffFeatures from write_feature_table_job job (notebook task)
+            deps:
+              - ANALYTICS/orders_augmented
+      "[dev christian] dev-databricks_mlops-monitoring-retraining-job":
+        monitored_metric_violation_check:
+          - key: monitored_metric_violation_check
+            description: monitored_metric_violation_check from retraining_job job (notebook task)
+            deps:
+              - model_deployment
+        is_metric_violated:
+          - key: is_metric_violated
+            description: is_metric_violated from retraining_job job (condition task)
+            deps:
+              - monitored_metric_violation_check
+        trigger_retraining:
+          - key: trigger_retraining
+            description: trigger_retraining from retraining_job job (job task)
+            deps:
+              - is_metric_violated
+  # databricks_filter:
+  #   include_jobs:
+  #     job_ids: [101, 102]  # Only include specific jobs
+  # assets_by_task_key:
+  #   ingest_task:
+  #     - key: my_custom_asset_name
+  #       group_name: etl_group
 
-  assets_by_task_key:
-    batch_inference_job:
-      - key: batch_inference_job
-        description: batch_inference_job from batch_inference_job job (notebook
-            task)
-        deps:
-          - pickup_features
-          - dropoff_features
-          - model_deployment
-    Train:
-      - key: train
-        description: Train from model_training_job job (notebook task)
-        deps:
-          - pickup_features
-          - dropoff_features
-    ModelValidation:
-      - key: model_validation
-        description: ModelValidation from model_training_job job (notebook task)
-        deps:
-          - train
-    ModelDeployment:
-      - key: model_deployment
-        description: ModelDeployment from model_training_job job (notebook task)
-        deps:
-          - model_validation
-    PickupFeatures:
-      - key: pickup_features
-        description: PickupFeatures from write_feature_table_job job (notebook task)
-        deps:
-          - ANALYTICS/orders_augmented
+# type: hooli_ml.components.DatabricksAssetBundleComponent
 
-    DropoffFeatures:
-      - key: dropoff_features
-        description: DropoffFeatures from write_feature_table_job job (notebook
-          task)
-        deps:
-          - ANALYTICS/orders_augmented
-    monitored_metric_violation_check:
-      - key: monitored_metric_violation_check
-        description: monitored_metric_violation_check from retraining_job job (notebook
-          task)
-        deps:
-          - model_deployment
-    is_metric_violated:
-      - key: is_metric_violated
-        description: is_metric_violated from retraining_job job (condition task)
-        deps:
-          - monitored_metric_violation_check
-    trigger_retraining:
-      - key: trigger_retraining
-        description: trigger_retraining from retraining_job job (job task)
-        deps:
-          - is_metric_violated
+# attributes:
+#   databricks_config_path: '{{ project_root }}/databricks_mlops/databricks_mlops/databricks.yml'
+#   workspace:
+#     host: "{{ env.DATABRICKS_HOST }}"
+#     token: "{{ env.DATABRICKS_TOKEN }}"
+
+#   assets_by_task_key:
+#     batch_inference_job:
+#       - key: batch_inference_job
+#         description: batch_inference_job from batch_inference_job job (notebook
+#             task)
+#         deps:
+#           - pickup_features
+#           - dropoff_features
+#           - model_deployment
+#     Train:
+#       - key: train
+#         description: Train from model_training_job job (notebook task)
+#         deps:
+#           - pickup_features
+#           - dropoff_features
+#     ModelValidation:
+#       - key: model_validation
+#         description: ModelValidation from model_training_job job (notebook task)
+#         deps:
+#           - train
+#     ModelDeployment:
+#       - key: model_deployment
+#         description: ModelDeployment from model_training_job job (notebook task)
+#         deps:
+#           - model_validation
+#     PickupFeatures:
+#       - key: pickup_features
+#         description: PickupFeatures from write_feature_table_job job (notebook task)
+#         deps:
+#           - ANALYTICS/orders_augmented
+
+#     DropoffFeatures:
+#       - key: dropoff_features
+#         description: DropoffFeatures from write_feature_table_job job (notebook
+#           task)
+#         deps:
+#           - ANALYTICS/orders_augmented
+#     monitored_metric_violation_check:
+#       - key: monitored_metric_violation_check
+#         description: monitored_metric_violation_check from retraining_job job (notebook
+#           task)
+#         deps:
+#           - model_deployment
+#     is_metric_violated:
+#       - key: is_metric_violated
+#         description: is_metric_violated from retraining_job job (condition task)
+#         deps:
+#           - monitored_metric_violation_check
+#     trigger_retraining:
+#       - key: trigger_retraining
+#         description: trigger_retraining from retraining_job job (job task)
+#         deps:
+#           - is_metric_violated
