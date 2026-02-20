@@ -355,7 +355,7 @@ jobs:
       - name: Get changed assets and launch materializations
         if: steps.branch-deployment.outputs.found == 'true'
         run: |
-          COMMANDS=$(python python_modules/dagster-open-platform/scripts/get_changed_assets.py \
+          COMMANDS=$(python scripts/get_changed_assets.py \
             --deployment "${{ steps.branch-deployment.outputs.name }}" \
             --verbose)
 
