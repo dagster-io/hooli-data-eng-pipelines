@@ -305,3 +305,68 @@ jobs:
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
         with:
           command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
+
+          # ── Materialize changed assets after prod deploy ──────────────
+  materialize-changed-assets:
+    name: Materialize Changed Assets
+    runs-on: ubuntu-22.04
+    needs: dagster-cloud-deploy
+    # Only run when a PR is merged (push to main after merge)
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: 3.13
+          activate-environment: "true"
+
+      - name: Install dependencies
+        run: uv pip install requests dagster-cloud
+
+      # Find the PR that was just merged for this push commit,
+      # then resolve its branch deployment name
+      - name: Get branch deployment name
+        id: branch-deployment
+        run: |
+          # Find the merged PR associated with this commit
+          PR_BRANCH=$(gh pr list \
+            --state merged \
+            --search "${{ github.sha }}" \
+            --json headRefName \
+            --jq '.[0].headRefName')
+
+          if [ -z "$PR_BRANCH" ]; then
+            echo "No merged PR found for this commit, skipping"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Merged PR branch: $PR_BRANCH"
+
+          # Branch deployment name is deterministic: SHA1(repo..branch)
+          DEPLOYMENT=$(echo -n "${{ github.repository }}..${PR_BRANCH}" | shasum -a 1 | cut -d' ' -f1)
+          echo "Branch deployment: $DEPLOYMENT"
+          echo "name=$DEPLOYMENT" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Get changed assets and launch materializations
+        if: steps.branch-deployment.outputs.found == 'true'
+        run: |
+          COMMANDS=$(python python_modules/dagster-open-platform/scripts/get_changed_assets.py \
+            --deployment "${{ steps.branch-deployment.outputs.name }}" \
+            --verbose)
+
+          if [ -z "$COMMANDS" ]; then
+            echo "No changed assets to materialize"
+            exit 0
+          fi
+
+          echo "### Changed Asset Materializations" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "$COMMANDS" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          echo "$COMMANDS" | bash
