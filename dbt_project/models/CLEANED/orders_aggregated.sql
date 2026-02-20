@@ -1,0 +1,1 @@
+select * from {{ ref("orders_cleaned") }}
