@@ -3,7 +3,6 @@ select
         user_id,
         quantity,
         purchase_price,
-        purchase_price * quantity as total_price,
         sku,
         dt,
         cast(dt as datetime) as order_date,
