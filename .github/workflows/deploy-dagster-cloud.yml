@@ -27,7 +27,7 @@ jobs:
     steps:
       - name: Pre-run checks
         id: prerun
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.12.14
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -124,14 +124,14 @@ jobs:
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v1.12.14
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
@@ -267,7 +267,7 @@ jobs:
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
         with:
          command: "ci deploy $LOCATIONS"
         env:
@@ -277,14 +277,14 @@ jobs:
       - name: Get branch deployment
         id: get-branch-deployment
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v1.12.14
         with:
           organization_id: 'hooli'
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
-        uses: dagster-io/dagster-cloud-action/actions/utils/run@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v1.12.14
         with:
           location_name: data-eng-pipeline
           deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
@@ -295,14 +295,14 @@ jobs:
       - name: Update PR comment for branch deployments
         id: ci-notify
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
         with:
           command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
 
       - name: Generate summary
         id: ci-summary
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.12
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
         with:
           command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
 
