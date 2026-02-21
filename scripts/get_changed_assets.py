@@ -159,11 +159,10 @@ def format_commands(
 ) -> str:
     lines = []
     for (location, repository), asset_keys in sorted(grouped.items()):
-        asset_args = " ".join(f"--asset-key {key}" for key in asset_keys)
+        asset_args = " ".join(f"--asset-key 'key:\"{key}\"'" for key in asset_keys)
         lines.append(
             f"dagster-cloud job launch"
             f" --location {location}"
-            f" --repository {repository}"
             f" --job {job}"
             f" {asset_args}"
         )
