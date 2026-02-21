@@ -5,6 +5,7 @@ select
         purchase_price,
         sku,
         dt,
+        dt as dt_2,
         cast(dt as datetime) as order_date,
         quantity * purchase_price as order_total
 from {{ source("raw_data", "orders") }}
