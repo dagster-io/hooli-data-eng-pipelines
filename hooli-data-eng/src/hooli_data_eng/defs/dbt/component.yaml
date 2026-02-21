@@ -2,7 +2,7 @@ type: hooli_data_eng.defs.dbt.component.HooliDbtComponent
 
 attributes:
   groups:
-    - selection: "company_stats locations_cleaned sku_stats company_perf orders_aggregated"
+    - selection: "company_stats locations_cleaned sku_stats company_perf"
       run_on_code_version_change: true
 
     - selection: "weekly_order_summary order_stats"
