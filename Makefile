@@ -21,10 +21,12 @@ dependencies:
 	uv pip install -e ".[dev]"
 
 update_packages:
-	uv lock --upgrade --directory hooli-data-eng;
-	uv lock --upgrade --directory hooli-basics;
-	uv lock --upgrade --directory hooli-data-ingest;
-	uv lock --upgrade --directory hooli-interoperability;
+	uv sync --upgrade --directory hooli-data-eng;
+	uv sync --upgrade --directory hooli-basics;
+	uv sync --upgrade --directory hooli-etl-pipeline;
+	uv sync --upgrade --directory hooli-ml;
+	uv sync --upgrade --directory hooli-ai;
+	uv sync --upgrade --directory hooli-interoperability;
 
 ruff:
 	-ruff check --fix .

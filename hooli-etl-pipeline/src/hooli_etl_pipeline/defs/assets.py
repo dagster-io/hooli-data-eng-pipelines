@@ -1,18 +1,18 @@
 from dagster_snowflake import SnowflakeResource
 from dagster_duckdb import DuckDBResource
 import dagster as dg
-from hooli_etl_pipeline.defs.resources import get_env, get_database_kind, DataImportResource
+from hooli_etl_pipeline.defs.resources import get_database_kind, DataImportResource
 import pandas as pd
 
 monthly_partition = dg.MonthlyPartitionsDefinition(start_date="2018-01-01")
 
 
 @dg.asset(
-        kinds={get_database_kind()},
-        # key likely different? 
-        key=["target", "main", "raw_customers"],
-        automation_condition=dg.AutomationCondition.on_cron("0 0 * * 1")
-    )  # every Monday at midnight)
+    kinds={get_database_kind()},
+    # key likely different?
+    key=["target", "main", "raw_customers"],
+    automation_condition=dg.AutomationCondition.on_cron("0 0 * * 1"),
+)  # every Monday at midnight)
 def raw_customers(database: DuckDBResource, data_importer: DataImportResource) -> None:
     data_importer.import_url_to_database(
         url="https://raw.githubusercontent.com/dbt-labs/jaffle-shop-classic/refs/heads/main/seeds/raw_customers.csv",
@@ -131,9 +131,7 @@ def missing_dimension_check(database: DuckDBResource) -> dg.AssetCheckResult:
     table_name = "RAW_CUSTOMERS"
 
     with database.get_connection() as conn:
-        conn = (
-            conn.cursor() if isinstance(database, SnowflakeResource) else conn
-        )
+        conn = conn.cursor() if isinstance(database, SnowflakeResource) else conn
         query_result = conn.execute(
             f"""
             select count(*)

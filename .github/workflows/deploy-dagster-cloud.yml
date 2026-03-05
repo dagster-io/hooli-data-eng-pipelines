@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Pre-run checks
         id: prerun
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.11.13
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,6 +55,8 @@ jobs:
               - hooli-interoperability/**
             hooli-ai:
               - hooli-ai/**
+            hooli-ml:
+              - hooli-ml/**
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -91,11 +93,15 @@ jobs:
               fi
               if [ "${{ steps.changed-files.outputs.hooli-interoperability_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_interoperability"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_interoperability --image-tag=$IMAGE_TAG-hooli-interoperability\n"
               fi
               if [ "${{ steps.changed-files.outputs.hooli-ai_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_ai"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ai --image-tag=$IMAGE_TAG-hooli-ai\n"
+              fi
+              if [ "${{ steps.changed-files.outputs.hooli-ml_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_ml"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_ml --image-tag=$IMAGE_TAG-hooli-ml"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
@@ -112,19 +118,19 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster dagster-snowflake dagster-duckdb pandas --upgrade;
+          uv pip install requests dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" dagster-dg-cli dagster dagster-snowflake dagster-duckdb pandas --upgrade;
 
       - name: Validate configuration
         id: ci-validate
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.13
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
       - name: Initialize build session
         id: ci-init
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v1.11.13
         with:
           project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
           dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
@@ -215,6 +221,15 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-ai
 
+      # Build 'hooli_ml' code location
+      - name: Build and upload Docker image for hooli_ml
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-ml
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-ml
+
       # Build pipes example container
       - name: Build and upload Docker image for pipes example
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -223,6 +238,50 @@ jobs:
           context: ./hooli-data-eng/hooli_data_eng/utils/example_container
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:latest-pipes-example
+
+      # Install Databricks CLI and deploy bundle for hooli-ml
+      - name: Install Databricks CLI
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true'
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          echo "$HOME/.databricks/bin" >> $GITHUB_PATH
+
+      - name: Initialize Predictions Table (Staging)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'pull_request'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          python scripts/init_predictions_table.py staging
+
+      - name: Deploy Databricks Bundle (Staging)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'pull_request'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks bundle deploy -t staging
+
+      - name: Initialize Predictions Table (Production)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/gtm20'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          pip install requests
+          python scripts/init_predictions_table.py workspace
+
+      - name: Deploy Databricks Bundle (Production)
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-ml_any_changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/gtm20'
+        working-directory: ./hooli-ml/databricks_mlops/databricks_mlops
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks bundle deploy -t prod
 
       #set build output
       - name: Set build output for Dagster Cloud
@@ -237,14 +296,14 @@ jobs:
               eval "$line"
             fi
           done
-        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        # uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.13
         # with:
         #   command: "ci set-build-output $LOCATIONS_WITH_IMAGE"
       #Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
         if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.13
         with:
          command: "ci deploy $LOCATIONS"
 
@@ -252,14 +311,14 @@ jobs:
       - name: Get branch deployment
         id: get-branch-deployment
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request'
-        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/get_branch_deployment@v1.11.13
         with:
           organization_id: 'hooli'
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
         if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
-        uses: dagster-io/dagster-cloud-action/actions/utils/run@v0.1
+        uses: dagster-io/dagster-cloud-action/actions/utils/run@v1.11.13
         with:
           location_name: data-eng-pipeline
           deployment: ${{ steps.get-branch-deployment.outputs.deployment }}
@@ -270,13 +329,13 @@ jobs:
       - name: Update PR comment for branch deployments
         id: ci-notify
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.13
         with:
           command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
 
       - name: Generate summary
         id: ci-summary
         if: steps.prerun.outputs.result != 'skip' && always()
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1.47
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.11.13
         with:
           command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"

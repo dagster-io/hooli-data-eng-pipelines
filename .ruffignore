@@ -1,0 +1,19 @@
+# Ignore Databricks notebooks which contain magic commands
+hooli-ml/databricks_mlops/databricks_mlops/**/notebooks/*.py
+hooli-ml/databricks_mlops/databricks_mlops/**/*Notebook*.py
+hooli-ml/databricks_mlops/databricks_mlops/**/*notebook*.py
+
+# General patterns for Databricks notebooks
+**/databricks_*/**/*.py
+**/*Notebook.py
+**/*notebook.py
+
+# Standard ignores
+.git/
+.venv/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+**/build/
+**/dist/
+**/target/
