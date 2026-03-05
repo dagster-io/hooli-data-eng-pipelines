@@ -38,25 +38,25 @@ targets:
       catalog_name: dev
     workspace:
       # TODO: add dev workspace URL
-      host: https://dbc-edf81ed6-5bff.cloud.databricks.com
+      host: https://dbc-4a54e2ac-d284.cloud.databricks.com
 
   staging:
     variables:
       catalog_name: staging
     workspace:
-      host: https://dbc-edf81ed6-5bff.cloud.databricks.com
+      host: https://dbc-4a54e2ac-d284.cloud.databricks.com
 
   prod:
     variables:
       catalog_name: workspace
     workspace:
-      host: https://dbc-edf81ed6-5bff.cloud.databricks.com
+      host: https://dbc-4a54e2ac-d284.cloud.databricks.com
 
   test:
     variables:
       catalog_name: test
     workspace:
-      host: https://dbc-edf81ed6-5bff.cloud.databricks.com
+      host: https://dbc-4a54e2ac-d284.cloud.databricks.com
 
   dev_with_cluster:
     variables:
