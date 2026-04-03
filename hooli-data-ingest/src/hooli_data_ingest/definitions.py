@@ -12,6 +12,7 @@ from hooli_data_ingest.jobs import daily_sling_job
 from hooli_data_ingest.resources import sling_resource
 from hooli_data_ingest.schedules import daily_sling_assets
 
+# Now here is hooli data ingest
 
 defs = Definitions(
     assets=link_code_references_to_git_if_cloud(
