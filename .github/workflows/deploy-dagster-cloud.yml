@@ -119,7 +119,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install dagster-dbt dagster-cloud dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
+          uv pip install dagster-dbt dagster-cloud dagster-dg-cli dbt-core dbt-duckdb "dbt-snowflake<=1.8.4" --upgrade;
 
       - name: Validate configuration
         id: ci-validate
@@ -169,7 +169,7 @@ jobs:
         run: |
           source .venv/bin/activate
           dagster-dbt project prepare-and-package --file hooli-data-eng/src/hooli_data_eng/defs/dbt/resources.py
-          dagster-cloud ci dagster-dbt project manage-state --file hooli-data-eng/src/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod 
+          dg plus integrations dbt manage-manifest --file hooli-data-eng/src/hooli_data_eng/defs/dbt/resources.py --source-deployment data-eng-prod
 
       - name: Build and upload Docker image for data-eng-pipeline
         if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
@@ -266,7 +266,7 @@ jobs:
       #Deploy
       - name: Deploy to Dagster Cloud
         id: ci-deploy
-        if: steps.prerun.outputs.result != 'skip'
+        if: steps.prerun.outputs.result != 'skip' && env.LOCATIONS != ''
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
         with:
          command: "ci deploy $LOCATIONS"
@@ -283,7 +283,7 @@ jobs:
 
       # Trigger dbt slim CI job
       - name: Trigger dbt slim CI
-        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-bi_any_changed == 'true'
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'pull_request' && steps.changed-files.outputs.hooli-data-eng_any_changed == 'true'
         uses: dagster-io/dagster-cloud-action/actions/utils/run@v1.12.14
         with:
           location_name: data-eng-pipeline
