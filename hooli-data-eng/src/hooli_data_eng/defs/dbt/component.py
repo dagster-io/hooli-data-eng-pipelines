@@ -153,11 +153,11 @@ def _process_partitioned_dbt_assets(
         context.log.info(f"Compiled SQL for {model_name}:\n{result['compiled_code']}")
 
 
-def get_hooli_translator():
+def get_hooli_translator(enable_code_references: bool = True):
     return CustomDagsterDbtTranslator(
         settings=DagsterDbtTranslatorSettings(
             enable_asset_checks=True,
-            enable_code_references=True,
+            enable_code_references=enable_code_references,
         )
     )
 
@@ -320,7 +320,7 @@ def get_slim_ci_job():
             dbt.cli(
                 args=dbt_command,
                 manifest=dbt_project.manifest_path,
-                dagster_dbt_translator=get_hooli_translator(),
+                dagster_dbt_translator=get_hooli_translator(enable_code_references=False),
             )
             .stream()
             .fetch_row_counts()
