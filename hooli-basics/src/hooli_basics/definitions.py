@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 
 from dagster import (
@@ -6,6 +7,8 @@ from dagster import (
     asset_check,
     AssetCheckResult,
     Definitions,
+    MaterializeResult,
+    MetadataValue,
     with_source_code_references,
 )
 from dagster_cloud.metadata.source_code import link_code_references_to_git_if_cloud
@@ -17,7 +20,11 @@ from sklearn.linear_model import LinearRegression as Regression
     kinds={"Kubernetes", "S3"},
 )
 def country_stats() -> DataFrame:
-    df = read_html("https://tinyurl.com/mry64ebh", flavor="html5lib")[0]
+    df = read_html(
+        "https://tinyurl.com/mry64ebh",
+        flavor="html5lib",
+        storage_options={"User-Agent": "Mozilla/5.0"},
+    )[0]
     df.columns = [
         "country",
         "Population (1 July 2022)",
@@ -47,10 +54,29 @@ def check_country_stats(country_stats):
 
 
 @asset(kinds={"Kubernetes", "S3"})
-def change_model(country_stats: DataFrame) -> Regression:
+def change_model(country_stats: DataFrame) -> MaterializeResult:
     data = country_stats.dropna(subset=["pop_change"])
     dummies = get_dummies(data[["continent"]])
-    return Regression().fit(dummies, data["pop_change"])
+    model = Regression().fit(dummies, data["pop_change"])
+
+    # Mocked performance metrics — randomized each run to demo ML metadata tracking
+    r2_score = round(random.uniform(0.72, 0.96), 4)
+    rmse = round(random.uniform(0.4, 2.8), 4)
+    mae = round(random.uniform(0.3, 1.9), 4)
+
+    return MaterializeResult(
+        value=model,
+        metadata={
+            "r2_score": MetadataValue.float(r2_score),
+            "rmse": MetadataValue.float(rmse),
+            "mae": MetadataValue.float(mae),
+            "num_training_samples": MetadataValue.int(len(data)),
+            "intercept": MetadataValue.float(round(float(model.intercept_), 4)),
+            "coefficients": MetadataValue.json(
+                dict(zip(dummies.columns.tolist(), [round(c, 4) for c in model.coef_.tolist()]))
+            ),
+        },
+    )
 
 
 @asset(kinds={"Kubernetes", "S3"})
