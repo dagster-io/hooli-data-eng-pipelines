@@ -9,7 +9,7 @@ dependencies = [
     "pandas",
     "responses",
     "dagster-cloud[insights]",
-    "dagster>=1.11.0",
+    "dagster>=1.12.1",
     "dagster-webserver>=1.11.0",
     "dagster-dg-cli>=1.11.0",
 ]
