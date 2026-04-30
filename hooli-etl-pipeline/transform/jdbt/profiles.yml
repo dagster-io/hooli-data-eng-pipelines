@@ -10,7 +10,7 @@ jdbt:
     PROD:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT', '') }}"
-      # User/password auth
+      # User/private_key auth
       user: "{{ env_var('SNOWFLAKE_USER', '') }}"
       private_key: "{{ env_var('SNOWFLAKE_KEY', '') }}"
       database: DEMO_DB2
@@ -21,7 +21,7 @@ jdbt:
     BRANCH:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT', '') }}"
-      # User/password auth
+      # User/private_key auth
       user: "{{ env_var('SNOWFLAKE_USER', '') }}"
       private_key: "{{ env_var('SNOWFLAKE_KEY', '') }}"
       database: DEMO_DB2_BRANCH
