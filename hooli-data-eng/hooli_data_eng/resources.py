@@ -19,7 +19,7 @@ snowflake_branch_io_manager = SnowflakePandasIOManager(
     database="DEMO_DB2_BRANCH",
     account=dg.EnvVar("SNOWFLAKE_ACCOUNT"),
     user=dg.EnvVar("SNOWFLAKE_USER"),
-    password=dg.EnvVar("SNOWFLAKE_PASSWORD"),
+    private_key=dg.EnvVar("SNOWFLAKE_KEY"),
     warehouse="TINY_WAREHOUSE",
 )
 
@@ -27,6 +27,6 @@ snowflake_prod_io_manager = SnowflakePandasIOManager(
     database="DEMO_DB2",
     account=dg.EnvVar("SNOWFLAKE_ACCOUNT"),
     user=dg.EnvVar("SNOWFLAKE_USER"),
-    password=dg.EnvVar("SNOWFLAKE_PASSWORD"),
+    private_key=dg.EnvVar("SNOWFLAKE_KEY"),
     warehouse="TINY_WAREHOUSE",
 )
