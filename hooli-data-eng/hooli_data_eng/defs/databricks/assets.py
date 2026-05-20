@@ -14,10 +14,12 @@ from databricks.sdk.service import jobs
 # for building a databricks cluster
 @dg.asset(
     ins={"predicted_orders": dg.AssetIn(key_prefix=["FORECASTING"])},
+    deps=[dg.AssetKey(["databricks_default_schema", "workspace", "default", "order_fulfillment"])],
     key_prefix=["FORECASTING"],
     required_resource_keys={"step_launcher", "pyspark"},
     metadata={"resource_constrained_at": 50},
     kinds={"pyspark", "databricks"},
+    automation_condition=dg.AutomationCondition.eager(),
 )
 def big_orders(context, predicted_orders: pd.DataFrame):
     """Days where predicted orders surpass our current carrying capacity"""
@@ -29,8 +31,12 @@ def big_orders(context, predicted_orders: pd.DataFrame):
 # The dependency on predicted_orders is not a real dependency since the script does not rely
 # or use that upstream Snowflake table, it is used here for illustrative purposes
 @dg.asset(
-    deps=[dg.AssetKey(["FORECASTING", "predicted_orders"])],
+    deps=[
+        dg.AssetKey(["FORECASTING", "predicted_orders"]),
+        dg.AssetKey(["databricks_default_schema", "workspace", "default", "revenue_forecast"]),
+    ],
     kinds={"pyspark", "databricks"},
+    automation_condition=dg.AutomationCondition.eager(),
 )
 def databricks_asset(
     context: dg.AssetExecutionContext,
