@@ -75,9 +75,7 @@ class DagsterAPIClient:
     """Client for interacting with Dagster Cloud's GraphQL API."""
 
     def __init__(self, organization: str, deployment: str, api_token: str):
-        self.graphql_url = (
-            f"https://{organization}.dagster.cloud/{deployment}/graphql"
-        )
+        self.graphql_url = f"https://{organization}.dagster.cloud/{deployment}/graphql"
         self.api_token = api_token
 
     def execute_query(
@@ -161,10 +159,7 @@ def format_commands(
     for (location, repository), asset_keys in sorted(grouped.items()):
         asset_args = " ".join(f"--asset-key 'key:\"{key}\"'" for key in asset_keys)
         lines.append(
-            f"dagster-cloud job launch"
-            f" --location {location}"
-            f" --job {job}"
-            f" {asset_args}"
+            f"dagster-cloud job launch --location {location} --job {job} {asset_args}"
         )
     return "\n".join(lines)
 

@@ -73,7 +73,12 @@ def change_model(country_stats: DataFrame) -> MaterializeResult:
             "num_training_samples": MetadataValue.int(len(data)),
             "intercept": MetadataValue.float(round(float(model.intercept_), 4)),
             "coefficients": MetadataValue.json(
-                dict(zip(dummies.columns.tolist(), [round(c, 4) for c in model.coef_.tolist()]))
+                dict(
+                    zip(
+                        dummies.columns.tolist(),
+                        [round(c, 4) for c in model.coef_.tolist()],
+                    )
+                )
             ),
         },
     )

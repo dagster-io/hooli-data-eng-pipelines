@@ -29,6 +29,7 @@ dependencies = [
       "requests-toolbelt",
       "html5lib",
       "scikit-learn",
+      "ruff>=0.15.2",
 ]
 
 [project.optional-dependencies]

@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -2965,6 +2965,7 @@ dependencies = [
     { name = "requests" },
     { name = "requests-toolbelt" },
     { name = "responses" },
+    { name = "ruff" },
     { name = "scikit-learn", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -3028,6 +3029,7 @@ requires-dist = [
     { name = "requests" },
     { name = "requests-toolbelt" },
     { name = "responses" },
+    { name = "ruff", specifier = ">=0.15.2" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "scikit-learn" },
     { name = "scipy" },
