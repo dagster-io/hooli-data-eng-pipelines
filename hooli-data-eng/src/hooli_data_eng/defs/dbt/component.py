@@ -320,7 +320,9 @@ def get_slim_ci_job():
             dbt.cli(
                 args=dbt_command,
                 manifest=dbt_project.manifest_path,
-                dagster_dbt_translator=get_hooli_translator(enable_code_references=False),
+                dagster_dbt_translator=get_hooli_translator(
+                    enable_code_references=False
+                ),
             )
             .stream()
             .fetch_row_counts()
