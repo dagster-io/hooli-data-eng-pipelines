@@ -52,6 +52,7 @@ query GetChangedAssets {
     assetNodes {
         assetKey { path }
         changedReasons
+        isExecutable
         repository {
             name
             location { name }
@@ -122,6 +123,9 @@ def get_changed_assets(
     for node in asset_nodes:
         reasons = set(node.get("changedReasons") or [])
         if not reasons & change_types:
+            continue
+
+        if not node.get("isExecutable"):
             continue
 
         matched_count += 1
