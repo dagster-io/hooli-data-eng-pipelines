@@ -2,6 +2,7 @@ import json
 import textwrap
 from typing import Any, Mapping, Union, Literal, Optional
 import dagster as dg
+from dagster.components.resolved.form_config import ComponentFormConfig
 from hooli_data_eng.utils import get_env
 from dagster_dbt import (
     DbtCliResource,
@@ -171,6 +172,10 @@ class DbtSelection(dg.Resolvable, dg.Model):
 
 class HooliDbtComponent(dg.Component, dg.Resolvable, dg.Model):
     groups: list[DbtSelection]
+
+    @classmethod
+    def get_form_config(cls) -> ComponentFormConfig:
+        return ComponentFormConfig(label="Hooli dbt Project", editable=True)
 
     def build_defs(self, context) -> dg.Definitions:
         assets = []
