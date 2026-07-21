@@ -1,0 +1,5 @@
+type: hooli_data_eng.components.ScheduledJobComponent
+attributes:
+  cron_schedule: 0 3 1 * *
+  asset_selection: ANALYTICS/company_perf or ANALYTICS/order_stats or ANALYTICS/company_stats
+  job_name: eric_123
