@@ -1,0 +1,10 @@
+type: dagster_community_components.MCPServerResourceComponent
+attributes:
+  resource_key: dagster_plus
+  name: dagster_plus
+  type: http
+  url: '{{ env.DAGSTER_PLUS_MCP_URL }}'
+  headers_env:
+    Authorization: DAGSTER_PLUS_BEARER
+    Dagster-Cloud-Organization: DAGSTER_PLUS_ORG
+  instructions: Every tool that takes a deployment_name needs the value data-eng-prod. Never use default.

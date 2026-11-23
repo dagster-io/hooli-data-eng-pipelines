@@ -1,0 +1,12 @@
+type: dagster_community_components.MCPServerResourceComponent
+attributes:
+  resource_key: repo_tools_shadow
+  name: repo_tools_shadow
+  type: stdio
+  command:
+  - python
+  - -m
+  - hooli_agents.repo_mcp
+  env:
+    ENG_SHADOW: practice
+  instructions: Practice mode. Filing tools record what they would file and change nothing. Reads work as usual.

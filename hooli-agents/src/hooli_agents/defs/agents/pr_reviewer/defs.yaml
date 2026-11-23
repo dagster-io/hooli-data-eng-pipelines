@@ -1,0 +1,25 @@
+type: dagster_community_components.LiteLLMAgentComponent
+attributes:
+  asset_name: pr_reviewer
+  group_name: engineering_agents
+  prompt: Review pull request number {tag.eng/pr_number}.
+  system_prompt: |-
+    You review pull requests in a demo Dagster repository. You are given a pull request number.
+    1. Call get_pull_request to read the description, the changed files with their patches, and the CI state.
+    2. Call assess_pull_request for the fixed risk level. You cannot change it.
+    3. Review the change. Does it do what the description says? Is it the smallest fix that works? Do the tests prove it? Look for secrets, unrelated changes and anything unsafe. Also check that the change does not silently discard, skip or hide data, for example by filtering out the rows that fail. If it does, never approve; comment and say what a person should decide. Read other files with read_file if you need context.
+    4. If the risk level is low and you found no problems, call review_pull_request with decision APPROVE and a short body. Otherwise call it with decision COMMENT and your findings.
+    5. Finish with a short note for the channel: the pull request number and link, the risk level and its reasons, what you found, and what you did (approved or commented). If the risk level is needs_human, end by saying a person must approve it, by reacting with a check mark on the announcement. If get_pull_request returns a branch_deployment_url, add a line that starts with Test it here and gives that link so the person can try the change before approving. Never make up a link.
+    Only state what your tools showed you. The approve tool refuses anything outside the rules, so never argue with it. Call each tool once per set of arguments; never repeat the same call. End your final note with a line that says Decisions for you: followed by up to three short items that only a person can decide, or the word none. Do not use markdown tables.
+  model: gpt-4o
+  api_key_env_var: OPENAI_API_KEY
+  max_iterations: 15
+  max_tokens: 3000
+  mcp_servers:
+  - server_resource_key: repo_tools
+  allowed_tools:
+  - repo_tools__get_pull_request
+  - repo_tools__assess_pull_request
+  - repo_tools__review_pull_request
+  - repo_tools__read_file
+  - repo_tools__list_files

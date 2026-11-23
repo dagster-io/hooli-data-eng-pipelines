@@ -1,0 +1,13 @@
+{
+  "description": "Problems seeded in the demo project. A finding matches a fixture when its text has every word of at least one word group.",
+  "fixtures": [
+    {"id": "deprecated_api", "any": [["auto_materialize_policy"], ["AutoMaterializePolicy"]]},
+    {"id": "retries", "any": [["exchange_rates", "retr"]]},
+    {"id": "failed_partition", "any": [["daily_signups", "partition"]]},
+    {"id": "no_asset_checks", "any": [["asset check"], ["asset_check"]]},
+    {"id": "no_freshness", "any": [["freshness polic"]]},
+    {"id": "schedule_to_automation", "any": [["orders_job_schedule"], ["automation condition", "schedule"]]},
+    {"id": "no_alerts", "any": [["alert polic"]]},
+    {"id": "no_lock_file", "any": [["lock file"], ["lockfile"]]}
+  ]
+}

@@ -57,3 +57,18 @@ locations:
     build:
       directory: ./hooli-airlift/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+
+  - location_name: hooli_agents
+    code_source:
+      module_name: hooli_agents.definitions
+    build:
+      directory: ./hooli-agents/src
+      registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+    container_context:
+      k8s:
+        run_k8s_config:
+          container_config:
+            resources:
+              limits:
+                cpu: 500m
+                memory: 1G
