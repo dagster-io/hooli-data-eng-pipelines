@@ -60,7 +60,7 @@ locations:
 
   - location_name: hooli_agents
     code_source:
-      autoload_defs_module_name: hooli_agents.defs
+      module_name: hooli_agents.definitions
     build:
       directory: ./hooli-agents/src
       registry:  764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
