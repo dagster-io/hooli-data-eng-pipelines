@@ -58,7 +58,7 @@ powerbi_assets = [
     else spec
     for spec in load_powerbi_asset_specs(
         power_bi_workspace,
-        dagster_powerbi_translator=MyCustomPowerBITranslator,
+        dagster_powerbi_translator=MyCustomPowerBITranslator(),
         use_workspace_scan=True,
     )
 ]

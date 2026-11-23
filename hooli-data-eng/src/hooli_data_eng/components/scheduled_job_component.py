@@ -1,5 +1,6 @@
 import dagster as dg
 from dagster.components import Component, ComponentLoadContext, Resolvable
+from dagster.components.resolved.form_config import ComponentFormConfig
 from typing import Optional, Any
 from dataclasses import dataclass
 
@@ -15,6 +16,10 @@ class ScheduledJobComponent(Component, Resolvable):
     cron_schedule: str
     asset_selection: str
     job_name: str
+
+    @classmethod
+    def get_form_config(cls) -> ComponentFormConfig:
+        return ComponentFormConfig(label="Scheduled Job", editable=True)
 
     def build_defs(self, context: ComponentLoadContext) -> dg.Definitions:
         job = dg.define_asset_job(
@@ -44,6 +49,10 @@ class ScheduledPartitionedJobComponent(Component, Resolvable):
     asset_selection: str
     job_name: str
     tags: Optional[dict[str, Any]]
+
+    @classmethod
+    def get_form_config(cls) -> ComponentFormConfig:
+        return ComponentFormConfig(label="Scheduled Partitioned Job", editable=True)
 
     def build_defs(self, context: ComponentLoadContext) -> dg.Definitions:
         job = dg.define_asset_job(

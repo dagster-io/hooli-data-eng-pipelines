@@ -2,9 +2,9 @@
 name = "hooli_data_ingest"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
-    "dagster",
+    "dagster>=1.13.9",
     "dagster-duckdb",
     "dagster-sling",
     "dagster-cloud[insights]",

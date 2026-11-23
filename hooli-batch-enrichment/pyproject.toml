@@ -3,13 +3,13 @@ name = "dagster_batch_enrichment"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "dagster-duckdb",
     "pandas",
     "responses",
     "dagster-cloud[insights]",
-    "dagster>=1.11.0",
+    "dagster>=1.13.9",
     "dagster-webserver>=1.11.0",
     "dagster-dg-cli>=1.11.0",
 ]
