@@ -39,7 +39,8 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 | `ENG_REVIEWER_GITHUB_TOKEN`, `ENG_REVIEWER_GH_USER` | a second GitHub login that approves, since GitHub does not let an author approve their own pull request |
 | `ENG_DAGSTER_URL` | UI base URL, `https://hooli.dagster.cloud/data-eng-prod`, used for run links |
 | `ENG_DAGSTER_GRAPHQL_URL`, `ENG_DAGSTER_API_TOKEN` | still needed by the advisor's evidence tool (assets, schedules, alerts, running versions) and by the re-run after a merge; the failure sensor does not use them |
-| `DAGSTER_PLUS_MCP_URL` | URL of the Dagster+ MCP server used by `bug_fixer` for run logs |
+| `DAGSTER_PLUS_MCP_URL` | URL of the Dagster+ MCP server used by `bug_fixer` for run logs (`https://mcp.agent.dagster.cloud/mcp`) |
+| `DAGSTER_PLUS_ORG`, `DAGSTER_PLUS_BEARER` | the MCP server's organization header (`hooli`) and authorization header (`Bearer <token>`) |
 | `ENG_WATCHED_LOCATION` | code locations to watch (comma-separated; empty is all) |
 | `ENG_BASE_BRANCH` | branch agent pull requests target (`master` for this repo) |
 | `ENG_AUTO_MERGE` | `false` to leave every merge to a person |
