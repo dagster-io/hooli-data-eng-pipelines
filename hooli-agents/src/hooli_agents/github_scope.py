@@ -78,17 +78,28 @@ def _reviewer() -> str:
     return user
 
 
+def is_excluded(path: str) -> bool:
+    """Paths the agents never read or change (ENG_EXCLUDE_PATHS, comma-separated prefixes)."""
+    for prefix in str(settings.get("exclude_paths", "hooli-agents/") or "").split(","):
+        prefix = prefix.strip()
+        if prefix and (path.rstrip("/") == prefix.rstrip("/") or path.startswith(prefix.rstrip("/") + "/")):
+            return True
+    return False
+
+
 def _safe_path(path: str) -> str:
     path = path.strip().lstrip("/")
     if ".." in path.split("/") or path.startswith(".git/"):
         raise ScopeError(f"Invalid path: {path!r}")
+    if is_excluded(path):
+        raise ScopeError(f"{path!r} is excluded; agents do not read or change it.")
     return path
 
 
 def list_files(path: str = "") -> list[dict]:
     items = _call("GET", f"/contents/{_safe_path(path)}", params={"ref": BASE_BRANCH})
     items = items if isinstance(items, list) else [items]
-    return [{"path": i["path"], "type": i["type"], "size": i.get("size")} for i in items]
+    return [{"path": i["path"], "type": i["type"], "size": i.get("size")} for i in items if not is_excluded(i["path"])]
 
 
 def read_file(path: str, ref: str = BASE_BRANCH) -> str:

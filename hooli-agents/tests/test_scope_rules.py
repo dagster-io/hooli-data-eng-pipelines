@@ -50,3 +50,16 @@ def test_list_locations_respects_watch_list(monkeypatch):
     assert ops_tools.list_locations() == {"locations": ["basics", "hooli_bi"]}
     monkeypatch.setenv("ENG_ADVISOR_LOCATION", "hooli_bi")
     assert ops_tools.list_locations() == {"locations": ["hooli_bi"]}
+
+
+def test_agents_own_code_is_excluded(monkeypatch):
+    monkeypatch.delenv("ENG_EXCLUDE_PATHS", raising=False)
+    assert gh.is_excluded("hooli-agents/src/hooli_agents/definitions.py")
+    assert gh.is_excluded("hooli-agents")
+    assert not gh.is_excluded("hooli-basics/src/hooli_basics/definitions.py")
+    assert not gh.is_excluded("hooli-agents-other/x.py")
+    try:
+        gh._safe_path("hooli-agents/README.md")
+        raise AssertionError("expected ScopeError")
+    except gh.ScopeError:
+        pass

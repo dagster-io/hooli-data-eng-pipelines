@@ -326,7 +326,7 @@ def deprecation_report(max_files: int = 40) -> dict:
     from hooli_agents import github_scope
 
     tree = github_scope._call("GET", f"/git/trees/{github_scope.BASE_BRANCH}", params={"recursive": "1"})
-    paths = [t["path"] for t in tree["tree"] if t["type"] == "blob" and t["path"].endswith(".py")][:max_files]
+    paths = [t["path"] for t in tree["tree"] if t["type"] == "blob" and t["path"].endswith(".py") and not github_scope.is_excluded(t["path"])][:max_files]
     findings: list[dict] = []
     for path in paths:
         findings += _scan_source(path, github_scope.read_file(path))
@@ -409,7 +409,7 @@ def dependency_report(running_libraries: list[dict] | None = None) -> dict:
     from hooli_agents import github_scope
 
     tree = github_scope._call("GET", f"/git/trees/{github_scope.BASE_BRANCH}", params={"recursive": "1"})["tree"]
-    names = {t["path"] for t in tree}
+    names = {t["path"] for t in tree if not github_scope.is_excluded(t["path"])}
     lockfiles = sorted(n for n in names if n.split("/")[-1] in ("uv.lock", "poetry.lock", "Pipfile.lock", "requirements.txt"))
     deps = []
     with contextlib.suppress(github_scope.ScopeError):
