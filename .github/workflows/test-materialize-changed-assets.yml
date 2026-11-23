@@ -1,0 +1,76 @@
+name: Test Materialize Changed Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_key_1:
+        description: "First asset key to materialize (e.g. my_asset or prefix/my_asset)"
+        required: true
+        type: string
+      asset_key_2:
+        description: "Second asset key to materialize (e.g. other_asset or prefix/other_asset)"
+        required: true
+        type: string
+      location_name:
+        description: "Code location name"
+        required: true
+        default: "data-eng-pipeline"
+        type: choice
+        options:
+          - data-eng-pipeline
+          - basics
+          - batch_enrichment
+          - snowflake_insights
+          - hooli_data_ingest
+          - hooli_bi
+          - hooli_airlift
+
+env:
+  DAGSTER_CLOUD_ORGANIZATION: "hooli"
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+
+jobs:
+  test-materialize:
+    name: Test Asset Selection Syntax and Launch Run
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+          activate-environment: "true"
+
+      - name: Install dependencies
+        run: uv pip install requests dagster-cloud
+
+      - name: Launch Dagster Cloud run with specified asset keys
+        env:
+          DAGSTER_CLOUD_DEPLOYMENT: data-eng-prod
+        run: |
+          ASSET_KEY_1="${{ inputs.asset_key_1 }}"
+          ASSET_KEY_2="${{ inputs.asset_key_2 }}"
+          LOCATION="${{ inputs.location_name }}"
+
+          # Build the command using the same asset selection syntax as get_changed_assets.py
+          CMD="dagster-cloud job launch \
+            --location ${LOCATION} \
+            --job __ASSET_JOB \
+            --asset-key 'key:\"${ASSET_KEY_1}\"' \
+            --asset-key 'key:\"${ASSET_KEY_2}\"'"
+
+          echo "### Launching Dagster Cloud run" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Deployment:** data-eng-prod" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Location:** ${LOCATION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Asset keys:** \`${ASSET_KEY_1}\`, \`${ASSET_KEY_2}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Command:**" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "$CMD" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          eval "$CMD"
