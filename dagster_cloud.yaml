@@ -70,5 +70,5 @@ locations:
           container_config:
             resources:
               limits:
-                cpu: 500m
-                memory: 1G
+                cpu: 1000m
+                memory: 4G
