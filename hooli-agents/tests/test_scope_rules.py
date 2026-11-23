@@ -63,3 +63,15 @@ def test_agents_own_code_is_excluded(monkeypatch):
         raise AssertionError("expected ScopeError")
     except gh.ScopeError:
         pass
+
+
+def test_asset_code_paths_come_from_github_references():
+    node = {"metadataEntries": [{"codeReferences": [
+        {"url": "https://github.com/o/r/tree/aae00c422be501764520f96a7e553e77607373f9/hooli-data-eng/src/hooli_data_eng/defs/dbt/component.py#L209"},
+        {"url": "https://github.com/o/r/tree/aae00c422be501764520f96a7e553e77607373f9/dbt_project/models/a.sql"},
+        {"filePath": "/opt/x.py"},
+    ]}]}
+    assert ops_tools._code_paths(node) == [
+        {"path": "hooli-data-eng/src/hooli_data_eng/defs/dbt/component.py", "line": 209},
+        {"path": "dbt_project/models/a.sql", "line": 0},
+    ]

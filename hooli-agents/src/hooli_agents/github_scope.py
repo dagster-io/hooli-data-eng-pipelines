@@ -12,7 +12,7 @@ from functools import lru_cache
 
 import requests
 
-from hooli_agents import ledger, settings
+from hooli_agents import ledger, settings, snippet_check
 
 REPO = settings.get("repo", "")
 BASE_BRANCH = settings.get("base_branch", "main")
@@ -350,6 +350,12 @@ def find_issues(query: str) -> list[dict]:
 
 
 def open_issue(title: str, body: str, labels: list[str] | None = None) -> dict:
+    wrong = snippet_check.problems_in(body)
+    if wrong:
+        raise ScopeError(
+            "Not filed: the code in the body does not match the installed Dagster. Fix it, using check_dagster_api "
+            "for the real names and signatures, and call open_issue again. " + "; ".join(wrong[:5])
+        )
     if settings.shadow():
         ledger.record("would_file", place="github_issue", title=title, body=body[:1500])
         return {"practice_mode": True, "would_open": "github_issue", "title": title, "url": "(practice mode: nothing was filed)"}
