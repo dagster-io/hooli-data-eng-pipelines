@@ -40,3 +40,13 @@ def test_agents_ignore_pull_requests_on_other_branches(monkeypatch):
         raise AssertionError("expected ScopeError")
     except gh.ScopeError as e:
         assert "agent branch" in str(e)
+
+
+def test_advisor_location_setting(monkeypatch):
+    monkeypatch.setenv("ENG_WATCHED_LOCATION", "")
+    monkeypatch.setenv("ENG_ADVISOR_LOCATION", "basics")
+    monkeypatch.setattr(ops_tools, "_gql", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("reached graphql")))
+    try:
+        ops_tools.project_overview()
+    except RuntimeError as e:
+        assert "reached graphql" in str(e)

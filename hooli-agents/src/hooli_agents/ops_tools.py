@@ -123,9 +123,9 @@ def project_overview(location: str = "") -> dict:
     """Facts about one watched code location: assets, schedules, alerts, versions and recent retries."""
     from hooli_agents import github_scope
 
-    location = location or (watched_locations() or [""])[0]
+    location = location or settings.get("advisor_location") or (watched_locations() or [""])[0]
     if not location or not location_watched(location):
-        raise RuntimeError(f"Pass a code location. Watched: {watched_locations() or 'set ENG_WATCHED_LOCATION'}")
+        raise RuntimeError("Set ENG_ADVISOR_LOCATION to the one code location the advisor reviews, or pass a location.")
     data = _gql(OVERVIEW_QUERY, {})
     schedules = []
     running = None
