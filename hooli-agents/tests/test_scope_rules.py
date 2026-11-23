@@ -28,3 +28,15 @@ def test_watched_locations(monkeypatch):
 def test_agents_never_watch_their_own_location(monkeypatch):
     monkeypatch.setenv("ENG_WATCHED_LOCATION", "")
     assert not ops_tools.location_watched("hooli_agents")
+
+
+def test_agents_ignore_pull_requests_on_other_branches(monkeypatch):
+    prs = [{"number": 1, "head": {"ref": "agent/fix", "sha": "a" * 40}, "title": "t", "html_url": "u", "user": {"login": "x"}},
+           {"number": 2, "head": {"ref": "feature/other", "sha": "b" * 40}, "title": "t", "html_url": "u", "user": {"login": "y"}}]
+    monkeypatch.setattr(gh, "_call", lambda method, path, **kw: prs if path == "/pulls" else prs[1])
+    assert [p["number"] for p in gh.open_pull_requests()] == [1]
+    try:
+        gh.get_pull_request(2)
+        raise AssertionError("expected ScopeError")
+    except gh.ScopeError as e:
+        assert "agent branch" in str(e)
