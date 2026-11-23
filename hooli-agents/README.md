@@ -12,10 +12,14 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 
 ## Layout
 
-- `src/hooli_agents/defs/agents/*/defs.yaml`: the agents, their tool servers and Slack replies, as components.
-- `src/hooli_agents/defs/triggers.py`: sensors that start the agents, and the approval watcher that merges after a person approves.
-- `src/hooli_agents/*_scope.py`, `ops_tools.py`, `repo_mcp.py`: the tools the agents get, served over MCP (stdio). Risk rules, duplicate checks and API checks live here, not in prompts.
-- `eval/`: fixtures for the grading asset check.
+What is a component, and what is not:
+
+- **Components** (YAML, `src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the MCP server entries (`repo_tools`, `repo_tools_shadow`, `dagster_plus`). `dg list components` shows the types.
+- **Plain Dagster definitions** (Python, also under `defs/` and loaded with the components): `triggers.py` holds the sensors that start the agents and the approval watcher that merges after a person approves; `outcomes.py` builds one outcome asset per agent; `grades.py` defines the optional grading check.
+- **The tool server** (Python package, not a component): `*_scope.py`, `ops_tools.py`, `snippet_check.py` and `repo_mcp.py` are the tools the agents call. `repo_mcp.py` exposes them as an MCP server, and the `repo_tools` component only tells an agent how to start it (`python -m hooli_agents.repo_mcp`). Risk rules, duplicate checks, API checks and snippet checks live here, not in prompts.
+- `eval/`: example fixtures for the optional grading check.
+
+Some of this duplicates tool and sensor components that ship in `dagster-community-components`; moving onto those is planned.
 
 ## What they watch, and what they change
 
@@ -42,6 +46,7 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 | `DAGSTER_PLUS_MCP_URL` | URL of the Dagster+ MCP server used by `bug_fixer` for run logs (`https://mcp.agent.dagster.cloud/mcp`) |
 | `DAGSTER_PLUS_ORG`, `DAGSTER_PLUS_BEARER` | the MCP server's organization header (`hooli`) and authorization header (`Bearer <token>`) |
 | `ENG_WATCHED_LOCATION` | code locations to watch (comma-separated; empty is all) |
+| `ENG_GRADE_FIXTURES` | optional; path to a fixtures file that describes the project under review. Defines the `matches_fixtures` check on the advisor outcome (without it there is no check) |
 | `ENG_ADVISOR_LOCATION` | optional; limit the improvement advisor to one code location (default: every watched location) |
 | `ENG_BASE_BRANCH` | branch agent pull requests target (`master` for this repo) |
 | `ENG_AUTO_MERGE` | `false` to leave every merge to a person |

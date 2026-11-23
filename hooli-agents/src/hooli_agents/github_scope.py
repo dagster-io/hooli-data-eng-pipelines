@@ -137,7 +137,7 @@ def propose_fix(
             )
     if settings.shadow():
         ledger.record(
-            "would_file", place="pull_request", title=title, body=body[:1500], files=sorted(wanted)
+            "would_file", place="pull_request", title=title, body=body[:20000], files=sorted(wanted)
         )
         return {"practice_mode": True, "would_open": "pull_request", "title": title, "url": "(practice mode: nothing was opened)"}
     slug = "".join(c if c.isalnum() or c in "-_" else "-" for c in branch)[:60].strip("-") or "fix"
@@ -357,7 +357,7 @@ def open_issue(title: str, body: str, labels: list[str] | None = None) -> dict:
             "for the real names and signatures, and call open_issue again. " + "; ".join(wrong[:5])
         )
     if settings.shadow():
-        ledger.record("would_file", place="github_issue", title=title, body=body[:1500])
+        ledger.record("would_file", place="github_issue", title=title, body=body[:20000])
         return {"practice_mode": True, "would_open": "github_issue", "title": title, "url": "(practice mode: nothing was filed)"}
     try:
         _call("POST", "/labels", json={"name": ISSUE_LABEL, "color": "1d76db"})

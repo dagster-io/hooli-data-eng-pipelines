@@ -28,6 +28,17 @@ def _summary(text: str) -> str:
     return head[:700] + ("…" if len(head) > 700 else "")
 
 
+def _drafts_markdown(filed: list[dict], would_file: list[dict]) -> str:
+    """The full text of what was filed, or what would have been filed in practice mode, for reading in the UI."""
+    parts = []
+    for row in would_file:
+        parts.append(f"## {row.get('title', '(untitled)')}\n\n_Practice mode, not filed ({row.get('place', '')})._\n\n{row.get('body', '')}")
+    for row in filed:
+        link = f" {row['url']}" if row.get("url") else ""
+        parts.append(f"## {row.get('title', row.get('kind', 'filed'))}\n\n_Filed ({row.get('kind', '')}).{link}_")
+    return "\n\n---\n\n".join(parts) or "Nothing was filed or drafted."
+
+
 def _outcome_asset(agent: str) -> dg.AssetsDefinition:
     @dg.asset(
         name=f"{agent}_outcome",
@@ -56,6 +67,7 @@ def _outcome_asset(agent: str) -> dg.AssetsDefinition:
             metadata={
                 "status": status,
                 "summary": dg.MetadataValue.md(_summary(text)),
+                "drafts": dg.MetadataValue.md(_drafts_markdown(filed, would_file)),
                 "filed": dg.MetadataValue.json(filed),
                 "would_file": dg.MetadataValue.json(would_file),
                 "refused": dg.MetadataValue.json(refused),
