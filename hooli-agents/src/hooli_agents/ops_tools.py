@@ -15,6 +15,9 @@ EVENTS_QUERY = """query($id:ID!){ logsForRun(runId:$id){ ... on EventConnection 
   ... on ExecutionStepUpForRetryEvent { stepKey error { message cause { message } causes { message } } } } } } }"""
 
 
+OWN_LOCATION = "hooli_agents"
+
+
 def _in_location(run: dict) -> bool:
     """Whether a run belongs to the code location under review, not another one in the deployment."""
     origin = run.get("repositoryOrigin") or {}
@@ -28,7 +31,7 @@ def watched_locations() -> list[str]:
 
 def location_watched(name: str | None) -> bool:
     wanted = watched_locations()
-    return bool(name) and (not wanted or name in wanted)
+    return bool(name) and name != OWN_LOCATION and (not wanted or name in wanted)
 
 
 def _gql(query: str, variables: dict) -> dict:

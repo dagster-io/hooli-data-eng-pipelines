@@ -23,3 +23,8 @@ def test_watched_locations(monkeypatch):
     assert not ops_tools.location_watched("other")
     monkeypatch.setenv("ENG_WATCHED_LOCATION", "")
     assert ops_tools.location_watched("anything")
+
+
+def test_agents_never_watch_their_own_location(monkeypatch):
+    monkeypatch.setenv("ENG_WATCHED_LOCATION", "")
+    assert not ops_tools.location_watched("hooli_agents")

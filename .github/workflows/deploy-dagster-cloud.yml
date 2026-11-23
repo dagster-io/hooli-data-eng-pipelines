@@ -60,6 +60,8 @@ jobs:
               - hooli-bi/**
             hooli-airlift:
               - hooli-airlift/**
+            hooli-agents:
+              - hooli-agents/**
 
       - name: Generate docker image tag
         id: generate-image-tag
@@ -70,7 +72,7 @@ jobs:
       - name: Get Code locations that changed
         id: extract-changed-dirs
         run: |
-              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-batch-enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli-snowflake-insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-bi_all_changed_files }} ${{ steps.changed-files.outputs.hooli-airlift_all_changed_files }}"
+              changed_files="${{ steps.changed-files.outputs.hooli-data-eng_all_changed_files }} ${{ steps.changed-files.outputs.hooli-basics_all_changed_files }} ${{ steps.changed-files.outputs.hooli-batch-enrichment_all_changed_files }} ${{ steps.changed-files.outputs.hooli-snowflake-insights_all_changed_files }} ${{ steps.changed-files.outputs.hooli-data-ingest_all_changed_files }} ${{ steps.changed-files.outputs.hooli-bi_all_changed_files }} ${{ steps.changed-files.outputs.hooli-airlift_all_changed_files }} ${{ steps.changed-files.outputs.hooli-agents_all_changed_files }}"
               filtered_dirs=$(echo $changed_files | tr ' ' '\n' | xargs -n1 dirname | sort | uniq)
               echo $changed_files
               echo $filtered_dirs
@@ -102,7 +104,11 @@ jobs:
               fi
               if [ "${{ steps.changed-files.outputs.hooli-airlift_any_changed}}" == "true" ]; then
                 LOCATIONS="$LOCATIONS --location-name hooli_airlift"
-                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_airlift --image-tag=$IMAGE_TAG-hooli-airlift\n"
+              fi
+              if [ "${{ steps.changed-files.outputs.hooli-agents_any_changed}}" == "true" ]; then
+                LOCATIONS="$LOCATIONS --location-name hooli_agents"
+                LOCATIONS_WITH_IMAGE="$LOCATIONS_WITH_IMAGE dagster-cloud ci set-build-output --location-name hooli_agents --image-tag=$IMAGE_TAG-hooli-agents"
               fi
               echo $LOCATIONS
               echo $LOCATIONS_WITH_IMAGE
@@ -237,6 +243,15 @@ jobs:
           context: ./hooli-airlift
           push: true
           tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-airlift
+
+      # Build 'hooli_agents' code location
+      - name: Build and upload Docker image for hooli_agents
+        if: steps.prerun.outputs.result != 'skip' && steps.changed-files.outputs.hooli-agents_any_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-agents
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-agents
 
       # Build pipes example container
       - name: Build and upload Docker image for pipes example

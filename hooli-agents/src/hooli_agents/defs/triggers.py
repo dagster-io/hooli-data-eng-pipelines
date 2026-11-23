@@ -75,6 +75,12 @@ def _run_url(run_id: str) -> str:
 
 FAILED_RUN_IN_BODY = re.compile(r"(?:Fixes failed run|Run ID)[^0-9a-f]*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", re.IGNORECASE)
 VERIFY_TIMEOUT_MINUTES = 30
+BRANCH_SKIP = "Branch deployment: the full deployment's sensors handle announcements and approvals."
+
+
+def _in_branch_deployment() -> bool:
+    """Dagster+ sets this in branch deployments, where a second copy of each sensor would double-post."""
+    return os.environ.get("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "").lower() in ("1", "true")
 
 
 def _start_verification(number: str, pr: dict, entry: dict) -> str:
@@ -118,52 +124,40 @@ def _check_verification(entry: dict) -> str | None:
     return None
 
 
-FAILED_RUNS_QUERY = """query($after:Float!){ runsOrError(filter:{statuses:[FAILURE], updatedAfter:$after}, limit:50){
-  ... on Runs { results { runId jobName updateTime repositoryOrigin { repositoryLocationName } } } } }"""
-
-
-@dg.sensor(
+@dg.run_failure_sensor(
     name="failed_run_trigger",
-    job=bug_fix_job,
-    minimum_interval_seconds=60,
+    monitor_all_code_locations=True,
+    request_job=bug_fix_job,
     default_status=dg.DefaultSensorStatus.RUNNING,
 )
-def failed_run_trigger(context: dg.SensorEvaluationContext):
-    """Polls the watched deployment's GraphQL API, since this code location runs in a different deployment."""
-    now = time.time()
-    if not context.cursor:
-        context.update_cursor(str(now))
-        return dg.SkipReason("Started watching; earlier failures are ignored.")
-    failed = ops_tools._gql(FAILED_RUNS_QUERY, {"after": float(context.cursor)})["runsOrError"].get("results", [])
+def failed_run_trigger(context: dg.RunFailureSensorContext):
+    if _in_branch_deployment():
+        return dg.SkipReason(BRANCH_SKIP)
+    run = context.dagster_run
+    origin = run.remote_job_origin
+    location = origin.location_name if origin else None
+    if not ops_tools.location_watched(location):
+        return dg.SkipReason(f"Run {run.run_id[:8]} is not in a watched code location.")
     channel = settings.get("slack_channel")
-    requests = []
-    for run in sorted(failed, key=lambda r: r["updateTime"] or 0):
-        location = (run.get("repositoryOrigin") or {}).get("repositoryLocationName")
-        if not ops_tools.location_watched(location):
-            continue
-        try:
-            posted = _slack().chat_postMessage(
-                channel=channel,
-                text=(
-                    f":beetle: Run <{_run_url(run['runId'])}|{run['runId'][:8]}> of `{run['jobName']}` "
-                    f"failed in `{location}`. Looking into the cause."
-                ),
-            )
-        except SlackApiError as e:
-            context.log.error(f"Could not post to Slack channel {channel}: {e.response.get('error')}")
-            return dg.SkipReason("Slack post failed; will retry.")
-        requests.append(
-            dg.RunRequest(
-                run_key=run["runId"],
-                tags={
-                    "eng/failed_run_id": run["runId"],
-                    "slack/channel": channel,
-                    "slack/thread_ts": posted["ts"],
-                },
-            )
+    try:
+        posted = _slack().chat_postMessage(
+            channel=channel,
+            text=(
+                f":beetle: Run <{_run_url(run.run_id)}|{run.run_id[:8]}> of `{run.job_name}` "
+                f"failed in `{location}`. Looking into the cause."
+            ),
         )
-    context.update_cursor(str(now))
-    return requests or dg.SkipReason("No new failures in the watched locations.")
+    except SlackApiError as e:
+        context.log.error(f"Could not post to Slack channel {channel}: {e.response.get('error')}")
+        return dg.SkipReason("Slack post failed.")
+    return dg.RunRequest(
+        run_key=run.run_id,
+        tags={
+            "eng/failed_run_id": run.run_id,
+            "slack/channel": channel,
+            "slack/thread_ts": posted["ts"],
+        },
+    )
 
 
 @dg.sensor(
@@ -173,6 +167,8 @@ def failed_run_trigger(context: dg.SensorEvaluationContext):
     default_status=dg.DefaultSensorStatus.RUNNING,
 )
 def new_pr_trigger(context: dg.SensorEvaluationContext):
+    if _in_branch_deployment():
+        return dg.SkipReason(BRANCH_SKIP)
     state = _load()
     channel = settings.get("slack_channel")
     client = _slack()
@@ -237,6 +233,8 @@ def _display_name(client: WebClient, user_id: str) -> str:
     default_status=dg.DefaultSensorStatus.RUNNING,
 )
 def pr_approval_watcher(context: dg.SensorEvaluationContext):
+    if _in_branch_deployment():
+        return dg.SkipReason(BRANCH_SKIP)
     state = _load()
     before = copy.deepcopy(state)
     client = _slack()
@@ -362,6 +360,8 @@ def _periodic_review(context: dg.SensorEvaluationContext, name: str, period_hour
     default_status=dg.DefaultSensorStatus.RUNNING,
 )
 def improvement_review_trigger(context: dg.SensorEvaluationContext):
+    if _in_branch_deployment():
+        return dg.SkipReason(BRANCH_SKIP)
     return _periodic_review(
         context,
         "improvement review",
@@ -388,6 +388,8 @@ def _excerpt(body: str, limit: int = 320) -> str:
     default_status=dg.DefaultSensorStatus.RUNNING,
 )
 def new_issue_announcer(context: dg.SensorEvaluationContext):
+    if _in_branch_deployment():
+        return dg.SkipReason(BRANCH_SKIP)
     """Announce each new ticket the agents filed (GitHub Issues, and Linear when a team is set)."""
     from hooli_agents import linear_scope
 
