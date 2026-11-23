@@ -18,13 +18,13 @@ attributes:
   max_tokens: 4000
   mcp_servers:
   - server_resource_key: dagster_plus
-  - server_resource_key: repo_tools
+  - server_resource_key: repo_tools_shadow
   skill_keys:
   - dagster_expert
   allowed_tools:
   - dagster_expert__*
   - dagster_plus__get_run
   - dagster_plus__get_run_logs
-  - repo_tools__list_files
-  - repo_tools__read_file
-  - repo_tools__propose_fix
+  - repo_tools_shadow__list_files
+  - repo_tools_shadow__read_file
+  - repo_tools_shadow__propose_fix
