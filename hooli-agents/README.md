@@ -65,3 +65,5 @@ uv run pytest tests
 ## Deployment
 
 `hooli_agents` is a location in `dagster_cloud.yaml` and in `.github/workflows/deploy-dagster-cloud.yml`, built and deployed like the other locations when `hooli-agents/**` changes.
+
+Run pods get 4G of memory and 1 CPU (`container_context` in `dagster_cloud.yaml`). A change to `dagster_cloud.yaml` redeploys this location, because the limits only apply when the location is redeployed.
