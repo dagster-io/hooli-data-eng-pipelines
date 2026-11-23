@@ -1,0 +1,16 @@
+# Separate from dagster_cloud.yaml on purpose: the agents deploy to their own Dagster+ deployment.
+locations:
+  - location_name: hooli_agents
+    code_source:
+      autoload_defs_module_name: hooli_agents.defs
+    build:
+      directory: ./hooli-agents/src
+      registry: 764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod
+    container_context:
+      k8s:
+        run_k8s_config:
+          container_config:
+            resources:
+              limits:
+                cpu: 500m
+                memory: 1G

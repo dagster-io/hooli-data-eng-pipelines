@@ -1,0 +1,142 @@
+name: Deploy Hooli Agents
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "hooli-agents/**"
+      - "dagster_cloud_agents.yaml"
+      - ".github/workflows/deploy-hooli-agents.yml"
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - "hooli-agents/**"
+      - "dagster_cloud_agents.yaml"
+      - ".github/workflows/deploy-hooli-agents.yml"
+
+concurrency:
+  group: hooli-agents-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DAGSTER_CLOUD_ORGANIZATION: "hooli"
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  DAGSTER_PROJECT_DIR: "."
+  DAGSTER_CLOUD_YAML_PATH: "dagster_cloud_agents.yaml"
+  IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/hooli-data-science-prod"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DAGSTER_CLOUD_GIT_ORIGIN_URL: "https://github.com/dagster-io/hooli-data-eng-pipelines"
+  DAGSTER_CLOUD_GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+  # The deployment the agents live in. Create it once with: dagster-cloud deployment create agents
+  AGENTS_DEPLOYMENT: "agents"
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Test and validate definitions
+        working-directory: hooli-agents
+        env:
+          DAGSTER_PLUS_MCP_URL: "http://localhost/mcp"
+          ENG_REPO: "example/example"
+        run: |
+          uv sync --frozen --extra dev
+          uv run pytest -q tests
+          uv run dg check defs
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Pre-run checks
+        id: prerun
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.12.14
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: steps.prerun.outputs.result != 'skip'
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Generate docker image tag
+        if: steps.prerun.outputs.result != 'skip'
+        run: echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set deployment for full deployments
+        if: steps.prerun.outputs.result != 'skip' && github.event_name == 'push'
+        run: echo "DAGSTER_CLOUD_DEPLOYMENT_NAME=$AGENTS_DEPLOYMENT" >> $GITHUB_ENV
+
+      - name: Install dagster-cloud
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install dagster-cloud
+
+      - name: Validate configuration
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
+        with:
+          command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
+
+      - name: Initialize build session
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v1.12.14
+        with:
+          project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
+          dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
+          deployment: ${{ env.AGENTS_DEPLOYMENT }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        if: steps.prerun.outputs.result != 'skip'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Login to ECR
+        if: steps.prerun.outputs.result != 'skip'
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Build and upload Docker image
+        if: steps.prerun.outputs.result != 'skip'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hooli-agents
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-hooli-agents
+
+      - name: Set build output
+        if: steps.prerun.outputs.result != 'skip'
+        run: |
+          source .venv/bin/activate
+          dagster-cloud ci set-build-output --location-name hooli_agents --image-tag=$IMAGE_TAG-hooli-agents
+
+      - name: Deploy to Dagster Cloud
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
+        with:
+          command: "ci deploy --location-name hooli_agents"
+
+      - name: Update PR comment for branch deployments
+        if: steps.prerun.outputs.result != 'skip' && always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
+        with:
+          command: "ci notify --project-dir=${{ env.DAGSTER_PROJECT_DIR }}"
+
+      - name: Generate summary
+        if: steps.prerun.outputs.result != 'skip' && always()
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.12.14
+        with:
+          command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"

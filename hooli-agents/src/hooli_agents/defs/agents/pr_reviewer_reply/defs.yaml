@@ -1,0 +1,9 @@
+type: dagster_community_components.SlackReplyComponent
+attributes:
+  asset_name: pr_reviewer_reply
+  upstream_asset_key: pr_reviewer
+  group_name: engineering_agents
+  monitor_failures: true
+  watch_reactions: false
+  update_reaction_on_completion: false
+  include_run_link: false

@@ -52,6 +52,8 @@ Specifically, the project showcases a hypothetical use case where raw data is in
 
 - The hooli_batch_enrichment project shows an example of a graph backed asset that uses dynamic outputs to achieve a map-reduce pattern.
 
+- The hooli-agents project holds three engineering agents (bug fixer, PR reviewer, improvement advisor) built from Dagster community components. It deploys to its own Dagster+ deployment, `agents`; see [hooli-agents/README.md](hooli-agents/README.md).
+
 ## Dev notes on running the Sling example
 
 - to run the `locations` dataset, uncomment out line 5-7 in [workspaces.yml](workspaces.yml)
