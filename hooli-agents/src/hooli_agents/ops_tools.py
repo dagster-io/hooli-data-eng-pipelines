@@ -110,6 +110,8 @@ def latest_dagster_release() -> dict:
 
 OVERVIEW_QUERY = """{
   assetNodes { assetKey { path } groupName jobNames
+    metadataEntries { __typename ... on CodeReferencesMetadataEntry { codeReferences { __typename
+      ... on LocalFileCodeReference { filePath lineNumber } ... on UrlCodeReference { url } } } }
     freshnessPolicy { maximumLagMinutes cronSchedule }
     automationCondition { label }
     repository { location { name } } }
@@ -125,6 +127,18 @@ def list_locations() -> dict:
     entries = _gql("{ workspaceOrError { ... on Workspace { locationEntries { name loadStatus } } } }", {})["workspaceOrError"]["locationEntries"]
     names = [e["name"] for e in entries if location_watched(e["name"]) and (not only or e["name"] == only)]
     return {"locations": names}
+
+
+def _code_paths(node: dict) -> list[dict]:
+    """Repository files that define an asset, from its code references (URLs from the Dagster+ GitHub link)."""
+    found: list[dict] = []
+    for entry in node.get("metadataEntries") or []:
+        for ref in entry.get("codeReferences") or []:
+            url = ref.get("url") or ""
+            m = re.search(r"/(?:tree|blob)/[0-9a-f]{7,40}/(?P<path>[^#?]+)(?:#L(?P<line>\d+))?", url)
+            if m and {"path": m["path"], "line": int(m["line"] or 0)} not in found:
+                found.append({"path": m["path"], "line": int(m["line"] or 0)})
+    return found[:3]
 
 
 def project_overview(location: str = "") -> dict:
@@ -162,6 +176,7 @@ def project_overview(location: str = "") -> dict:
                 "freshness_policy": node["freshnessPolicy"],
                 "automation_condition": (node["automationCondition"] or {}).get("label"),
                 "scheduled_by": [s["name"] for s in schedules if s["job"] in jobs],
+                "code": _code_paths(node),
             }
         )
     constraint = None
