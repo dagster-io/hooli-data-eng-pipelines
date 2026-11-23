@@ -7,4 +7,4 @@ attributes:
   - python
   - -m
   - hooli_agents.repo_mcp
-  instructions: Reads and changes one demo repository only. propose_fix opens a pull request and never merges. CI, dependency and packaging files are protected. Link every pull request you mention.
+  instructions: Reads and changes one repository only. propose_fix opens a pull request and never merges. CI, dependency and packaging files are protected. Link every pull request you mention.

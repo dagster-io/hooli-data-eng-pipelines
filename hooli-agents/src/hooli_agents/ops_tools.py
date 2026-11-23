@@ -119,13 +119,21 @@ OVERVIEW_QUERY = """{
 }"""
 
 
+def list_locations() -> dict:
+    """The code locations the advisor reviews: every watched one, or ENG_ADVISOR_LOCATION when set."""
+    only = settings.get("advisor_location")
+    entries = _gql("{ workspaceOrError { ... on Workspace { locationEntries { name loadStatus } } } }", {})["workspaceOrError"]["locationEntries"]
+    names = [e["name"] for e in entries if location_watched(e["name"]) and (not only or e["name"] == only)]
+    return {"locations": names}
+
+
 def project_overview(location: str = "") -> dict:
     """Facts about one watched code location: assets, schedules, alerts, versions and recent retries."""
     from hooli_agents import github_scope
 
-    location = location or (watched_locations() or [""])[0]
+    location = location or settings.get("advisor_location") or ""
     if not location or not location_watched(location):
-        raise RuntimeError(f"Pass a code location. Watched: {watched_locations() or 'set ENG_WATCHED_LOCATION'}")
+        raise RuntimeError("Pass a code location from list_locations.")
     data = _gql(OVERVIEW_QUERY, {})
     schedules = []
     running = None

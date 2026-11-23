@@ -40,3 +40,13 @@ def test_agents_ignore_pull_requests_on_other_branches(monkeypatch):
         raise AssertionError("expected ScopeError")
     except gh.ScopeError as e:
         assert "agent branch" in str(e)
+
+
+def test_list_locations_respects_watch_list(monkeypatch):
+    entries = {"workspaceOrError": {"locationEntries": [{"name": n, "loadStatus": "LOADED"} for n in ("basics", "hooli_bi", "hooli_agents")]}}
+    monkeypatch.setattr(ops_tools, "_gql", lambda *a, **k: entries)
+    monkeypatch.setenv("ENG_WATCHED_LOCATION", "")
+    monkeypatch.setenv("ENG_ADVISOR_LOCATION", "")
+    assert ops_tools.list_locations() == {"locations": ["basics", "hooli_bi"]}
+    monkeypatch.setenv("ENG_ADVISOR_LOCATION", "hooli_bi")
+    assert ops_tools.list_locations() == {"locations": ["hooli_bi"]}

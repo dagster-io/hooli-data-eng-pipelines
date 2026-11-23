@@ -2,5 +2,5 @@ type: dagster_community_components.SkillResourceComponent
 attributes:
   resource_key: dagster_expert
   git_url: https://github.com/dagster-io/skills.git
-  git_path: plugins/dagster-expert/skills/dagster-expert
+  git_path: plugins/dagster/skills/dagster-expert
   git_ref: master

@@ -19,7 +19,7 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 
 ## What they watch, and what they change
 
-- **Watched locations:** the failed-run sensor is a run failure sensor that monitors every code location in the deployment. `ENG_WATCHED_LOCATION` takes a comma-separated list; empty means all of them except `hooli_agents` itself, so a failing agent never starts the bug fixer. The advisor reviews one location per run (the first listed, or the `location` it is given).
+- **Watched locations:** the failed-run sensor is a run failure sensor that monitors every code location in the deployment. `ENG_WATCHED_LOCATION` takes a comma-separated list; empty means all of them except `hooli_agents` itself, so a failing agent never starts the bug fixer. The advisor reviews every watched location, one overview per location, unless `ENG_ADVISOR_LOCATION` limits it to one.
 - **Branch deployments:** the sensors do nothing there, so a PR does not double-post announcements.
 - **Changed repository:** the agents change one repository only, set by `ENG_REPO`, on branch `ENG_BASE_BRANCH` (default `main`; this repo uses `master`). For the code that runs in `data-eng-prod` that is this repository, so set `ENG_AUTO_MERGE=false`: every merge here deploys to production, and a person should press it.
 - **Protected files:** `.github/`, `pyproject.toml`, requirements, `uv.lock`, `Dockerfile`, `setup.*` and `dagster_cloud*` files are never changed by an agent, in any project folder. A change is low risk only if it is at most 2 files and 30 lines, under a `src`, `tests` or `docs` folder, and checks pass; the reviewer can approve only those.
@@ -42,6 +42,7 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 | `DAGSTER_PLUS_MCP_URL` | URL of the Dagster+ MCP server used by `bug_fixer` for run logs (`https://mcp.agent.dagster.cloud/mcp`) |
 | `DAGSTER_PLUS_ORG`, `DAGSTER_PLUS_BEARER` | the MCP server's organization header (`hooli`) and authorization header (`Bearer <token>`) |
 | `ENG_WATCHED_LOCATION` | code locations to watch (comma-separated; empty is all) |
+| `ENG_ADVISOR_LOCATION` | optional; limit the improvement advisor to one code location (default: every watched location) |
 | `ENG_BASE_BRANCH` | branch agent pull requests target (`master` for this repo) |
 | `ENG_AUTO_MERGE` | `false` to leave every merge to a person |
 | `ENG_VAR_DIR` | optional; where the ledger and sensor state are kept (defaults to the project `var/`, which is lost when the pod restarts) |
