@@ -42,11 +42,11 @@ def test_agents_ignore_pull_requests_on_other_branches(monkeypatch):
         assert "agent branch" in str(e)
 
 
-def test_advisor_location_setting(monkeypatch):
+def test_list_locations_respects_watch_list(monkeypatch):
+    entries = {"workspaceOrError": {"locationEntries": [{"name": n, "loadStatus": "LOADED"} for n in ("basics", "hooli_bi", "hooli_agents")]}}
+    monkeypatch.setattr(ops_tools, "_gql", lambda *a, **k: entries)
     monkeypatch.setenv("ENG_WATCHED_LOCATION", "")
-    monkeypatch.setenv("ENG_ADVISOR_LOCATION", "basics")
-    monkeypatch.setattr(ops_tools, "_gql", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("reached graphql")))
-    try:
-        ops_tools.project_overview()
-    except RuntimeError as e:
-        assert "reached graphql" in str(e)
+    monkeypatch.setenv("ENG_ADVISOR_LOCATION", "")
+    assert ops_tools.list_locations() == {"locations": ["basics", "hooli_bi"]}
+    monkeypatch.setenv("ENG_ADVISOR_LOCATION", "hooli_bi")
+    assert ops_tools.list_locations() == {"locations": ["hooli_bi"]}

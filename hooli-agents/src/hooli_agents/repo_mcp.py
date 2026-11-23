@@ -106,6 +106,12 @@ def deprecation_report() -> dict:
 
 
 @mcp.tool
+def list_locations() -> dict:
+    """The code locations to review. Call it first, then project_overview once for each."""
+    return ops_tools.list_locations()
+
+
+@mcp.tool
 def project_overview(location: str = "") -> dict:
     """Facts about one code location under review (default: the first watched one): each asset with its freshness policy, automation condition
     and the schedules that run it; all schedules; alert policies; the Dagster dependency and the newest
