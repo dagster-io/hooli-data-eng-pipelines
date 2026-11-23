@@ -168,8 +168,14 @@ def _checks(sha: str) -> dict:
     return {"state": state, "runs": statuses}
 
 
+def _require_agent_branch(pr: dict) -> None:
+    if not pr["head"]["ref"].startswith(BRANCH_PREFIX):
+        raise ScopeError(f"PR #{pr['number']} is not an agent branch ({BRANCH_PREFIX}*); agents leave other pull requests alone.")
+
+
 def get_pull_request(number: int) -> dict:
     pr = _call("GET", f"/pulls/{int(number)}")
+    _require_agent_branch(pr)
     files = _call("GET", f"/pulls/{int(number)}/files", params={"per_page": 100})
     return {
         "number": pr["number"],
@@ -237,7 +243,7 @@ def review_pull_request(number: int, decision: str, body: str) -> dict:
 
 
 def open_pull_requests() -> list[dict]:
-    prs = _call("GET", "/pulls", params={"state": "open", "per_page": 50})
+    prs = [p for p in _call("GET", "/pulls", params={"state": "open", "per_page": 100}) if p["head"]["ref"].startswith(BRANCH_PREFIX)]
     return [
         {
             "number": p["number"],
