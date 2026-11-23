@@ -63,6 +63,7 @@ jobs:
               - hooli-airlift/**
             hooli-agents:
               - hooli-agents/**
+              - dagster_cloud.yaml
 
       - name: Generate docker image tag
         id: generate-image-tag
