@@ -78,7 +78,7 @@ def find_issues(query: str) -> list[dict]:
 
 def create_issue(title: str, body: str) -> dict:
     if settings.shadow():
-        ledger.record("would_file", place="linear_ticket", title=title, body=body[:1500])
+        ledger.record("would_file", place="linear_ticket", title=title, body=body[:20000])
         return {"practice_mode": True, "would_open": "linear_ticket", "title": title, "url": "(practice mode: nothing was filed)"}
     team = _team()
     label = _label_id(team)
