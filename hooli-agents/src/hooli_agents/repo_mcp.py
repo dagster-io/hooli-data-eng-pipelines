@@ -6,9 +6,9 @@ from hooli_agents import _parent_env
 
 _parent_env.load()  # must run before the modules below read their settings
 
-from hooli_agents import github_scope as gh
-from hooli_agents import ledger, ops_tools
-from hooli_agents import linear_scope as lin
+from hooli_agents import github_scope as gh  # noqa: E402
+from hooli_agents import ledger, ops_tools  # noqa: E402
+from hooli_agents import linear_scope as lin  # noqa: E402
 
 mcp = FastMCP("engineering-repo")
 
