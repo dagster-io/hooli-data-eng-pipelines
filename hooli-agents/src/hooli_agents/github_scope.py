@@ -15,15 +15,25 @@ import requests
 from hooli_agents import ledger, settings
 
 REPO = settings.get("repo", "")
-BASE_BRANCH = "main"
+BASE_BRANCH = settings.get("base_branch", "main")
 BRANCH_PREFIX = "agent/"
 API = "https://api.github.com"
 
 MAX_FILES_PER_FIX = 5
 # The agents may not change CI, dependencies or packaging.
-PROTECTED_PATHS = (".github/", "pyproject.toml", "requirements", "Dockerfile", "setup.")
-LOW_RISK_PATHS = ("src/", "tests/", "docs/", "README")
+PROTECTED_NAMES = ("pyproject.toml", "requirements", "Dockerfile", "setup.", "uv.lock", "dagster_cloud")
 LOW_RISK_MAX_FILES = 2
+
+
+def is_protected(path: str) -> bool:
+    """Protected at the repo root or inside any project folder of a monorepo."""
+    parts = path.split("/")
+    return path.startswith(".github/") or any(parts[-1].startswith(x) for x in PROTECTED_NAMES)
+
+
+def is_low_risk(path: str) -> bool:
+    parts = path.split("/")
+    return any(x in parts[:-1] for x in ("src", "tests", "docs")) or parts[-1].startswith("README")
 LOW_RISK_MAX_LINES = 30
 
 
@@ -104,7 +114,7 @@ def propose_fix(
         raise ScopeError(f"A fix changes between 1 and {MAX_FILES_PER_FIX} files.")
     for f in files:
         p = _safe_path(f["path"])
-        if p.startswith(PROTECTED_PATHS) or any(p.startswith(x) for x in PROTECTED_PATHS):
+        if is_protected(p):
             raise ScopeError(f"{p} is protected; agents may not change it.")
     wanted = {_safe_path(f["path"]) for f in files}
     for open_pr in _call("GET", "/pulls", params={"state": "open", "per_page": 50}):
@@ -196,9 +206,9 @@ def assess_risk(pr: dict) -> dict:
     if changed > LOW_RISK_MAX_LINES:
         reasons.append(f"changes {changed} lines (limit {LOW_RISK_MAX_LINES})")
     for f in files:
-        if f["path"].startswith(PROTECTED_PATHS):
+        if is_protected(f["path"]):
             reasons.append(f"touches protected path {f['path']}")
-        elif not f["path"].startswith(LOW_RISK_PATHS):
+        elif not is_low_risk(f["path"]):
             reasons.append(f"touches {f['path']}, outside source, tests and docs")
     if pr["checks"]["state"] != "passing":
         reasons.append(f"checks are {pr['checks']['state']}")

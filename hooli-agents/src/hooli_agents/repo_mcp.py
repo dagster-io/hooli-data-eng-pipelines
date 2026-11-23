@@ -29,7 +29,7 @@ def list_files(path: str = "") -> list | dict:
 
 
 @mcp.tool
-def read_file(path: str, ref: str = "main") -> str | dict:
+def read_file(path: str, ref: str = gh.BASE_BRANCH) -> str | dict:
     """Read one file from the repository (main branch unless a branch is given)."""
     return _guard(gh.read_file)(path, ref)
 
@@ -106,11 +106,11 @@ def deprecation_report() -> dict:
 
 
 @mcp.tool
-def project_overview() -> dict:
-    """Facts about the project under review: each asset with its freshness policy, automation condition
+def project_overview(location: str = "") -> dict:
+    """Facts about one code location under review (default: the first watched one): each asset with its freshness policy, automation condition
     and the schedules that run it; all schedules; alert policies; the Dagster dependency and the newest
     release. Call it once first."""
-    return ops_tools.project_overview()
+    return ops_tools.project_overview(location)
 
 
 @mcp.tool

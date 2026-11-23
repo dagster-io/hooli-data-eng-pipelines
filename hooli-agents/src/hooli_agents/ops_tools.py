@@ -18,7 +18,17 @@ EVENTS_QUERY = """query($id:ID!){ logsForRun(runId:$id){ ... on EventConnection 
 def _in_location(run: dict) -> bool:
     """Whether a run belongs to the code location under review, not another one in the deployment."""
     origin = run.get("repositoryOrigin") or {}
-    return origin.get("repositoryLocationName") == settings.get("watched_location", "engineering_demo")
+    return location_watched(origin.get("repositoryLocationName"))
+
+
+def watched_locations() -> list[str]:
+    """Comma-separated ENG_WATCHED_LOCATION; empty means every code location in the deployment."""
+    return [x.strip() for x in str(settings.get("watched_location", "") or "").split(",") if x.strip()]
+
+
+def location_watched(name: str | None) -> bool:
+    wanted = watched_locations()
+    return bool(name) and (not wanted or name in wanted)
 
 
 def _gql(query: str, variables: dict) -> dict:
@@ -106,11 +116,13 @@ OVERVIEW_QUERY = """{
 }"""
 
 
-def project_overview() -> dict:
-    """Facts about the watched code location: assets, schedules, alerts, versions and recent retries."""
+def project_overview(location: str = "") -> dict:
+    """Facts about one watched code location: assets, schedules, alerts, versions and recent retries."""
     from hooli_agents import github_scope
 
-    location = settings.get("watched_location", "engineering_demo")
+    location = location or (watched_locations() or [""])[0]
+    if not location or not location_watched(location):
+        raise RuntimeError(f"Pass a code location. Watched: {watched_locations() or 'set ENG_WATCHED_LOCATION'}")
     data = _gql(OVERVIEW_QUERY, {})
     schedules = []
     running = None

@@ -118,38 +118,52 @@ def _check_verification(entry: dict) -> str | None:
     return None
 
 
-@dg.run_failure_sensor(
+FAILED_RUNS_QUERY = """query($after:Float!){ runsOrError(filter:{statuses:[FAILURE], updatedAfter:$after}, limit:50){
+  ... on Runs { results { runId jobName updateTime repositoryOrigin { repositoryLocationName } } } } }"""
+
+
+@dg.sensor(
     name="failed_run_trigger",
-    monitor_all_code_locations=True,
-    request_job=bug_fix_job,
+    job=bug_fix_job,
+    minimum_interval_seconds=60,
     default_status=dg.DefaultSensorStatus.RUNNING,
 )
-def failed_run_trigger(context: dg.RunFailureSensorContext):
-    run = context.dagster_run
-    origin = run.remote_job_origin
-    watched = settings.get("watched_location", "engineering_demo")
-    if origin is None or origin.location_name != watched:
-        return dg.SkipReason(f"Run {run.run_id[:8]} is not in {watched}.")
+def failed_run_trigger(context: dg.SensorEvaluationContext):
+    """Polls the watched deployment's GraphQL API, since this code location runs in a different deployment."""
+    now = time.time()
+    if not context.cursor:
+        context.update_cursor(str(now))
+        return dg.SkipReason("Started watching; earlier failures are ignored.")
+    failed = ops_tools._gql(FAILED_RUNS_QUERY, {"after": float(context.cursor)})["runsOrError"].get("results", [])
     channel = settings.get("slack_channel")
-    try:
-        posted = _slack().chat_postMessage(
-            channel=channel,
-            text=(
-                f":beetle: Run <{_run_url(run.run_id)}|{run.run_id[:8]}> of `{run.job_name}` "
-                f"failed in `{watched}`. Looking into the cause."
-            ),
+    requests = []
+    for run in sorted(failed, key=lambda r: r["updateTime"] or 0):
+        location = (run.get("repositoryOrigin") or {}).get("repositoryLocationName")
+        if not ops_tools.location_watched(location):
+            continue
+        try:
+            posted = _slack().chat_postMessage(
+                channel=channel,
+                text=(
+                    f":beetle: Run <{_run_url(run['runId'])}|{run['runId'][:8]}> of `{run['jobName']}` "
+                    f"failed in `{location}`. Looking into the cause."
+                ),
+            )
+        except SlackApiError as e:
+            context.log.error(f"Could not post to Slack channel {channel}: {e.response.get('error')}")
+            return dg.SkipReason("Slack post failed; will retry.")
+        requests.append(
+            dg.RunRequest(
+                run_key=run["runId"],
+                tags={
+                    "eng/failed_run_id": run["runId"],
+                    "slack/channel": channel,
+                    "slack/thread_ts": posted["ts"],
+                },
+            )
         )
-    except SlackApiError as e:
-        context.log.error(f"Could not post to Slack channel {channel}: {e.response.get('error')}")
-        return dg.SkipReason("Slack post failed.")
-    return dg.RunRequest(
-        run_key=run.run_id,
-        tags={
-            "eng/failed_run_id": run.run_id,
-            "slack/channel": channel,
-            "slack/thread_ts": posted["ts"],
-        },
-    )
+    context.update_cursor(str(now))
+    return requests or dg.SkipReason("No new failures in the watched locations.")
 
 
 @dg.sensor(

@@ -7,4 +7,4 @@ attributes:
   headers_env:
     Authorization: DAGSTER_PLUS_BEARER
     Dagster-Cloud-Organization: DAGSTER_PLUS_ORG
-  instructions: Every tool that takes a deployment_name needs the value agents. Never use default.
+  instructions: Every tool that takes a deployment_name needs the value data-eng-prod. Never use default.

@@ -12,14 +12,17 @@ attributes:
     5. File at most three findings, most valuable first. File each finding in every place listed here: a Linear ticket (linear_find_issues, then linear_create_issue). Check each place separately for an existing open item about the same problem, and skip only that place: a finding that already has a ticket still gets a pull request when pull requests are listed and none is open for it, and a finding that already has a pull request still gets a ticket when tickets are listed and none exists. Each ticket or description holds the finding and the full analysis. The identifier and URL a tool returns are the link; never write a placeholder link.
     6. Ticket bodies have these sections: What we saw (with the evidence), Analysis, Suggested change, Risk and effort. The Suggested change quotes the real code you read: the file path, the current lines and the proposed lines as a diff in a code block. Before you put any Dagster name in a snippet, call check_dagster_api once with all of the names, and use only names that exist. Say the snippet is untested. For an alert policy, give the alert definition.
     7. Put a short summary of incidents_last_24h in your final note: what failed, whether the same step keeps failing, and the run link; do not file anything for an incident that already has a pull request or ticket. Finish with a note that lists each finding with its title and the URL the tool returned. If you found nothing worth changing, say so plainly and give the evidence.
-    End your final note with a line that says Decisions for you: followed by up to three short items that only a person can decide, or the word none. Call each tool once per set of arguments; never repeat the same call. Use parameter names exactly as the signatures from check_dagster_api show them. Do not use markdown tables.
+    Before you write a snippet about a Dagster feature (asset checks, automation conditions, freshness, retries, partitions, schedules), load the dagster_expert skill and read its reference for that feature, then write the snippet to match it. End your final note with a line that says Decisions for you: followed by up to three short items that only a person can decide, or the word none. Call each tool once per set of arguments; never repeat the same call. Use parameter names exactly as the signatures from check_dagster_api show them. Do not use markdown tables.
   model: gpt-4.1
   api_key_env_var: OPENAI_API_KEY
   max_iterations: 20
   max_tokens: 4000
   mcp_servers:
   - server_resource_key: repo_tools
+  skill_keys:
+  - dagster_expert
   allowed_tools:
+  - dagster_expert__*
   - repo_tools__project_overview
   - repo_tools__list_files
   - repo_tools__read_file
