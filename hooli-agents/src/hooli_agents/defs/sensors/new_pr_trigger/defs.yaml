@@ -1,0 +1,11 @@
+type: dagster_community_components.GithubPullRequestAgentSensorComponent
+attributes:
+  sensor_name: new_pr_trigger
+  asset_keys: [pr_reviewer, pr_reviewer_reply, pr_reviewer_outcome]
+  repo: dagster-io/hooli-data-eng-pipelines
+  token_env_var: ENG_GITHUB_TOKEN
+  branch_prefix: agent/
+  slack_channel: C0CKKGBUMPF
+  slack_bot_token_env_var: SLACK_BOT_TOKEN
+  minimum_interval_seconds: 60
+  default_status: RUNNING

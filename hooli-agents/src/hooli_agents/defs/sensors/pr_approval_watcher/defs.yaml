@@ -1,0 +1,19 @@
+type: dagster_community_components.SlackPrApprovalWatcherComponent
+attributes:
+  sensor_name: pr_approval_watcher
+  repo: dagster-io/hooli-data-eng-pipelines
+  token_env_var: ENG_GITHUB_TOKEN
+  reviewer_token_env_var: ENG_REVIEWER_GITHUB_TOKEN
+  reviewer_login: ethomasii
+  branch_prefix: agent/
+  slack_channel: C0CKKGBUMPF
+  slack_bot_token_env_var: SLACK_BOT_TOKEN
+  protected_paths: [.github/, pyproject.toml, requirements, Dockerfile, setup., uv.lock, dagster_cloud]
+  low_risk_paths: [src/, tests/, docs/, README]
+  post_branch_deployment_link: true
+  auto_merge: false
+  verify_after_merge: true
+  dagster_url: https://hooli.dagster.cloud/data-eng-prod
+  dagster_cloud_api_token_env_var: ENG_DAGSTER_API_TOKEN
+  minimum_interval_seconds: 30
+  default_status: RUNNING
