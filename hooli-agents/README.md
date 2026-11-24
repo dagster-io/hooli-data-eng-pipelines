@@ -14,18 +14,17 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 
 What is a component, and what is not:
 
-- **Components** (YAML, `src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the MCP server entries (`repo_tools`, `repo_tools_shadow`, `dagster_plus`). `dg list components` shows the types.
-- **Plain Dagster definitions** (Python, also under `defs/` and loaded with the components): `triggers.py` holds the sensors that start the agents and the approval watcher that merges after a person approves; `grades.py` defines the optional grading check.
-- **The tool server** (Python package, not a component): `*_scope.py`, `ops_tools.py`, `snippet_check.py` and `repo_mcp.py` are the tools the agents call. `repo_mcp.py` exposes them as an MCP server, and the `repo_tools` component only tells an agent how to start it (`python -m hooli_agents.repo_mcp`). Risk rules, duplicate checks, API checks and snippet checks live here, not in prompts.
+- **Components** (YAML, `src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the tool servers (`repo_tools_gh`, `evidence_tools`, `discovery_tools`, `dagster_plus`) and the sensors (`defs/sensors/*`). `dg list components` shows the types.
+- **Plain Dagster definitions** (Python): `triggers.py` holds the weekly improvement review trigger, which posts the start message in Slack and tags the run with the thread; `grades.py` defines the optional grading check. Both wait on shipped components.
 - `eval/`: example fixtures for the optional grading check.
 
-Some of this duplicates tool and sensor components that ship in `dagster-community-components`; moving onto those is planned.
+The tools (GitHub, Dagster evidence and discovery), the outcome asset and every sensor except the weekly trigger are shipped components in `dagster-community-components`.
 
 ## What they watch, and what they change
 
-- **Watched locations:** the failed-run sensor is a run failure sensor that monitors every code location in the deployment. `ENG_WATCHED_LOCATION` takes a comma-separated list; empty means all of them except `hooli_agents` itself, so a failing agent never starts the bug fixer. The advisor reviews every watched location, one overview per location, unless `ENG_ADVISOR_LOCATION` limits it to one.
+- **Watched locations:** the failure sensor (`defs/sensors/failed_run_trigger`) watches every code location except `hooli_agents`, so a failing agent never starts the bug fixer. The advisor reviews every location except `hooli_agents`, one overview per location. Both lists are `exclude_*` settings in the YAML.
 - **Branch deployments:** the sensors do nothing there, so a PR does not double-post announcements.
-- **Changed repository:** the agents change one repository only, set by `ENG_REPO`, on branch `ENG_BASE_BRANCH` (default `main`; this repo uses `master`). For the code that runs in `data-eng-prod` that is this repository, so set `ENG_AUTO_MERGE=false`: every merge here deploys to production, and a person should press it.
+- **Changed repository:** the agents change one repository only, set as `repo` and `base_branch` in the tool and sensor YAML (this repo, `master`). Every merge here deploys to production, so `auto_merge` is `false` and a person presses it.
 - **Protected files:** `.github/`, `pyproject.toml`, requirements, `uv.lock`, `Dockerfile`, `setup.*` and `dagster_cloud*` files are never changed by an agent, in any project folder. A change is low risk only if it is at most 2 files and 30 lines, under a `src`, `tests` or `docs` folder, and checks pass; the reviewer can approve only those.
 - **Skill:** `bug_fixer` and `improvement_advisor` load the `dagster-expert` skill, fetched from `dagster-io/skills` (so the image needs `git` and network access) the first time an agent uses it.
 
@@ -35,36 +34,26 @@ Some of this duplicates tool and sensor components that ship in `dagster-communi
 
 | Variable | Purpose |
 |---|---|
+| `ENG_SLACK_CHANNEL` | channel for the weekly review start message (the other sensors have the channel in their YAML) |
 | `OPENAI_API_KEY` | model key used by the agents (change `model` and `api_key_env_var` in the agent YAML to switch provider) |
 | `SLACK_BOT_TOKEN` | posts announcements and reads reactions |
-| `ENG_SLACK_CHANNEL` | channel id for announcements and approvals |
-| `ENG_REPO` | `owner/name` of the target repository |
 | `ENG_GITHUB_TOKEN` | token for the author identity (opens pull requests and issues) |
-| `ENG_REVIEWER_GITHUB_TOKEN`, `ENG_REVIEWER_GH_USER` | a second GitHub login that approves, since GitHub does not let an author approve their own pull request |
-| `ENG_DAGSTER_URL` | UI base URL, `https://hooli.dagster.cloud/data-eng-prod`, used for run links |
-| `ENG_DAGSTER_GRAPHQL_URL`, `ENG_DAGSTER_API_TOKEN` | still needed by the advisor's evidence tool (assets, schedules, alerts, running versions) and by the re-run after a merge; the failure sensor does not use them |
+| `ENG_REVIEWER_GITHUB_TOKEN` | a second GitHub login that approves, since GitHub does not let an author approve their own pull request |
+| `ENG_DAGSTER_API_TOKEN` | Dagster+ token for the advisor's evidence tools and the re-run after a merge |
 | `DAGSTER_PLUS_MCP_URL` | URL of the Dagster+ MCP server used by `bug_fixer` for run logs (`https://mcp.agent.dagster.cloud/mcp`) |
 | `DAGSTER_PLUS_ORG`, `DAGSTER_PLUS_BEARER` | the MCP server's organization header (`hooli`) and authorization header (`Bearer <token>`) |
-| `ENG_WATCHED_LOCATION` | code locations to watch (comma-separated; empty is all) |
 | `ENG_GRADE_FIXTURES` | optional; path to a fixtures file that describes the project under review. Defines the `matches_fixtures` check on the advisor outcome (without it there is no check) |
-| `ENG_ADVISOR_LOCATION` | optional; limit the improvement advisor to one code location (default: every watched location) |
-| `ENG_BASE_BRANCH` | branch agent pull requests target (`master` for this repo) |
-| `ENG_AUTO_MERGE` | `false` to leave every merge to a person |
-| `ENG_VAR_DIR` | optional; where the ledger and sensor state are kept (defaults to the project `var/`, which is lost when the pod restarts) |
-| `ENG_LINEAR_TEAM_ID`, `ENG_LINEAR_API_KEY_FILE` | optional; only for filing Linear tickets |
-
-Other settings (`auto_merge`, `verify_after_merge`, `post_merge_command`) can be set the same way as `ENG_<NAME>`.
 
 ## Practice mode
 
-Set `ENG_SHADOW=practice` and filing tools record what they would file and change nothing. Scope the variable to **branch deployments** in Dagster+: an agent change arrives as a pull request, its branch deployment runs the agents in practice mode, and merging promotes it to `data-eng-prod`, where the variable is unset. The value must be a word; a number-like value is stored as an integer and the location will not load.
+Set `ENG_SHADOW=practice` (the `practice_mode_env_var` in `repo_tools_gh`) and filing tools record what they would file and change nothing. Scope the variable to **branch deployments** in Dagster+: an agent change arrives as a pull request, its branch deployment runs the agents in practice mode, and merging promotes it to `data-eng-prod`, where the variable is unset. The value must be a word; a number-like value is stored as an integer and the location will not load.
 
 ## Develop
 
 ```
 cd hooli-agents
 uv sync --extra dev
-DAGSTER_PLUS_MCP_URL=http://localhost/mcp ENG_REPO=example/example uv run dg check defs
+DAGSTER_PLUS_MCP_URL=http://localhost/mcp uv run dg check defs
 uv run pytest tests
 ```
 

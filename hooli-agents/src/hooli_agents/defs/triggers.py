@@ -26,10 +26,6 @@ def _slack() -> WebClient:
     return WebClient(token=os.environ["SLACK_BOT_TOKEN"])
 
 
-def _run_url(run_id: str) -> str:
-    return f"{settings.get('dagster_url', '')}/runs/{run_id}"
-
-
 BRANCH_SKIP = "Branch deployment: the full deployment's sensors handle announcements and approvals."
 
 
