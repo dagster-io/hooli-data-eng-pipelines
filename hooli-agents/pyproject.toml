@@ -7,7 +7,7 @@ dependencies = [
     "dagster==1.13.30",
     "dagster-cloud",
     "dagster-community-components",
-    "fastmcp>=2.0",
+    "mcp",
     "litellm>=1.30.0",
     "requests",
     "slack-sdk",
