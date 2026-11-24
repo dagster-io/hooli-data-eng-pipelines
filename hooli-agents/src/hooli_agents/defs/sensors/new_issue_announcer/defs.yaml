@@ -1,0 +1,11 @@
+type: dagster_community_components.TicketAnnouncerComponent
+attributes:
+  sensor_name: new_issue_announcer
+  slack_channel: C0CKKGBUMPF
+  slack_bot_token_env_var: SLACK_BOT_TOKEN
+  repo: dagster-io/hooli-data-eng-pipelines
+  github_token_env_var: ENG_GITHUB_TOKEN
+  github_issue_label: engineering-agent
+  excerpt_chars: 320
+  minimum_interval_seconds: 60
+  default_status: RUNNING

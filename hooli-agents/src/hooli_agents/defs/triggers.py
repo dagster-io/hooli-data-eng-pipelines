@@ -1,6 +1,5 @@
-"""Triggers for the engineering agents: weekly reviews and new-issue announcements."""
+"""Triggers for the engineering agents: the weekly improvement review."""
 
-import json
 import os
 import time
 
@@ -8,7 +7,6 @@ import dagster as dg
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-from hooli_agents import github_scope as gh
 from hooli_agents import settings
 
 
@@ -78,54 +76,3 @@ def improvement_review_trigger(context: dg.SensorEvaluationContext):
         float(settings.get("improvement_period_hours", 168)),
         ":bar_chart: Improvement review started. Checking retries, deprecated APIs, freshness, automation and alerts.",
     )
-
-
-def _excerpt(body: str, limit: int = 320) -> str:
-    """The analysis section of a ticket body, or its start, as a short Slack quote."""
-    text = body
-    low = body.lower()
-    if "analysis" in low:
-        text = body[low.index("analysis") :].split("\n", 1)[-1]
-        cut = text.lower().find("suggested change")
-        text = text[:cut] if cut > 0 else text
-    text = " ".join(text.split())
-    return (text[:limit] + "…") if len(text) > limit else text
-
-
-@dg.sensor(
-    name="new_issue_announcer",
-    minimum_interval_seconds=60,
-    default_status=dg.DefaultSensorStatus.RUNNING,
-)
-def new_issue_announcer(context: dg.SensorEvaluationContext):
-    if _in_branch_deployment():
-        return dg.SkipReason(BRANCH_SKIP)
-    """Announce each new ticket the agents filed (GitHub Issues, and Linear when a team is set)."""
-    from hooli_agents import linear_scope
-
-    announced = set(json.loads(context.cursor)) if context.cursor else set()
-    channel = settings.get("slack_channel")
-    client = _slack()
-    found = [("GitHub", i) for i in gh.list_agent_issues()]
-    if settings.get("linear_team_id"):
-        try:
-            found += [("Linear", i) for i in linear_scope.list_agent_issues()]
-        except linear_scope.LinearError as e:
-            context.log.error(str(e))
-    for source, issue in found:
-        key = f"{source}:{issue['number']}"
-        if key in announced:
-            continue
-        try:
-            client.chat_postMessage(
-                channel=channel,
-                text=(
-                    f":memo: {source} ticket <{issue['url']}|{issue['number']} {issue['title']}> "
-                    f"filed by an engineering agent.\n> {_excerpt(issue['body'])}"
-                ),
-            )
-        except SlackApiError as e:
-            context.log.error(f"Slack {e.response.get('error')} for channel {channel}")
-            continue
-        announced.add(key)
-    return dg.SensorResult(cursor=json.dumps(sorted(announced)))
