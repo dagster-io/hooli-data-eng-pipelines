@@ -15,7 +15,7 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 What is a component, and what is not:
 
 - **Components** (YAML, `src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the MCP server entries (`repo_tools`, `repo_tools_shadow`, `dagster_plus`). `dg list components` shows the types.
-- **Plain Dagster definitions** (Python, also under `defs/` and loaded with the components): `triggers.py` holds the sensors that start the agents and the approval watcher that merges after a person approves; `outcomes.py` builds the advisor outcome asset (the bug fixer and PR reviewer use the shipped one); `grades.py` defines the optional grading check.
+- **Plain Dagster definitions** (Python, also under `defs/` and loaded with the components): `triggers.py` holds the sensors that start the agents and the approval watcher that merges after a person approves; `grades.py` defines the optional grading check.
 - **The tool server** (Python package, not a component): `*_scope.py`, `ops_tools.py`, `snippet_check.py` and `repo_mcp.py` are the tools the agents call. `repo_mcp.py` exposes them as an MCP server, and the `repo_tools` component only tells an agent how to start it (`python -m hooli_agents.repo_mcp`). Risk rules, duplicate checks, API checks and snippet checks live here, not in prompts.
 - `eval/`: example fixtures for the optional grading check.
 

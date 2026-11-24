@@ -1,0 +1,14 @@
+type: dagster_community_components.DagsterEvidenceToolsComponent
+attributes:
+  resource_key: dagster_evidence_tools
+  mcp_server_resource_key: evidence_tools_mcp
+  deployment_url: https://hooli.dagster.cloud/data-eng-prod
+  token_env_var: ENG_DAGSTER_API_TOKEN
+  repo: dagster-io/hooli-data-eng-pipelines
+  github_token_env_var: ENG_GITHUB_TOKEN
+  base_branch: master
+  exclude_paths:
+  - hooli-agents/
+  exclude_locations:
+  - hooli_agents
+  max_result_chars: 30000

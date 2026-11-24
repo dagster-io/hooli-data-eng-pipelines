@@ -1,0 +1,10 @@
+type: dagster_community_components.DagsterDiscoveryToolsComponent
+attributes:
+  resource_key: dagster_discovery_tools
+  mcp_server_resource_key: discovery_tools_mcp
+  deployment_url: https://hooli.dagster.cloud/data-eng-prod
+  token_env_var: ENG_DAGSTER_API_TOKEN
+  exclude_locations:
+  - hooli_agents
+  allow:
+  - list_locations
