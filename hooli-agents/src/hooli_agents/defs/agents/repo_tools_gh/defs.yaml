@@ -31,3 +31,4 @@ attributes:
   - list_files
   - read_file
   practice_mode_env_var: ENG_SHADOW
+  ledger_path: /tmp/agent_ledger

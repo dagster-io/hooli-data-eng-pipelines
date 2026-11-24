@@ -16,6 +16,8 @@ attributes:
   api_key_env_var: OPENAI_API_KEY
   max_iterations: 20
   max_tokens: 4000
+  emit_outcome_asset: true
+  outcome_ledger_path: /tmp/agent_ledger
   mcp_servers:
   - server_resource_key: dagster_plus
   - server_resource_key: repo_tools_gh
