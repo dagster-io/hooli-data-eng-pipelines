@@ -8,17 +8,14 @@ Three engineering agents built from Dagster community components. They run as th
 | `pr_reviewer` | an agent pull request opens | scores risk in code; approves low-risk changes, asks a person (a Slack reaction) for the rest |
 | `improvement_advisor` | on a schedule you set, or by hand | reads the deployment and files findings as pull requests, GitHub issues or Linear tickets |
 
-Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, `refused`, `decisions_for_you`), and the advisor has an asset check that grades its findings against `eval/improvement_fixtures.json`.
+Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, `refused`, `decisions_for_you`).
 
 ## Layout
 
-What is a component, and what is not:
+There is no hand-written Python beyond `definitions.py`, which loads the defs folder. Everything is a component in YAML:
 
-- **Components** (YAML, `src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the tool servers (`repo_tools_gh`, `evidence_tools`, `discovery_tools`, `dagster_plus`) and the sensors (`defs/sensors/*`). `dg list components` shows the types.
-- **Plain Dagster definitions** (Python): only `grades.py`, the optional grading check, which waits on the shipped `agent_fixture_check`.
-- `eval/`: example fixtures for the optional grading check.
-
-The tools (GitHub, Dagster evidence and discovery), the outcome asset and every sensor, including the weekly review, are shipped components in `dagster-community-components`.
+- **Agents and tools** (`src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the tool servers (`repo_tools_gh`, `evidence_tools`, `discovery_tools`, `dagster_plus`).
+- **Sensors** (`defs/sensors/*/defs.yaml`): the failure, pull request, approval, ticket and weekly review sensors. `dg list components` shows the types.
 
 ## What they watch, and what they change
 
@@ -41,7 +38,6 @@ The tools (GitHub, Dagster evidence and discovery), the outcome asset and every 
 | `ENG_DAGSTER_API_TOKEN` | Dagster+ token for the advisor's evidence tools and the re-run after a merge |
 | `DAGSTER_PLUS_MCP_URL` | URL of the Dagster+ MCP server used by `bug_fixer` for run logs (`https://mcp.agent.dagster.cloud/mcp`) |
 | `DAGSTER_PLUS_ORG`, `DAGSTER_PLUS_BEARER` | the MCP server's organization header (`hooli`) and authorization header (`Bearer <token>`) |
-| `ENG_GRADE_FIXTURES` | optional; path to a fixtures file that describes the project under review. Defines the `matches_fixtures` check on the advisor outcome (without it there is no check) |
 
 ## Practice mode
 
