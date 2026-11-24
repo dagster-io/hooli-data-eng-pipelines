@@ -546,15 +546,15 @@ wheels = [
 
 [[package]]
 name = "dagster-community-components"
-version = "0.10.178"
+version = "0.10.181"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dagster" },
     { name = "pandas" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/7f/f67f41b22858b17caa96fd205032b45938e43dabbf03d23cea52cc331563/dagster_community_components-0.10.178.tar.gz", hash = "sha256:d01a328188ff1cafbaa8ebcf1b21388d6485defc03037bb92164d77a00e6c744", size = 17575919, upload-time = "2026-11-21T00:36:16.979Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/54/aabaa239c1feae26c164068e58423be6594373d9b6c00aae0249d505682a/dagster_community_components-0.10.181.tar.gz", hash = "sha256:13f7acc4f01074b2008d476037cddb2605bdec62a1e6c0afb2b173c3c71d6696", size = 18001159, upload-time = "2026-11-24T04:26:58.821Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/cc/b88eb9e3f404782d0611efc712344562419f847cc418c3c99f1a0ee25de5/dagster_community_components-0.10.178-py3-none-any.whl", hash = "sha256:9db3e86553946e701f2f15de06e192b7b349a528559f415682d03d6cb7a6663e", size = 25493374, upload-time = "2026-11-21T00:36:12.342Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/96/17968e18b3089a2b2d5ed5d5bb0e893d3a590d10e9498c311ae834085648/dagster_community_components-0.10.181-py3-none-any.whl", hash = "sha256:49d97025e15f6f974bd58a1dd1b1f9d28bb986817f242fcfb0c083f2fea5c0c2", size = 26044890, upload-time = "2026-11-24T04:26:54.858Z" },
 ]
 
 [[package]]
