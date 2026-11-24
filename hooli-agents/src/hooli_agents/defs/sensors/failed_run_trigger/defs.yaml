@@ -1,0 +1,12 @@
+type: dagster_community_components.FailedRunAgentSensorComponent
+attributes:
+  sensor_name: failed_run_trigger
+  asset_keys: [bug_fixer, bug_fixer_reply, bug_fixer_outcome]
+  exclude_code_location_names: [hooli_agents]
+  slack_channel: C0CKKGBUMPF
+  slack_bot_token_env_var: SLACK_BOT_TOKEN
+  dagster_url: https://hooli.dagster.cloud/data-eng-prod
+  cooldown_hours: 168
+  max_runs_per_day: 10
+  use_retry_rule: true
+  default_status: RUNNING

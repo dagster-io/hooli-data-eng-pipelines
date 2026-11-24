@@ -1,4 +1,4 @@
-"""Triggers for the engineering agents: failed runs, weekly reviews and new-issue announcements."""
+"""Triggers for the engineering agents: weekly reviews and new-issue announcements."""
 
 import json
 import os
@@ -9,7 +9,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from hooli_agents import github_scope as gh
-from hooli_agents import ops_tools, settings, triage
+from hooli_agents import settings
 
 
 bug_fix_job = dg.define_asset_job("bug_fix_job", selection=["bug_fixer", "bug_fixer_reply", "bug_fixer_outcome"])
@@ -38,54 +38,6 @@ BRANCH_SKIP = "Branch deployment: the full deployment's sensors handle announcem
 def _in_branch_deployment() -> bool:
     """Dagster+ sets this in branch deployments, where a second copy of each sensor would double-post."""
     return os.environ.get("DAGSTER_CLOUD_IS_BRANCH_DEPLOYMENT", "").lower() in ("1", "true")
-
-
-@dg.run_failure_sensor(
-    name="failed_run_trigger",
-    monitor_all_code_locations=True,
-    request_job=bug_fix_job,
-    default_status=dg.DefaultSensorStatus.RUNNING,
-)
-def failed_run_trigger(context: dg.RunFailureSensorContext):
-    if _in_branch_deployment():
-        return dg.SkipReason(BRANCH_SKIP)
-    run = context.dagster_run
-    origin = run.remote_job_origin
-    location = origin.location_name if origin else None
-    if not ops_tools.location_watched(location):
-        return dg.SkipReason(f"Run {run.run_id[:8]} is not in a watched code location.")
-    instance = context.instance
-    target = run.root_run_id or run.run_id
-    if target != run.run_id and triage.analyzed_run(instance, target):
-        return dg.SkipReason(f"Run {run.run_id[:8]} is a retry of {target[:8]}, which was already analyzed.")
-    sig = triage.failure_signature(context, location)
-    cooldown = float(settings.get("failure_cooldown_hours", 168))
-    if triage.analyzed_recently(instance, sig, cooldown):
-        return dg.SkipReason(f"Run {run.run_id[:8]} repeats a failure analyzed in the last {cooldown:g}h ({sig}).")
-    cap = int(settings.get("max_analyses_per_day", 10))
-    if triage.analyses_since(instance, 24) >= cap:
-        return dg.SkipReason(f"Already analyzed {cap} failures in the last 24h; skipping {run.run_id[:8]}.")
-    channel = settings.get("slack_channel")
-    try:
-        posted = _slack().chat_postMessage(
-            channel=channel,
-            text=(
-                f":beetle: Run <{_run_url(target)}|{target[:8]}> of `{run.job_name}` "
-                f"failed in `{location}`. Looking into the cause."
-            ),
-        )
-    except SlackApiError as e:
-        context.log.error(f"Could not post to Slack channel {channel}: {e.response.get('error')}")
-        return dg.SkipReason("Slack post failed.")
-    return dg.RunRequest(
-        run_key=target,
-        tags={
-            "eng/failed_run_id": target,
-            "eng/signature": sig,
-            "slack/channel": channel,
-            "slack/thread_ts": posted["ts"],
-        },
-    )
 
 
 def _periodic_review(context: dg.SensorEvaluationContext, name: str, period_hours: float, text: str):
