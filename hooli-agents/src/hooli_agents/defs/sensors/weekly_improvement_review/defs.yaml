@@ -1,0 +1,9 @@
+type: dagster_community_components.ScheduledSlackAgentSensorComponent
+attributes:
+  sensor_name: weekly_improvement_review
+  slack_channel_id: C0CKKGBUMPF
+  slack_bot_token_env_var: SLACK_BOT_TOKEN
+  asset_selection: [improvement_advisor, improvement_advisor_reply, improvement_advisor_outcome]
+  announce_text: ":bar_chart: Improvement review started. Checking retries, deprecated APIs, freshness, automation and alerts."
+  period_hours: 168
+  default_status: RUNNING
