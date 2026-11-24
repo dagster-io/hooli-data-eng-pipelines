@@ -30,5 +30,8 @@ attributes:
   - propose_fix
   - list_files
   - read_file
+  - find_issues
+  - open_issue
   practice_mode_env_var: ENG_SHADOW
+  validate_python_snippets: true
   ledger_path: /tmp/agent_ledger

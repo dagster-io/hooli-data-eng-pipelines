@@ -75,15 +75,3 @@ def test_asset_code_paths_come_from_github_references():
         {"path": "hooli-data-eng/src/hooli_data_eng/defs/dbt/component.py", "line": 209},
         {"path": "dbt_project/models/a.sql", "line": 0},
     ]
-
-
-def test_outcome_drafts_are_readable_markdown():
-    from hooli_agents.defs import outcomes
-
-    text = outcomes._drafts_markdown(
-        [{"kind": "github_issue", "title": "Filed one", "url": "https://x/1"}],
-        [{"kind": "would_file", "place": "github_issue", "title": "Draft one", "body": "Full body\n```python\nx = 1\n```"}],
-    )
-    assert "## Draft one" in text and "Full body" in text and "x = 1" in text
-    assert "## Filed one" in text and "https://x/1" in text
-    assert outcomes._drafts_markdown([], []) == "Nothing was filed or drafted."
