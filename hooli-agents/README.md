@@ -15,10 +15,10 @@ Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, 
 What is a component, and what is not:
 
 - **Components** (YAML, `src/hooli_agents/defs/agents/*/defs.yaml`): the three agents, the Slack replies, the skill, and the tool servers (`repo_tools_gh`, `evidence_tools`, `discovery_tools`, `dagster_plus`) and the sensors (`defs/sensors/*`). `dg list components` shows the types.
-- **Plain Dagster definitions** (Python): `triggers.py` holds the weekly improvement review trigger, which posts the start message in Slack and tags the run with the thread; `grades.py` defines the optional grading check. Both wait on shipped components.
+- **Plain Dagster definitions** (Python): only `grades.py`, the optional grading check, which waits on the shipped `agent_fixture_check`.
 - `eval/`: example fixtures for the optional grading check.
 
-The tools (GitHub, Dagster evidence and discovery), the outcome asset and every sensor except the weekly trigger are shipped components in `dagster-community-components`.
+The tools (GitHub, Dagster evidence and discovery), the outcome asset and every sensor, including the weekly review, are shipped components in `dagster-community-components`.
 
 ## What they watch, and what they change
 
@@ -34,7 +34,6 @@ The tools (GitHub, Dagster evidence and discovery), the outcome asset and every 
 
 | Variable | Purpose |
 |---|---|
-| `ENG_SLACK_CHANNEL` | channel for the weekly review start message (the other sensors have the channel in their YAML) |
 | `OPENAI_API_KEY` | model key used by the agents (change `model` and `api_key_env_var` in the agent YAML to switch provider) |
 | `SLACK_BOT_TOKEN` | posts announcements and reads reactions |
 | `ENG_GITHUB_TOKEN` | token for the author identity (opens pull requests and issues) |

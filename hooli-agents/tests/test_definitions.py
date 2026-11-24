@@ -8,7 +8,7 @@ EXPECTED_SENSORS = {
     "new_pr_trigger",
     "pr_approval_watcher",
     "new_issue_announcer",
-    "improvement_review_trigger",
+    "weekly_improvement_review",
 }
 
 
