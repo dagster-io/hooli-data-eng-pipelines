@@ -6,7 +6,7 @@ import dagster as dg
 
 from hooli_agents import ledger
 
-AGENTS = ["bug_fixer", "improvement_advisor", "pr_reviewer"]
+AGENTS = ["improvement_advisor"]  # the others use the shipped outcome asset
 
 
 def _text(result) -> str:
