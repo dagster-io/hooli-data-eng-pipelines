@@ -185,6 +185,7 @@ def project_overview(location: str = "") -> dict:
         constraint = found.group(1) if found else None
     return {
         "code_location": location,
+        "repo_notes": settings.get("repo_notes") or "",
         "assets": assets,
         "schedules": schedules,
         "alert_policies": [{"name": a["name"], "description": a["description"]} for a in data["alertPolicies"]],
