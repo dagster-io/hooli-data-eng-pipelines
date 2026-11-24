@@ -16,10 +16,10 @@ attributes:
   max_iterations: 15
   max_tokens: 3000
   mcp_servers:
-  - server_resource_key: repo_tools
+  - server_resource_key: repo_tools_gh
   allowed_tools:
-  - repo_tools__get_pull_request
-  - repo_tools__assess_pull_request
-  - repo_tools__review_pull_request
-  - repo_tools__read_file
-  - repo_tools__list_files
+  - repo_tools_gh__get_pull_request
+  - repo_tools_gh__assess_pull_request
+  - repo_tools_gh__review_pull_request
+  - repo_tools_gh__read_file
+  - repo_tools_gh__list_files

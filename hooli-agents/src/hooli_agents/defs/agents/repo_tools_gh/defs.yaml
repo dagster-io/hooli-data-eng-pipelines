@@ -1,0 +1,33 @@
+type: dagster_community_components.GithubPrToolsComponent
+attributes:
+  resource_key: github_pr_tools
+  mcp_server_resource_key: repo_tools_gh
+  repo: dagster-io/hooli-data-eng-pipelines
+  token_env_var: ENG_GITHUB_TOKEN
+  reviewer_token_env_var: ENG_REVIEWER_GITHUB_TOKEN
+  base_branch: master
+  branch_prefix: agent/
+  restrict_to_branch_prefix: true
+  exclude_paths:
+  - hooli-agents/
+  protected_paths:
+  - .github/
+  - pyproject.toml
+  - requirements
+  - Dockerfile
+  - setup.
+  - uv.lock
+  - dagster_cloud
+  low_risk_paths:
+  - src/
+  - tests/
+  - docs/
+  - README
+  allow:
+  - get_pull_request
+  - assess_pull_request
+  - review_pull_request
+  - propose_fix
+  - list_files
+  - read_file
+  practice_mode_env_var: ENG_SHADOW
