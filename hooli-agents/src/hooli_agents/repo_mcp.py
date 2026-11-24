@@ -64,7 +64,7 @@ def list_open_pull_requests() -> list | dict:
 
 @mcp.tool
 def find_issues(query: str) -> list | dict:
-    """Open issues the agents already filed that match some words, to avoid filing a finding twice."""
+    """Issues the agents already filed that match some words (open, or closed in the last 30 days), to avoid filing a finding twice."""
     return _guard(gh.find_issues)(query)
 
 

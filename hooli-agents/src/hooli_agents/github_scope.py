@@ -8,6 +8,7 @@ import base64
 import os
 import re
 import subprocess
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 
 import requests
@@ -17,6 +18,7 @@ from hooli_agents import ledger, settings, snippet_check
 REPO = settings.get("repo", "")
 BASE_BRANCH = settings.get("base_branch", "main")
 BRANCH_PREFIX = "agent/"
+CLOSED_ISSUE_DAYS = 30
 API = "https://api.github.com"
 
 MAX_FILES_PER_FIX = 5
@@ -330,22 +332,26 @@ ISSUE_LABEL = "engineering-agent"
 
 
 def find_issues(query: str) -> list[dict]:
-    """Open issues the agents filed whose title has any of the query's main words."""
+    """Issues the agents filed whose title has any of the query's main words: open ones, and ones closed in the last 30 days."""
     generic = {"dagster", "assets", "asset", "project", "improve", "improvements", "reliability", "update"}
     words = [w for w in dict.fromkeys(re.findall(r"[A-Za-z0-9_]{5,}", query.lower())) if w not in generic][:5]
+    cutoff = datetime.now(timezone.utc) - timedelta(days=CLOSED_ISSUE_DAYS)
     found: dict[int, dict] = {}
     for word in words:
-        q = f"repo:{REPO} is:issue is:open label:{ISSUE_LABEL} {word} in:title"
+        q = f"repo:{REPO} is:issue label:{ISSUE_LABEL} {word} in:title"
         resp = requests.get(
             f"{API}/search/issues",
-            params={"q": q, "per_page": 10},
+            params={"q": q, "per_page": 20},
             headers={"Authorization": f"Bearer {_token(None)}", "Accept": "application/vnd.github+json"},
             timeout=30,
         )
         if resp.status_code >= 400:
             raise ScopeError(f"Issue search failed ({resp.status_code}): {resp.text[:200]}")
         for i in resp.json()["items"]:
-            found[i["number"]] = {"number": i["number"], "title": i["title"], "url": i["html_url"]}
+            closed = i.get("closed_at")
+            if i["state"] != "open" and not (closed and datetime.fromisoformat(closed.replace("Z", "+00:00")) >= cutoff):
+                continue
+            found[i["number"]] = {"number": i["number"], "title": i["title"], "url": i["html_url"], "state": i["state"]}
     return list(found.values())
 
 
