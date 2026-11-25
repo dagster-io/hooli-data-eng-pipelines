@@ -9,6 +9,7 @@ EXPECTED_SENSORS = {
     "pr_approval_watcher",
     "new_issue_announcer",
     "weekly_improvement_review",
+    "weekly_improvement_review_pipeline",
 }
 
 
@@ -24,3 +25,15 @@ def test_definitions_load_with_every_sensor_and_agent():
     assert EXPECTED_SENSORS <= {s.name for s in loaded.sensors}
     keys = {k.to_user_string() for a in loaded.assets for k in a.keys}
     assert {"bug_fixer", "pr_reviewer", "improvement_advisor"} <= keys
+
+
+def test_advisor_pipeline_assets_and_outcome():
+    loaded = defs() if callable(defs) else defs
+    keys = {k.to_user_string() for a in loaded.assets for k in a.keys}
+    assert {
+        "improvement_advisor_pipeline_overviews",
+        "improvement_advisor_pipeline_analysis",
+        "improvement_advisor_pipeline_filed",
+        "improvement_advisor_pipeline_outcome",
+        "improvement_advisor_pipeline_reply",
+    } <= keys

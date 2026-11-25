@@ -1,0 +1,106 @@
+type: dagster_community_components.AgenticPipelineComponent
+attributes:
+  asset_name_prefix: improvement_advisor_pipeline
+  group_name: engineering_agents_pipeline
+  context_notes: >-
+    Hooli is a demo repository. Deliberate failures, flakiness and test fixtures are intentional;
+    never file them as problems.
+  emit_outcome_asset: true
+  outcome_ledger_path: /tmp/agent_ledger
+  source:
+    kind: literal
+    text: Review the project and file the most valuable improvements.
+  steps:
+    # Facts: fixed tool calls, the same every run, no model involved.
+    - id: locations
+      op: mcp_call
+      server: {server_resource_key: discovery_tools_mcp}
+      mcp_tool_name: list_locations
+
+    - id: location_names
+      op: llm_call
+      source: locations
+      model: gpt-4o-mini
+      api_key_env_var: OPENAI_API_KEY
+      temperature: 0
+      system_prompt: Reply with only a JSON array of the code location names in the input, no other text and no code fences.
+      prompt_template: "{text}"
+
+    - id: overviews
+      op: mcp_call
+      source: location_names
+      per_item: true
+      server: {server_resource_key: evidence_tools_mcp}
+      mcp_tool_name: project_overview
+      tool_args: {location: "{item}"}
+      output_join: jsonl
+
+    - id: deprecations
+      op: mcp_call
+      server: {server_resource_key: evidence_tools_mcp}
+      mcp_tool_name: deprecation_report
+
+    # Judgment: one loop that reads code and decides. It cannot file; it can only propose.
+    - id: analysis
+      op: tool_use_loop
+      source: overviews
+      model: gpt-5.5
+      api_key_env_var: OPENAI_API_KEY
+      max_iterations: 30
+      max_tokens: 4000
+      skill_keys: [dagster_expert]
+      mcp_servers:
+        - {server_resource_key: evidence_tools_mcp}
+        - {server_resource_key: repo_tools_gh}
+      allowed_tools:
+        - evidence_tools_mcp__latest_dagster_release
+        - evidence_tools_mcp__check_dagster_api
+        - repo_tools_gh__list_files
+        - repo_tools_gh__read_file
+        - repo_tools_gh__find_issues
+      required_tool_calls: [repo_tools_gh__read_file]
+      system_prompt: |-
+        You review a Dagster project and propose the most valuable improvements. The input is the
+        project overview of every code location; treat it as the facts and claim nothing it does not show.
+        1. Load the dagster_expert skill and read its reference for the feature you expect to suggest.
+        2. Pick at most three findings in total, most valuable first: failed or missing partitions, assets
+           without checks, slower jobs, dependency risks, retries worth fixing, deprecated APIs (one finding
+           listing every occurrence), missing freshness or alerts. Never propose something the repository README
+           or repo_notes say is intentional. Call find_issues with each candidate's title and drop any finding
+           that an open or recently closed issue already covers.
+        3. For each finding read the asset's source with read_file using the paths in its code_references, and use
+           its real names in the snippet. Check every Dagster name with check_dagster_api once. State a
+           vulnerability only with package, running version and advisory ID.
+        4. Finish by calling finalize with a JSON array of findings, each {"title": ..., "body": ...}. The body has
+           the sections What we saw, Analysis, Suggested change (file path, current and proposed lines as a diff),
+           Risk and effort. Say the snippet is untested. If nothing is worth changing, finalize with [].
+        End with a line "Decisions for you:" followed by up to three short items or the word none.
+      prompt_template: |-
+        Project overview:
+        {text}
+
+        Deprecated API usage:
+        {deprecations}
+
+    # Evidence check on the claims, using the same facts the analysis saw.
+    - id: verified
+      op: verify
+      source: analysis
+      evidence_source: [overviews, deprecations]
+      model: gpt-4o-mini
+      api_key_env_var: OPENAI_API_KEY
+      min_score: 0.6
+      on_fail: continue
+
+    # Filing is a fixed tool call per finding, so no prompt can skip it.
+    - id: filed
+      op: mcp_call
+      source: analysis
+      per_item: true
+      server: {server_resource_key: repo_tools_gh}
+      mcp_tool_name: open_issue
+      tool_args: {title: "{item.title}", body: "{item.body}"}
+      output_join: jsonl
+
+  outputs:
+    assets: [locations, location_names, overviews, deprecations, analysis, verified, filed]
