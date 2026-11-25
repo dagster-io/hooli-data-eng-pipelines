@@ -9,6 +9,7 @@ EXPECTED_SENSORS = {
     "pr_approval_watcher",
     "new_issue_announcer",
     "weekly_improvement_review",
+    "weekly_improvement_review_pipeline",
 }
 
 
@@ -34,4 +35,5 @@ def test_advisor_pipeline_assets_and_outcome():
         "improvement_advisor_pipeline_analysis",
         "improvement_advisor_pipeline_filed",
         "improvement_advisor_pipeline_outcome",
+        "improvement_advisor_pipeline_reply",
     } <= keys

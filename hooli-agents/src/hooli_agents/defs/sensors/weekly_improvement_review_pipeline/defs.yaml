@@ -1,0 +1,17 @@
+type: dagster_community_components.ScheduledSlackAgentSensorComponent
+attributes:
+  sensor_name: weekly_improvement_review_pipeline
+  slack_channel_id: C0CKKGBUMPF
+  asset_selection:
+  - improvement_advisor_pipeline_locations
+  - improvement_advisor_pipeline_location_names
+  - improvement_advisor_pipeline_overviews
+  - improvement_advisor_pipeline_deprecations
+  - improvement_advisor_pipeline_analysis
+  - improvement_advisor_pipeline_verified
+  - improvement_advisor_pipeline_filed
+  - improvement_advisor_pipeline_outcome
+  - improvement_advisor_pipeline_reply
+  announce_text: ":bar_chart: Improvement review (pipeline version) started. Checking retries, deprecated APIs, freshness, automation and alerts."
+  period_hours: 168
+  default_status: STOPPED

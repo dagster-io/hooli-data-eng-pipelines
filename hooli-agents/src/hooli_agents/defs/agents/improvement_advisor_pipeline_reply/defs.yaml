@@ -1,0 +1,9 @@
+type: dagster_community_components.SlackReplyComponent
+attributes:
+  asset_name: improvement_advisor_pipeline_reply
+  upstream_asset_key: improvement_advisor_pipeline_filed
+  group_name: engineering_agents_pipeline
+  monitor_failures: true
+  watch_reactions: false
+  update_reaction_on_completion: false
+  include_run_link: false
