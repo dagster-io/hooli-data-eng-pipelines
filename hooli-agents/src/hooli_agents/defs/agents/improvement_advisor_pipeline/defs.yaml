@@ -19,10 +19,11 @@ attributes:
 
     - id: location_names
       op: llm_call
+      source: locations
       model: gpt-4o-mini
       api_key_env_var: OPENAI_API_KEY
       temperature: 0
-      system_prompt: Reply with only a JSON array of the code location names in the input, no other text.
+      system_prompt: Reply with only a JSON array of the code location names in the input, no other text and no code fences.
       prompt_template: "{text}"
 
     - id: overviews
@@ -52,11 +53,10 @@ attributes:
         - {server_resource_key: evidence_tools_mcp}
         - {server_resource_key: repo_tools_gh}
       allowed_tools:
-        - dagster_expert__*
-        - evidence_tools_mcp__latest_dagster_release
-        - evidence_tools_mcp__check_dagster_api
-        - repo_tools_gh__list_files
-        - repo_tools_gh__read_file
+        - latest_dagster_release
+        - check_dagster_api
+        - list_files
+        - read_file
       required_tool_calls: [repo_tools_gh__read_file]
       system_prompt: |-
         You review a Dagster project and propose the most valuable improvements. The input is the
@@ -100,9 +100,10 @@ attributes:
       mcp_servers:
         - {server_resource_key: repo_tools_gh}
       allowed_tools:
-        - repo_tools_gh__find_issues
-        - repo_tools_gh__open_issue
+        - find_issues
+        - open_issue
       required_tool_calls: [repo_tools_gh__find_issues]
+      on_required_tool_calls_missing: warn
       system_prompt: |-
         The input is a JSON array of findings. For each finding call find_issues with its title. If an open or
         recently closed issue already covers it, skip it. Otherwise call open_issue once with the finding's
@@ -111,4 +112,4 @@ attributes:
       prompt_template: "{text}"
 
   outputs:
-    assets: [locations, overviews, deprecations, analysis, verified, filed]
+    assets: [locations, location_names, overviews, deprecations, analysis, verified, filed]
