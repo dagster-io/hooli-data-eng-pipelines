@@ -43,7 +43,9 @@ attributes:
     # Judgment: one loop that reads code and decides. It cannot file; it can only propose.
     - id: analysis
       op: tool_use_loop
-      source: overviews
+      inputs:
+        overviews: {from: overviews}
+        deprecations: {from: deprecations}
       model: gpt-5.5
       api_key_env_var: OPENAI_API_KEY
       max_iterations: 30
@@ -77,7 +79,7 @@ attributes:
         End with a line "Decisions for you:" followed by up to three short items or the word none.
       prompt_template: |-
         Project overview:
-        {text}
+        {overviews}
 
         Deprecated API usage:
         {deprecations}
@@ -86,6 +88,9 @@ attributes:
     - id: verified
       op: verify
       source: analysis
+      inputs:
+        overviews: {from: overviews}
+        deprecations: {from: deprecations}
       evidence_source: [overviews, deprecations]
       model: gpt-4o-mini
       api_key_env_var: OPENAI_API_KEY
