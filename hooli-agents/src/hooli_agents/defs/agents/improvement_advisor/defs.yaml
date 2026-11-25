@@ -2,6 +2,7 @@ type: dagster_community_components.LiteLLMAgentComponent
 attributes:
   asset_name: improvement_advisor
   group_name: engineering_agents
+  description: "Reviews every watched code location and files up to three improvements as GitHub issues (retries, partitions, missing checks, deprecated APIs, freshness, alerts). Runs weekly through weekly_improvement_review."
   prompt: Review the project and file the most valuable improvements.
   system_prompt: |-
     You review the Dagster project in a repository and suggest improvements that make it more reliable and cheaper to run. Work in this order.
@@ -37,3 +38,8 @@ attributes:
   - repo_tools_gh__read_file
   - repo_tools_gh__find_issues
   - repo_tools_gh__open_issue
+post_processing:
+  assets:
+  - target: "key:improvement_advisor_outcome"
+    attributes:
+      description: "What the improvement advisor did this run: status, a short summary, the issues it filed or drafted, and the decisions it left for a person."

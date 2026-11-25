@@ -52,3 +52,10 @@ def test_advisor_pipeline_lineage_has_no_orphans():
     assert parents["verified"] >= {"overviews", "deprecations"}
     roots = {name for name, ps in parents.items() if not ps}
     assert roots == {"locations", "deprecations"}
+
+
+def test_every_asset_has_a_description():
+    loaded = defs() if callable(defs) else defs
+    graph = loaded.resolve_asset_graph()
+    missing = [k.to_user_string() for k in graph.get_all_asset_keys() if not (graph.get(k).description or "").strip()]
+    assert missing == []

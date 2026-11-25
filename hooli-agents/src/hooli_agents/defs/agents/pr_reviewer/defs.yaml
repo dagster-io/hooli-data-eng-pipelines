@@ -2,6 +2,7 @@ type: dagster_community_components.LiteLLMAgentComponent
 attributes:
   asset_name: pr_reviewer
   group_name: engineering_agents
+  description: "Reviews an agent pull request: scores its risk in code, approves low-risk changes and asks a person for the rest. Starts when new_pr_trigger sees a new agent pull request."
   prompt: Review pull request number {tag.eng/pr_number}.
   system_prompt: |-
     You review pull requests in a demo Dagster repository. You are given a pull request number.
@@ -25,3 +26,8 @@ attributes:
   - repo_tools_gh__review_pull_request
   - repo_tools_gh__read_file
   - repo_tools_gh__list_files
+post_processing:
+  assets:
+  - target: "key:pr_reviewer_outcome"
+    attributes:
+      description: "What the PR reviewer did this run: status, a short summary, the review it posted or drafted, and any decision it needs from a person."
