@@ -37,3 +37,18 @@ def test_advisor_pipeline_assets_and_outcome():
         "improvement_advisor_pipeline_outcome",
         "improvement_advisor_pipeline_reply",
     } <= keys
+
+
+def test_advisor_pipeline_lineage_has_no_orphans():
+    loaded = defs() if callable(defs) else defs
+    graph = loaded.resolve_asset_graph()
+    prefix = "improvement_advisor_pipeline_"
+    parents = {
+        key.to_user_string().removeprefix(prefix): {p.to_user_string().removeprefix(prefix) for p in graph.get(key).parent_keys}
+        for key in graph.get_all_asset_keys()
+        if key.to_user_string().startswith(prefix)
+    }
+    assert parents["analysis"] >= {"overviews", "deprecations"}
+    assert parents["verified"] >= {"overviews", "deprecations"}
+    roots = {name for name, ps in parents.items() if not ps}
+    assert roots == {"locations", "deprecations"}
