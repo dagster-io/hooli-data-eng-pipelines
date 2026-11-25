@@ -2,6 +2,7 @@ type: dagster_community_components.AgenticPipelineComponent
 attributes:
   asset_name_prefix: improvement_advisor_pipeline
   group_name: engineering_agents_pipeline
+  description: "The improvement advisor as a pipeline: fixed steps gather facts, one tool loop proposes findings, a check verifies them, and each finding is filed as a GitHub issue."
   context_notes: >-
     Hooli is a demo repository. Deliberate failures, flakiness and test fixtures are intentional;
     never file them as problems.
@@ -109,3 +110,29 @@ attributes:
 
   outputs:
     assets: [locations, location_names, overviews, deprecations, analysis, verified, filed]
+post_processing:
+  assets:
+  - target: "key:improvement_advisor_pipeline_locations"
+    attributes:
+      description: "Every code location in the deployment (name, load status, library versions), except the agents' own. Fixed tool call; no model."
+  - target: "key:improvement_advisor_pipeline_location_names"
+    attributes:
+      description: "The location names from the previous step as a JSON list, so the next step can run once per location. A small model call."
+  - target: "key:improvement_advisor_pipeline_overviews"
+    attributes:
+      description: "One project overview per code location: assets with freshness and automation, retries, partition and check health, slower runs, dependency risks and recent failures. One fixed tool call per location."
+  - target: "key:improvement_advisor_pipeline_deprecations"
+    attributes:
+      description: "Deprecated, superseded or removed Dagster API usage across the repository, with file, line and replacement. Fixed tool call; no model."
+  - target: "key:improvement_advisor_pipeline_analysis"
+    attributes:
+      description: "The judgment step. A tool loop reads the overviews and deprecations, reads the code for the assets it cares about, checks Dagster API names, drops findings that already have an issue, and proposes at most three findings as a JSON list of title and body."
+  - target: "key:improvement_advisor_pipeline_verified"
+    attributes:
+      description: "Checks the proposed findings against the overviews and deprecation report and scores how well the facts support them. Recorded for review; it does not block filing."
+  - target: "key:improvement_advisor_pipeline_filed"
+    attributes:
+      description: "Files each proposed finding as a GitHub issue, one fixed tool call per finding. In practice mode it records what it would file and creates nothing."
+  - target: "key:improvement_advisor_pipeline_outcome"
+    attributes:
+      description: "What this run did: status (filed, practice, refused, needs_human or nothing_new), a short summary, the issues filed or drafted, and the decisions left for a person."
