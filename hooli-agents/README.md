@@ -10,6 +10,8 @@ Three engineering agents built from Dagster community components. They run as th
 
 Each agent writes an outcome asset (`status`, `summary`, `filed`, `would_file`, `refused`, `decisions_for_you`).
 
+`improvement_advisor_pipeline_*` is the same advisor written as an `agentic_pipeline`: fixed tool calls gather the facts, one tool loop reads code and proposes findings, a verify step checks them, and filing is a deterministic `open_issue` call per finding. Its weekly sensor (`weekly_improvement_review_pipeline`) is stopped; turn it on and stop `weekly_improvement_review` to switch over.
+
 ## Layout
 
 There is no hand-written Python beyond `definitions.py`, which loads the defs folder. Everything is a component in YAML:
